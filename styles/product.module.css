@@ -1,0 +1,258 @@
+.wrap{
+  display:grid;
+  grid-template-columns: 1fr 1.1fr;
+  gap: 18px;
+  align-items: start;
+}
+@media (max-width: 900px){
+  .wrap{ grid-template-columns: 1fr; }
+}
+
+.media{
+  height: 320px;
+  border-radius: 16px;
+  /* StarPro themed gradient and dark border */
+  background: linear-gradient(135deg, rgba(177,0,0,.25), rgba(0,0,0,.05));
+  border: 1px solid rgba(0,0,0,.08);
+  display:flex;
+  align-items:flex-start;
+  justify-content:flex-end;
+  padding: 12px;
+}
+
+.badge{
+  font-size: 12px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(177,0,0,.12);
+  border: 1px solid rgba(177,0,0,.22);
+  color: #b00000;
+}
+
+.info{
+  padding: 6px 0;
+}
+
+.h1{ margin: 0 0 8px; }
+
+.meta{
+  display:flex;
+  align-items:center;
+  gap: 8px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+.model{
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: #fafafa;
+  border: 1px solid rgba(0,0,0,.10);
+  font-size: 12px;
+  color: #b00000;
+}
+.dot{ color: rgba(0,0,0,.45); }
+.muted{
+  /* Use dark muted text on light surfaces */
+  color: rgba(21,23,26,.65);
+}
+.mutedSmall{
+  /* Smaller muted text should also be dark for readability */
+  color: rgba(21,23,26,.65);
+  font-size: 12px;
+}
+
+.desc{
+  /* Description text should be dark and legible */
+  color: rgba(21,23,26,.80);
+  line-height: 1.55;
+  margin-bottom: 16px;
+}
+
+.priceBox{
+  display:grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin: 14px 0 18px;
+}
+@media (max-width: 700px){
+  .priceBox{ grid-template-columns: 1fr; }
+}
+.priceBox > div{
+  padding: 12px;
+  border-radius: 16px;
+  /* Light card background with subtle dark border for price options */
+  background: #fafafa;
+  border: 1px solid rgba(0,0,0,.08);
+}
+.label{
+  /* Labels should use a muted dark color */
+  color: rgba(21,23,26,.65);
+  font-size: 12px;
+}
+.price{
+  font-size: 20px;
+  margin-top: 6px;
+  /* Ensure price uses dark text to stand out */
+  color: #15171a;
+}
+
+.actions{
+  display:flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.primary{
+  padding: 12px 16px;
+  border-radius: 14px;
+  /* Solid StarPro red button with white text */
+  border: 1px solid #b00000;
+  background: #b00000;
+  color: #ffffff;
+  cursor: pointer;
+}
+.secondary{
+  padding: 12px 16px;
+  border-radius: 14px;
+  /* Secondary actions use a white surface with dark border and text */
+  border: 1px solid rgba(0,0,0,.10);
+  background: #ffffff;
+  color: #15171a;
+}
+
+.contact{
+  margin-top: 26px;
+  padding: 18px;
+  border-radius: 16px;
+  /* Light card styling for contact section */
+  background: #fafafa;
+  border: 1px solid rgba(0,0,0,.08);
+}
+.formRow{
+  display:flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+.formRow input{
+  flex: 1;
+  min-width: 220px;
+  padding: 12px 12px;
+  border-radius: 14px;
+  /* Inputs use a clean white background with dark text */
+  border: 1px solid rgba(0,0,0,.10);
+  background: #ffffff;
+  color: #15171a;
+}
+.formRow button{
+  padding: 12px 16px;
+  border-radius: 14px;
+  /* Primary submit button uses solid red */
+  border: 1px solid #b00000;
+  background: #b00000;
+  color: #ffffff;
+  cursor:pointer;
+}
+
+.priceMuted{
+  font-size: 18px;
+  margin-top: 6px;
+  /* Strike-through prices should be muted dark for readability */
+  color: rgba(21,23,26,.55);
+  text-decoration: line-through;
+}
+
+.tiersTitle {
+  font-weight: 800;
+  font-size: 18px;
+  margin-bottom: 10px;
+}
+
+.tiersMiniRow {
+  display: inline-grid;
+  grid-template-columns: 140px 1fr;
+  border: 1px solid #eaeaea;
+  border-radius: 10px;
+  overflow: hidden;
+  margin-bottom: 10px;
+}
+
+.cellLabel {
+  padding: 10px 12px;
+  background: #fafafa;
+  font-weight: 700;
+  border-right: 1px solid #eaeaea;
+}
+
+.cellValue {
+  padding: 10px 12px;
+  font-weight: 700;
+}
+
+.tiersSheet {
+  border: 1px solid #eaeaea;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #fff;
+}
+
+.sheetRow {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+}
+
+.sheetHeadCell {
+  padding: 12px;
+  font-weight: 800;
+  background: #fafafa;
+  border-right: 1px solid #ededed;
+}
+
+.sheetRow > :last-child {
+  border-right: none;
+}
+
+.sheetCellLabel {
+  padding: 12px;
+  font-weight: 800;
+  border-top: 1px solid #ededed;
+  border-right: 1px solid #ededed;
+  background: #fff;
+}
+
+.sheetCell {
+  padding: 12px;
+  border-top: 1px solid #ededed;
+  border-right: 1px solid #ededed;
+  font-weight: 700;
+}
+
+.actionsRow {
+  display: flex;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.btnPrimary,
+.btnSecondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 44px;
+  padding: 0 16px;
+  border-radius: 14px;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.btnPrimary {
+  background: var(--brand);
+  color: #fff;
+  border: 1px solid var(--brand);
+}
+
+.btnSecondary {
+  background: #fff;
+  color: #111;
+  border: 1px solid #e6e6e6;
+}

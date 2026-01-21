@@ -1,0 +1,101 @@
+.hero{
+  display:grid;
+  grid-template-columns: 1.25fr .75fr;
+  gap: 22px;
+  align-items: stretch;
+  margin-top: 8px;
+}
+@media (max-width: 900px){
+  .hero{ grid-template-columns: 1fr; }
+}
+.h1{ font-size: 44px; margin: 0 0 10px; letter-spacing: -0.02em; }
+.p{ color: rgba(21,23,26,.72); margin: 0 0 18px; line-height: 1.5; }
+.actions{ display:flex; gap: 12px; flex-wrap: wrap; }
+.primary, .secondary{
+  padding: 12px 16px;
+  border-radius: 14px;
+  /* neutral border for light backgrounds */
+  border: 1px solid rgba(0,0,0,.10);
+}
+.primary{
+  /* solid StarPro red button with white text */
+  background: #b00000;
+  border-color: #b00000;
+  color: #ffffff;
+}
+
+/*
+  Secondary calls to action should blend with a light page.  Provide a white
+  surface with a subtle dark border and dark text for contrast.
+*/
+.secondary{
+  background: #ffffff;
+  border-color: rgba(0,0,0,.14);
+  color: #15171a;
+}
+
+.stats{
+  display:flex; gap: 16px; flex-wrap: wrap;
+  margin-top: 18px;
+}
+.stats div{
+  padding: 10px 12px;
+  border-radius: 14px;
+  /* light card background and dark border */
+  background: #fafafa;
+  border: 1px solid rgba(0,0,0,.08);
+}
+.stats strong{ display:block; font-size: 14px; }
+.stats span{ color: rgba(21,23,26,.65); font-size: 12px; }
+
+.panel{
+  border-radius: 16px;
+  /* subtle grey gradient and dark border for light mode */
+  background: linear-gradient(180deg, rgba(0,0,0,.03), rgba(0,0,0,.01));
+  border: 1px solid rgba(0,0,0,.10);
+}
+.panelInner{ padding: 18px; }
+.badge{
+  display:inline-block;
+  padding: 6px 10px;
+  border-radius: 999px;
+  /* StarPro red palette for badges */
+  background: rgba(177,0,0,.12);
+  border: 1px solid rgba(177,0,0,.22);
+  color: #b00000;
+  font-size: 12px;
+  margin-bottom: 10px;
+}
+.muted{ color: rgba(21,23,26,.65); }
+
+.contact{
+  margin-top: 34px;
+  padding: 18px;
+  border-radius: 16px;
+  /* light card styling for the contact panel */
+  background: #fafafa;
+  border: 1px solid rgba(0,0,0,.10);
+}
+.formRow{
+  display:flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+.formRow input{
+  flex: 1;
+  min-width: 220px;
+  padding: 12px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(0,0,0,.10);
+  background: #fafafa;
+  color: #15171a;
+}
+.formRow button{
+  padding: 12px 16px;
+  border-radius: 14px;
+  border: 1px solid #b00000;
+  background: #b00000;
+  color: #ffffff;
+  cursor:pointer;
+}

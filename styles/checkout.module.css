@@ -1,0 +1,297 @@
+:root {
+  /* StarPro Doors-ish palette */
+  --bg: #f5f6f8;
+  --panel: #ffffff;
+  --panel-2: #fafafa;
+  --border: rgba(0, 0, 0, 0.10);
+  --border-2: rgba(0, 0, 0, 0.14);
+
+  --text: #15171a;
+  --muted: rgba(21, 23, 26, 0.72);
+
+  --brand: #b10000;         /* StarPro red */
+  --brand-dark: #7f0000;
+  --brand-soft: rgba(177, 0, 0, 0.12);
+
+  --shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+}
+
+/* ✅ Esse é o “segredo” do respiro: max-width + padding lateral */
+.page {
+  background: var(--bg);
+  color: var(--text);
+
+  max-width: 1180px;
+  margin: 0 auto;
+
+  padding: 28px 18px 56px;
+}
+
+.title {
+  font-size: 26px;
+  margin: 0 0 6px;
+  color: var(--text);
+}
+
+.subtitle {
+  margin: 0 0 18px;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 460px 1fr;
+  gap: 22px;
+  align-items: start;
+}
+
+@media (max-width: 1100px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.card {
+  border-radius: 14px;
+  padding: 16px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+}
+
+.cardTitle {
+  margin: 0 0 12px;
+  font-size: 13px;
+  font-weight: 700;
+  color: rgba(21, 23, 26, 0.86);
+  letter-spacing: 0.2px;
+}
+
+.label {
+  display: block;
+  margin: 10px 0 6px;
+  font-size: 12px;
+  color: rgba(21, 23, 26, 0.72);
+}
+
+.input {
+  width: 100%;
+  border-radius: 12px;
+  padding: 10px 12px;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  outline: none;
+}
+
+.input::placeholder {
+  color: rgba(21, 23, 26, 0.45);
+}
+
+.input:focus {
+  border-color: rgba(177, 0, 0, 0.35);
+  box-shadow: 0 0 0 3px var(--brand-soft);
+}
+
+/* ✅ Badge */
+.badge {
+  margin-top: 12px;
+  display: inline-flex;
+  padding: 8px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  background: var(--brand-soft);
+  border: 1px solid rgba(177, 0, 0, 0.22);
+  color: rgba(127, 0, 0, 0.95);
+  font-weight: 600;
+}
+
+.steps {
+  margin-top: 14px;
+}
+
+.steps h3 {
+  margin: 14px 0 6px;
+  font-size: 13px;
+  color: rgba(21, 23, 26, 0.90);
+}
+
+.steps p {
+  margin: 0 0 10px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.secondaryCta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--border-2);
+  background: #fff;
+  color: rgba(21, 23, 26, 0.92);
+  text-decoration: none;
+  font-weight: 700;
+  transition: transform 120ms ease, box-shadow 120ms ease;
+}
+
+.secondaryCta:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.08);
+}
+
+.secondaryCta:disabled {
+  opacity: 0.65;
+}
+
+/* RIGHT: Preview */
+.preview {
+  border-radius: 14px;
+  padding: 16px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+  min-width: 0;
+}
+
+.previewHeader {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: baseline;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(0,0,0,0.10);
+}
+
+.brand {
+  font-weight: 800;
+  color: rgba(21, 23, 26, 0.92);
+}
+
+.small {
+  font-size: 12px;
+  color: rgba(21, 23, 26, 0.60);
+}
+
+.previewBody {
+  padding-top: 12px;
+}
+
+.previewInfo {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(0,0,0,0.10);
+}
+
+.infoRow {
+  font-size: 12px;
+  color: rgba(21, 23, 26, 0.78);
+  margin: 2px 0;
+}
+
+.infoLabel {
+  font-weight: 700;
+  color: rgba(21, 23, 26, 0.82);
+}
+
+/* ✅ Item 3: o header (QTY/UNIT/SUBTOTAL) precisa usar o MESMO grid das rows */
+.previewTableHeader,
+.previewRow,
+.previewTotal {
+  display: grid;
+  grid-template-columns: 1fr 64px 110px 120px;
+  gap: 12px;
+  align-items: end;
+}
+
+.previewTableHeader {
+  margin-top: 12px;
+  padding: 8px 0 10px;
+  font-size: 12px;
+  font-weight: 800;
+  color: rgba(21, 23, 26, 0.65);
+  letter-spacing: 0.2px;
+  border-bottom: 1px solid rgba(0,0,0,0.10);
+}
+
+.previewEmpty {
+  padding: 16px 0;
+  color: rgba(21, 23, 26, 0.60);
+  font-size: 13px;
+}
+
+.previewRow {
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(0,0,0,0.08);
+  align-items: center;
+}
+
+.prodName {
+  font-size: 13px;
+  font-weight: 800;
+  color: rgba(21, 23, 26, 0.90);
+  line-height: 1.15;
+}
+
+.prodModel {
+  font-size: 11px;
+  color: rgba(21, 23, 26, 0.55);
+  margin-top: 2px;
+}
+
+.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: rgba(21, 23, 26, 0.82);
+  font-size: 12px;
+}
+
+.previewTotal {
+  padding-top: 12px;
+  margin-top: 10px;
+  border-top: 1px solid rgba(0,0,0,0.12);
+  align-items: center;
+}
+
+.totalLabel {
+  text-align: right;
+  font-weight: 900;
+  color: rgba(21, 23, 26, 0.85);
+  font-size: 13px;
+}
+
+.numStrong {
+  text-align: right;
+  font-weight: 900;
+  color: rgba(21, 23, 26, 0.92);
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+
+.previewNote {
+  margin-top: 12px;
+  font-size: 12px;
+  color: rgba(21, 23, 26, 0.60);
+}
+
+/* Mobile tweaks */
+@media (max-width: 520px) {
+  .page {
+    padding: 18px 14px 42px;
+  }
+
+  .previewTableHeader,
+  .previewRow,
+  .previewTotal {
+    grid-template-columns: 1fr 44px 86px 96px;
+    gap: 8px;
+  }
+
+  .grid {
+    gap: 16px;
+  }
+}

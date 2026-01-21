@@ -1,0 +1,68 @@
+.card{
+  display:flex;
+  flex-direction:column;
+  gap: 10px;
+  padding: 14px;
+  border-radius: 16px;
+  background: #ffffff;
+  border: 1px solid rgba(0,0,0,.10);
+  transition: transform .15s ease, box-shadow .15s ease;
+}
+.card:hover{
+  transform: translateY(-2px);
+  box-shadow: 0 10px 30px rgba(0,0,0,.10);
+}
+.media{
+  height: 120px;
+  border-radius: 12px;
+  /* replace orange/blue gradient with StarPro red themed gradient */
+  background: linear-gradient(135deg, rgba(177,0,0,.18), rgba(0,0,0,.06));
+  display:flex;
+  align-items:flex-start;
+  justify-content:flex-end;
+  padding: 10px;
+}
+.badge{
+  font-size: 12px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  /* StarPro badge styling */
+  background: rgba(177,0,0,.12);
+  border: 1px solid rgba(177,0,0,.22);
+  color: #b00000;
+}
+.body strong{
+  display:block;
+}
+.model{
+  font-size: 12px;
+  color: rgba(21,23,26,.65);
+}
+.desc{
+  font-size: 13px;
+  color: rgba(21,23,26,.75);
+}
+
+.priceBlock{
+  display:flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 8px;
+}
+
+.price{
+  color: #15171a;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.priceMuted{
+  font-size: 13px;
+  color: rgba(21,23,26,.55);
+  text-decoration: line-through;
+}
+
+.hint{
+  font-size: 12px;
+  color: rgba(21,23,26,.65);
+}

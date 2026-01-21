@@ -1,0 +1,56 @@
+.h1{ margin-bottom: 6px; }
+.p{
+  /* Use dark muted color for body text */
+  color: rgba(21,23,26,.65);
+  margin-bottom: 16px;
+}
+
+.card{
+  max-width: 520px;
+  padding: 16px;
+  border-radius: 16px;
+  /* Light panel for login card */
+  background: #ffffff;
+  border: 1px solid rgba(0,0,0,.08);
+}
+
+.label{
+  display:flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 10px;
+  /* Darker label text for legibility */
+  color: rgba(21,23,26,.8);
+  font-size: 13px;
+}
+
+.input{
+  padding: 12px 12px;
+  border-radius: 14px;
+  /* Inputs use a white background with dark text */
+  border: 1px solid rgba(0,0,0,.10);
+  background: #ffffff;
+  color: #15171a;
+}
+
+.primary{
+  padding: 12px 16px;
+  border-radius: 14px;
+  /* Solid StarPro red primary action */
+  border: 1px solid #b00000;
+  background: #b00000;
+  color: #ffffff;
+  cursor:pointer;
+}
+
+.status{
+  margin-top: 12px;
+  /* Status messages should use a dark muted color */
+  color: rgba(21,23,26,.75);
+  font-size: 13px;
+}
+.ok{
+  /* Successful status uses a green tone that contrasts on light backgrounds */
+  color: rgba(0,128,64,.85);
+}
+

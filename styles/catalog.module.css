@@ -1,0 +1,24 @@
+/* styles/catalog.module.css */
+
+.page{
+  background: #f5f6f8;
+  color: #15171a;
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 28px 18px 56px;
+}
+
+.header{
+  margin-bottom: 16px;
+}
+
+.h1{ margin: 0 0 6px; }
+.p{ color: rgba(21,23,26,.65); margin: 0; }
+
+.grid{
+  display:grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 18px;
+  margin-top: 16px;
+  align-items: stretch;
+}
