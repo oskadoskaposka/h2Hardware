@@ -1,4 +1,3 @@
-// app/login/page.tsx
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
@@ -182,23 +181,19 @@ export default function LoginPage() {
         <p className={styles.p}>Manage your profile details and view your orders.</p>
       )}
 
-      {/* ✅ DOIS CARDS LADO A LADO */}
       <div className="twoColWrap">
-        {/* CARD ESQUERDO: login / reset / profile */}
         <div className="starCard">
           <div className="starCardHeader">ACCOUNT</div>
           <div className="starCardBody">
-            {/* aviso só quando NÃO logado e NÃO reset */}
             {!isLogged && !resetMode ? (
               <div className="miniNotice">
                 <div className="miniNoticeTitle">Don’t have a login yet?</div>
                 <div className="miniNoticeText">
-                  Accounts are created by our team. Please contact StarPro to request access.
+                  Accounts are created by our team. Please contact H2 Hardware to request access.
                 </div>
               </div>
             ) : null}
 
-            {/* NOT LOGGED + NOT RESET */}
             {!isLogged && !resetMode ? (
               <form
                 onSubmit={(e) => {
@@ -256,7 +251,6 @@ export default function LoginPage() {
               </form>
             ) : null}
 
-            {/* RESET */}
             {!isLogged && resetMode ? (
               <>
                 <label className={styles.label}>
@@ -297,7 +291,6 @@ export default function LoginPage() {
               </>
             ) : null}
 
-            {/* LOGGED */}
             {isLogged ? (
               <>
                 <p className={styles.ok}>
@@ -387,54 +380,48 @@ export default function LoginPage() {
           </div>
         </div>
 
-        {/* CARD DIREITO: contato (sempre) */}
         <div className="starCard">
           <div className="starCardHeader">CONTACT US</div>
           <div className="starCardBody">
             <div style={{ fontWeight: 900, fontSize: 16, marginBottom: 8 }}>
-              StarPro Doors
+              H2 Hardware
             </div>
 
             <div className="cBlock">
               <div className="cLabel">Phone</div>
-              <div className="cValue">403.813.8890</div>
-              <div className="cValue">780.710.3826</div>
+              <div className="cValue">
+                <a className="cPhone" href="tel:+17809077827">
+                  +1 (780) 907-7827
+                </a>
+              </div>
             </div>
 
             <div className="cBlock">
               <div className="cLabel">Email</div>
-              <a className="cLink" href="mailto:sales@starprodoors.ca">
-                sales@starprodoors.ca
+              <a className="cLink" href="mailto:info@h2hardwareltd.com">
+                info@h2hardwareltd.com
               </a>
             </div>
 
             <div className="cBlock">
-              <div className="cLabel">Edmonton</div>
-              <div className="cValue">3820 97 ST Edmonton</div>
-              <div className="cValue">T6E 5S8</div>
-            </div>
-
-            <div className="cBlock">
-              <div className="cLabel">Calgary</div>
-              <div className="cValue">4510 10th Street NE, Calgary</div>
-              <div className="cValue">AB T2E 6K3</div>
+              <div className="cHint">
+                Need access to your account or help with pricing? Contact our team and we’ll assist you.
+              </div>
             </div>
           </div>
         </div>
       </div>
 
       <style jsx>{`
-        /* wrapper centralizado com dois cards */
         .twoColWrap {
           display: grid;
           grid-template-columns: minmax(320px, 520px) minmax(320px, 420px);
           gap: 28px;
-          justify-content: center; /* ✅ ambos no meio da página */
+          justify-content: center;
           align-items: start;
           margin-top: 10px;
         }
 
-        /* card StarPro (preto + vermelho) */
         .starCard {
           background: #fff;
           border: 1px solid #e5e7eb;
@@ -458,7 +445,6 @@ export default function LoginPage() {
           padding: 16px;
         }
 
-        /* mini aviso (discreto) */
         .miniNotice {
           background: rgba(185, 28, 28, 0.06);
           border: 1px solid rgba(185, 28, 28, 0.22);
@@ -482,10 +468,10 @@ export default function LoginPage() {
           line-height: 1.45;
         }
 
-        /* Contact styling */
         .cBlock {
           margin-top: 12px;
         }
+
         .cLabel {
           font-weight: 900;
           font-size: 12px;
@@ -494,12 +480,20 @@ export default function LoginPage() {
           color: #111;
           margin-bottom: 2px;
         }
+
         .cValue {
           font-size: 13px;
           font-weight: 700;
           color: #111;
           line-height: 1.35;
         }
+
+        .cPhone {
+          color: #111;
+          text-decoration: none;
+          font-weight: 700;
+        }
+
         .cLink {
           display: inline-block;
           margin-top: 2px;
@@ -508,11 +502,17 @@ export default function LoginPage() {
           color: #b91c1c;
           text-decoration: none;
         }
+
         .cLink:hover {
           text-decoration: underline;
         }
 
-        /* responsivo */
+        .cHint {
+          font-size: 13px;
+          line-height: 1.5;
+          color: #555;
+        }
+
         @media (max-width: 980px) {
           .twoColWrap {
             grid-template-columns: 1fr;

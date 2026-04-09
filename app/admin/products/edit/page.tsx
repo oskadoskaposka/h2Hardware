@@ -40,7 +40,7 @@ function normalizeTierRow(row: Partial<TierRow>): TierRow {
   const maxQty =
     maxQtyRaw === null || maxQtyRaw === undefined || maxQtyRaw === ("" as any)
       ? null
-      : Math.max(minQty, Math.floor(toNumberOr(maxQtyRaw, minQty)));
+      : Math.floor(toNumberOr(maxQtyRaw, minQty));
   const price = Math.max(0, toNumberOr(row.price, 0));
 
   const id = row.id ? String(row.id) : undefined;
@@ -56,7 +56,7 @@ function normalizeTiers(tiers: any[]): TierRow[] {
       minQty: t?.minQty,
       maxQty: t?.maxQty,
       price: t?.price,
-    })
+    }),
   );
 
   rows.sort((a, b) => a.minQty - b.minQty);
@@ -153,7 +153,9 @@ function AdminProductEditInner() {
         });
 
         const cats = Array.from(categories).sort((a, b) => a.localeCompare(b));
-        const subs = Array.from(subcategories).sort((a, b) => a.localeCompare(b));
+        const subs = Array.from(subcategories).sort((a, b) =>
+          a.localeCompare(b),
+        );
 
         setCategoryOptions(cats);
         setSubcategoryOptions(subs);
@@ -222,7 +224,9 @@ function AdminProductEditInner() {
           sortOrder: toNumberOr(data.sortOrder, 9999),
           stock: toNumberOr(data.stock, 0),
           imagesCsv: Array.isArray(data.images) ? data.images.join(", ") : "",
-          featuresCsv: Array.isArray(data.features) ? data.features.join(", ") : "",
+          featuresCsv: Array.isArray(data.features)
+            ? data.features.join(", ")
+            : "",
         });
 
         setTiers(normalizeTiers(loadedTiers));
@@ -234,7 +238,9 @@ function AdminProductEditInner() {
     })();
   }, [isAdmin, slugParam]);
 
-  function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) {
+  function handleChange(
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
+  ) {
     const { name, value, type } = e.target as any;
 
     if (type === "checkbox") {
@@ -247,7 +253,10 @@ function AdminProductEditInner() {
   }
 
   function addTier() {
-    setTiers((prev) => [...prev, { id: `t${prev.length + 1}`, minQty: 1, maxQty: null, price: 0 }]);
+    setTiers((prev) => [
+      ...prev,
+      { id: `t${prev.length + 1}`, minQty: 1, maxQty: null, price: 0 },
+    ]);
   }
 
   function removeTier(index: number) {
@@ -255,7 +264,11 @@ function AdminProductEditInner() {
   }
 
   function updateTier(index: number, patch: Partial<TierRow>) {
-    setTiers((prev) => prev.map((t, i) => (i === index ? normalizeTierRow({ ...t, ...patch }) : t)));
+    setTiers((prev) =>
+      prev.map((t, i) =>
+        i === index ? normalizeTierRow({ ...t, ...patch }) : t,
+      ),
+    );
   }
 
   function parseBulkTiers(text: string): TierRow[] {
@@ -277,7 +290,12 @@ function AdminProductEditInner() {
       if (left.endsWith("+")) {
         const min = toNumberOr(left.replace("+", "").trim(), NaN);
         if (!Number.isFinite(min)) continue;
-        out.push({ id: undefined, minQty: Math.floor(min), maxQty: null, price });
+        out.push({
+          id: undefined,
+          minQty: Math.floor(min),
+          maxQty: null,
+          price,
+        });
         continue;
       }
 
@@ -286,13 +304,23 @@ function AdminProductEditInner() {
         const min = toNumberOr(a, NaN);
         const max = toNumberOr(b, NaN);
         if (!Number.isFinite(min) || !Number.isFinite(max)) continue;
-        out.push({ id: undefined, minQty: Math.floor(min), maxQty: Math.floor(max), price });
+        out.push({
+          id: undefined,
+          minQty: Math.floor(min),
+          maxQty: Math.floor(max),
+          price,
+        });
         continue;
       }
 
       const minOnly = toNumberOr(left, NaN);
       if (Number.isFinite(minOnly)) {
-        out.push({ id: undefined, minQty: Math.floor(minOnly), maxQty: null, price });
+        out.push({
+          id: undefined,
+          minQty: Math.floor(minOnly),
+          maxQty: null,
+          price,
+        });
       }
     }
 
@@ -305,7 +333,10 @@ function AdminProductEditInner() {
       alert("No valid tiers found. Example:\n1-10=9\n11-20=8\n21+=7");
       return;
     }
-    const withIds = parsed.map((t, idx) => ({ ...t, id: t.id ?? `t${idx + 1}` }));
+    const withIds = parsed.map((t, idx) => ({
+      ...t,
+      id: t.id ?? `t${idx + 1}`,
+    }));
     setTiers(withIds);
     setBulkTiersText("");
   }
@@ -331,8 +362,14 @@ function AdminProductEditInner() {
       }
 
       // category/subcategory are required (UI), mapped to Firestore series/category
-      const category = canonicalizeFromOptions(String(form.category || ""), categoryOptions);
-      const subcategory = canonicalizeFromOptions(String(form.subcategory || ""), subcategoryOptions);
+      const category = canonicalizeFromOptions(
+        String(form.category || ""),
+        categoryOptions,
+      );
+      const subcategory = canonicalizeFromOptions(
+        String(form.subcategory || ""),
+        subcategoryOptions,
+      );
 
       if (!category) {
         alert("Category is required.");
@@ -365,12 +402,20 @@ function AdminProductEditInner() {
         .map((s) => s.trim())
         .filter(Boolean);
 
-      const normalizedTiers = normalizeTiers(tiers).map((t, idx) => ({
-        id: t.id ?? `t${idx + 1}`,
-        minQty: t.minQty,
-        maxQty: t.maxQty,
-        price: t.price,
-      }));
+      const normalizedTiers = normalizeTiers(tiers).map((t, idx) => {
+        if (t.maxQty !== null && t.maxQty < t.minQty) {
+          throw new Error(
+            `Tier ${t.id ?? `t${idx + 1}`}: Max qty cannot be less than Min qty.`,
+          );
+        }
+
+        return {
+          id: t.id ?? `t${idx + 1}`,
+          minQty: t.minQty,
+          maxQty: t.maxQty,
+          price: t.price,
+        };
+      });
 
       const payload: any = {
         slug,
@@ -409,11 +454,23 @@ function AdminProductEditInner() {
       }
 
       // keep options fresh (in case admin added new values)
-      if (category && !categoryOptions.some((c) => c.toLowerCase() === category.toLowerCase())) {
-        setCategoryOptions((p) => [...p, category].sort((a, b) => a.localeCompare(b)));
+      if (
+        category &&
+        !categoryOptions.some((c) => c.toLowerCase() === category.toLowerCase())
+      ) {
+        setCategoryOptions((p) =>
+          [...p, category].sort((a, b) => a.localeCompare(b)),
+        );
       }
-      if (subcategory && !subcategoryOptions.some((c) => c.toLowerCase() === subcategory.toLowerCase())) {
-        setSubcategoryOptions((p) => [...p, subcategory].sort((a, b) => a.localeCompare(b)));
+      if (
+        subcategory &&
+        !subcategoryOptions.some(
+          (c) => c.toLowerCase() === subcategory.toLowerCase(),
+        )
+      ) {
+        setSubcategoryOptions((p) =>
+          [...p, subcategory].sort((a, b) => a.localeCompare(b)),
+        );
       }
 
       alert("Saved!");
@@ -431,7 +488,14 @@ function AdminProductEditInner() {
 
   return (
     <main style={{ padding: 24, maxWidth: 980, margin: "0 auto" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", gap: 16, alignItems: "center" }}>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          gap: 16,
+          alignItems: "center",
+        }}
+      >
         <h1 style={{ margin: 0 }}>{title}</h1>
         <button onClick={() => router.push("/admin/products")} type="button">
           Back to list
@@ -440,10 +504,14 @@ function AdminProductEditInner() {
 
       <form onSubmit={handleSubmit} style={{ marginTop: 16 }}>
         {/* Basics */}
-        <section style={{ border: "1px solid #e5e5e5", borderRadius: 10, padding: 16 }}>
+        <section
+          style={{ border: "1px solid #e5e5e5", borderRadius: 10, padding: 16 }}
+        >
           <h2 style={{ marginTop: 0 }}>Basics</h2>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          <div
+            style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}
+          >
             <label>
               Slug (Document ID)
               <input
@@ -458,7 +526,13 @@ function AdminProductEditInner() {
 
             <label>
               Name <span style={{ color: "#b00" }}>*</span>
-              <input name="name" value={form.name} onChange={handleChange} required style={{ width: "100%" }} />
+              <input
+                name="name"
+                value={form.name}
+                onChange={handleChange}
+                required
+                style={{ width: "100%" }}
+              />
             </label>
 
             {/* Label changed: Series -> Category (Firestore: series) */}
@@ -471,7 +545,9 @@ function AdminProductEditInner() {
                 required
                 list="category-options"
                 style={{ width: "100%" }}
-                placeholder={loadingOptions ? "Loading categories..." : "e.g. Garage Doors"}
+                placeholder={
+                  loadingOptions ? "Loading categories..." : "e.g. Garage Doors"
+                }
               />
               <datalist id="category-options">
                 {categoryOptions.map((c) => (
@@ -479,7 +555,9 @@ function AdminProductEditInner() {
                 ))}
               </datalist>
               <div style={{ fontSize: 12, color: "#666", marginTop: 4 }}>
-                {categoryOptions.length ? "Type to search or add a new Category." : "Type to add a Category."}
+                {categoryOptions.length
+                  ? "Type to search or add a new Category."
+                  : "Type to add a Category."}
               </div>
             </label>
 
@@ -493,7 +571,11 @@ function AdminProductEditInner() {
                 required
                 list="subcategory-options"
                 style={{ width: "100%" }}
-                placeholder={loadingOptions ? "Loading subcategories..." : "e.g. Standard / Premium / etc"}
+                placeholder={
+                  loadingOptions
+                    ? "Loading subcategories..."
+                    : "e.g. Standard / Premium / etc"
+                }
               />
               <datalist id="subcategory-options">
                 {subcategoryOptions.map((c) => (
@@ -501,7 +583,9 @@ function AdminProductEditInner() {
                 ))}
               </datalist>
               <div style={{ fontSize: 12, color: "#666", marginTop: 4 }}>
-                {subcategoryOptions.length ? "Type to search or add a new Subcategory." : "Type to add a Subcategory."}
+                {subcategoryOptions.length
+                  ? "Type to search or add a new Subcategory."
+                  : "Type to add a Subcategory."}
               </div>
             </label>
 
@@ -516,8 +600,20 @@ function AdminProductEditInner() {
               />
             </label>
 
-            <label style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 22 }}>
-              <input name="active" type="checkbox" checked={form.active} onChange={handleChange as any} />
+            <label
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                marginTop: 22,
+              }}
+            >
+              <input
+                name="active"
+                type="checkbox"
+                checked={form.active}
+                onChange={handleChange as any}
+              />
               Active
             </label>
 
@@ -536,11 +632,25 @@ function AdminProductEditInner() {
         </section>
 
         {/* Pricing */}
-        <section style={{ border: "1px solid #e5e5e5", borderRadius: 10, padding: 16, marginTop: 16 }}>
+        <section
+          style={{
+            border: "1px solid #e5e5e5",
+            borderRadius: 10,
+            padding: 16,
+            marginTop: 16,
+          }}
+        >
           <h2 style={{ marginTop: 0 }}>Pricing</h2>
 
           {/* ✅ Mantém grid, mas remove Currency */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, alignItems: "end" }}>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr 1fr",
+              gap: 12,
+              alignItems: "end",
+            }}
+          >
             <label>
               Public price (unit) — $ <span style={{ color: "#b00" }}>*</span>
               <input
@@ -568,10 +678,42 @@ function AdminProductEditInner() {
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>
                 <tr>
-                  <th style={{ textAlign: "left", padding: 8, borderBottom: "1px solid #eee" }}>Tier ID</th>
-                  <th style={{ textAlign: "left", padding: 8, borderBottom: "1px solid #eee" }}>Min qty</th>
-                  <th style={{ textAlign: "left", padding: 8, borderBottom: "1px solid #eee" }}>Max qty</th>
-                  <th style={{ textAlign: "left", padding: 8, borderBottom: "1px solid #eee" }}>Unit price ($)</th>
+                  <th
+                    style={{
+                      textAlign: "left",
+                      padding: 8,
+                      borderBottom: "1px solid #eee",
+                    }}
+                  >
+                    Tier ID
+                  </th>
+                  <th
+                    style={{
+                      textAlign: "left",
+                      padding: 8,
+                      borderBottom: "1px solid #eee",
+                    }}
+                  >
+                    Min qty
+                  </th>
+                  <th
+                    style={{
+                      textAlign: "left",
+                      padding: 8,
+                      borderBottom: "1px solid #eee",
+                    }}
+                  >
+                    Max qty
+                  </th>
+                  <th
+                    style={{
+                      textAlign: "left",
+                      padding: 8,
+                      borderBottom: "1px solid #eee",
+                    }}
+                  >
+                    Unit price ($)
+                  </th>
                   <th style={{ padding: 8, borderBottom: "1px solid #eee" }} />
                 </tr>
               </thead>
@@ -579,53 +721,91 @@ function AdminProductEditInner() {
                 {tiers.length === 0 ? (
                   <tr>
                     <td colSpan={5} style={{ padding: 10, color: "#666" }}>
-                      No tiers yet. Public price will be used for all quantities.
+                      No tiers yet. Public price will be used for all
+                      quantities.
                     </td>
                   </tr>
                 ) : (
                   tiers.map((t, idx) => (
                     <tr key={`${t.id ?? "tier"}-${idx}`}>
-                      <td style={{ padding: 8, borderBottom: "1px solid #f3f3f3" }}>
+                      <td
+                        style={{
+                          padding: 8,
+                          borderBottom: "1px solid #f3f3f3",
+                        }}
+                      >
                         <input
                           value={t.id ?? ""}
-                          onChange={(e) => updateTier(idx, { id: e.target.value })}
+                          onChange={(e) =>
+                            updateTier(idx, { id: e.target.value })
+                          }
                           placeholder="t1"
                           style={{ width: "100%" }}
                         />
                       </td>
 
-                      <td style={{ padding: 8, borderBottom: "1px solid #f3f3f3" }}>
+                      <td
+                        style={{
+                          padding: 8,
+                          borderBottom: "1px solid #f3f3f3",
+                        }}
+                      >
                         <input
                           type="number"
                           value={t.minQty}
-                          onChange={(e) => updateTier(idx, { minQty: Number(e.target.value) })}
+                          onChange={(e) =>
+                            updateTier(idx, { minQty: Number(e.target.value) })
+                          }
                           style={{ width: "100%" }}
                         />
                       </td>
 
-                      <td style={{ padding: 8, borderBottom: "1px solid #f3f3f3" }}>
+                      <td
+                        style={{
+                          padding: 8,
+                          borderBottom: "1px solid #f3f3f3",
+                        }}
+                      >
                         <input
                           type="number"
                           value={t.maxQty ?? ""}
                           onChange={(e) =>
-                            updateTier(idx, { maxQty: e.target.value === "" ? null : Number(e.target.value) })
+                            updateTier(idx, {
+                              maxQty:
+                                e.target.value === ""
+                                  ? null
+                                  : Number(e.target.value),
+                            })
                           }
                           placeholder="(no limit)"
                           style={{ width: "100%" }}
                         />
                       </td>
 
-                      <td style={{ padding: 8, borderBottom: "1px solid #f3f3f3" }}>
+                      <td
+                        style={{
+                          padding: 8,
+                          borderBottom: "1px solid #f3f3f3",
+                        }}
+                      >
                         <input
                           type="number"
                           step="0.01"
                           value={t.price}
-                          onChange={(e) => updateTier(idx, { price: Number(e.target.value) })}
+                          onChange={(e) =>
+                            updateTier(idx, { price: Number(e.target.value) })
+                          }
                           style={{ width: "100%" }}
                         />
                       </td>
 
-                      <td style={{ padding: 8, borderBottom: "1px solid #f3f3f3", textAlign: "right" }}>
+                      <td
+                        style={{
+                          padding: 8,
+                          borderBottom: "1px solid #f3f3f3",
+                          textAlign: "right",
+                        }}
+                      >
                         <button type="button" onClick={() => removeTier(idx)}>
                           Remove
                         </button>
@@ -644,7 +824,8 @@ function AdminProductEditInner() {
                 <div style={{ color: "#666", marginBottom: 8 }}>
                   Paste one per line. Examples:
                   <br />
-                  <code>1-10=9</code>, <code>11-20=8</code>, <code>21+=7</code>, <code>50=6.5</code>
+                  <code>1-10=9</code>, <code>11-20=8</code>, <code>21+=7</code>,{" "}
+                  <code>50=6.5</code>
                 </div>
                 <textarea
                   value={bulkTiersText}
@@ -666,7 +847,14 @@ function AdminProductEditInner() {
         </section>
 
         {/* Content */}
-        <section style={{ border: "1px solid #e5e5e5", borderRadius: 10, padding: 16, marginTop: 16 }}>
+        <section
+          style={{
+            border: "1px solid #e5e5e5",
+            borderRadius: 10,
+            padding: 16,
+            marginTop: 16,
+          }}
+        >
           <h2 style={{ marginTop: 0 }}>Content</h2>
 
           <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 12 }}>

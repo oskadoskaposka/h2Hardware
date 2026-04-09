@@ -49,14 +49,29 @@ export default function Header() {
       {/* TOP BAR */}
       <div className={styles.topBar}>
         <div className={`${styles.inner} container`}>
-          <Link href="/" className={styles.brand} aria-label="StarPro Home">
-            <img
-              src="/starpro-logo.png"
-              alt="StarPro Doors"
-              className={styles.logo}
-            />
+          <Link
+            href="/"
+            className={styles.brand}
+            aria-label="H2 Hardware Home"
+            style={{ textDecoration: "none" }}
+          >
+            <span
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
+                fontWeight: 900,
+                fontSize: 28,
+                letterSpacing: 1.2,
+                textTransform: "uppercase",
+                textDecoration: "none",
+                whiteSpace: "nowrap",
+              }}
+            >
+              <span style={{ color: "#b91c1c" }}>H2</span>
+              <span style={{ color: "#ffffff" }}>Hardware</span>
+            </span>
           </Link>
-
           <div className={styles.topLinks}>
             {isAdmin && (
               <>
@@ -147,7 +162,11 @@ export default function Header() {
             {/* ✅ esconder HOME (removido) */}
 
             {/* ✅ CATALOG agora vai para Home */}
-            <Link href="/" className={styles.navItem} aria-current={isCurrent("/")}>
+            <Link
+              href="/"
+              className={styles.navItem}
+              aria-current={isCurrent("/")}
+            >
               CATALOG
             </Link>
 

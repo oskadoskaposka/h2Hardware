@@ -3,6 +3,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   getFirestore,
   collection,
@@ -38,21 +39,46 @@ type Product = {
   features: string[];
 };
 
+type CarouselLinkType = "filter" | "product" | "page" | "url";
+
 type CarouselSlide = {
-  // se não tiver imagem ainda, pode ficar undefined
   src?: string;
   alt: string;
 
-  // ao clicar, aplica filtro
+  title: string;
+  subtitle?: string;
+
+  linkType?: CarouselLinkType;
+
+  // filter
   series?: string;
   category?: string;
 
-  // texto do placeholder
-  title: string;
-  subtitle?: string;
+  // product
+  productSlug?: string;
+
+  // internal page
+  pagePath?: string;
+
+  // external url
+  url?: string;
 };
 
+function normalizeLinkType(v: any): CarouselLinkType {
+  const s = String(v ?? "").toLowerCase().trim();
+  if (s === "product" || s === "page" || s === "url") return s;
+  return "filter";
+}
+
+function normalizeInternalPath(p: string) {
+  const v = String(p ?? "").trim();
+  if (!v) return "";
+  return v.startsWith("/") ? v : `/${v}`;
+}
+
 export default function CatalogPage() {
+  const router = useRouter();
+
   const [qText, setQText] = useState("");
 
   // ✅ Series (Category principal)
@@ -68,34 +94,34 @@ export default function CatalogPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  // ✅ Carrossel: fallback estático (o que você já tinha)
+  // ✅ Carrossel: fallback estático
   const fallbackSlides: CarouselSlide[] = [
     {
       alt: "Featured products",
       title: "Featured Products",
       subtitle: "Click to filter by category",
+      linkType: "filter",
       series: "Standard",
     },
     {
       alt: "Premium collection",
       title: "Premium Collection",
       subtitle: "Click to filter by category",
+      linkType: "filter",
       series: "Carriage",
     },
     {
       alt: "Aluminum series",
       title: "Aluminum Series",
       subtitle: "Click to filter by category",
+      linkType: "filter",
       series: "Aluminum",
     },
   ];
 
-  // ✅ Carrossel vindo do Firestore (sem mexer em layout/CSS)
   const [slides, setSlides] = useState<CarouselSlide[]>(fallbackSlides);
-
   const [carouselIndex, setCarouselIndex] = useState(0);
 
-  // ✅ Carrega produtos (igual ao seu)
   useEffect(() => {
     (async () => {
       try {
@@ -105,7 +131,11 @@ export default function CatalogPage() {
         const db = getFirestore(app);
         const col = collection(db, "products");
 
-        const qy = query(col, where("active", "==", true), orderBy("sortOrder", "asc"));
+        const qy = query(
+          col,
+          where("active", "==", true),
+          orderBy("sortOrder", "asc")
+        );
         const snap = await getDocs(qy);
 
         const list: Product[] = snap.docs.map((d) => {
@@ -135,7 +165,8 @@ export default function CatalogPage() {
 
         list.sort(
           (a, b) =>
-            (a.sortOrder ?? 9999) - (b.sortOrder ?? 9999) || a.name.localeCompare(b.name)
+            (a.sortOrder ?? 9999) - (b.sortOrder ?? 9999) ||
+            a.name.localeCompare(b.name)
         );
 
         setProducts(list);
@@ -147,7 +178,7 @@ export default function CatalogPage() {
     })();
   }, []);
 
-  // ✅ Carrega slides do Firestore (somente dados; layout fica intacto)
+  // ✅ Carrega slides do Firestore com suporte ao schema novo
   useEffect(() => {
     (async () => {
       try {
@@ -155,40 +186,44 @@ export default function CatalogPage() {
         const ref = doc(db, "site_config", "catalog_carousel");
         const snap = await getDoc(ref);
 
-        if (!snap.exists()) {
-          // fica no fallback
-          return;
-        }
+        if (!snap.exists()) return;
 
         const data = snap.data() as any;
         const raw = data?.slides;
 
-        if (!Array.isArray(raw) || raw.length === 0) {
-          // fica no fallback
-          return;
-        }
+        if (!Array.isArray(raw) || raw.length === 0) return;
 
-        // Sanitiza sem mudar o formato esperado pelo layout
         const cleaned: CarouselSlide[] = raw
           .map((s: any) => ({
-            src: s?.src ? String(s.src) : undefined,
+            src: s?.src ? String(s.src).trim() : undefined,
             alt: String(s?.alt ?? s?.title ?? "Carousel slide"),
-            series: s?.series ? String(s.series) : undefined,
-            category: s?.category ? String(s.category) : undefined,
-            title: String(s?.title ?? ""),
-            subtitle: s?.subtitle ? String(s.subtitle) : undefined,
+            title: String(s?.title ?? "").trim(),
+            subtitle: s?.subtitle ? String(s.subtitle).trim() : undefined,
+            linkType: normalizeLinkType(s?.linkType),
+
+            series: s?.series ? String(s.series).trim() : undefined,
+            category: s?.category ? String(s.category).trim() : undefined,
+
+            productSlug: s?.productSlug
+              ? String(s.productSlug).trim()
+              : undefined,
+
+            pagePath: s?.pagePath
+              ? normalizeInternalPath(String(s.pagePath))
+              : undefined,
+
+            url: s?.url ? String(s.url).trim() : undefined,
           }))
-          .filter((s) => s.title && s.alt); // mantém mínimo
+          .filter((s) => s.title && s.alt);
 
         if (cleaned.length > 0) {
           setSlides(cleaned);
-          setCarouselIndex(0); // reset pra não ficar index inválido
+          setCarouselIndex(0);
         }
       } catch {
         // silencioso: mantém fallback
       }
     })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const seriesStats = useMemo(() => {
@@ -238,7 +273,8 @@ export default function CatalogPage() {
 
       if (!q) return true;
 
-      const hay = `${p.name} ${p.series} ${p.category ?? ""} ${p.description ?? ""} ${p.slug}`.toLowerCase();
+      const hay =
+        `${p.name} ${p.series} ${p.category ?? ""} ${p.description ?? ""} ${p.slug}`.toLowerCase();
       return hay.includes(q);
     });
   }, [products, qText, activeSeries, activeCategory]);
@@ -271,6 +307,71 @@ export default function CatalogPage() {
     else setActiveCategory("all");
 
     setQText("");
+  }
+
+  function handleSlideClick(slide: CarouselSlide) {
+    const linkType = normalizeLinkType(slide.linkType);
+
+    if (linkType === "filter") {
+      applySlideFilter(slide);
+      return;
+    }
+
+    if (linkType === "page") {
+      const pagePath = normalizeInternalPath(slide.pagePath ?? "");
+      if (pagePath) router.push(pagePath);
+      return;
+    }
+
+    if (linkType === "product") {
+      const slug = String(slide.productSlug ?? "").trim();
+      if (slug) {
+        router.push(`/product?slug=${encodeURIComponent(slug)}`);
+      }
+      return;
+    }
+
+    if (linkType === "url") {
+      const url = String(slide.url ?? "").trim();
+      if (url) {
+        window.location.href = url;
+      }
+    }
+  }
+
+  function getSlideHint(slide: CarouselSlide) {
+    const linkType = normalizeLinkType(slide.linkType);
+
+    if (linkType === "filter") {
+      return (
+        <>
+          Click to filter: <strong>{slide.series ?? "All"}</strong>
+          {slide.category ? ` / ${slide.category}` : ""}
+        </>
+      );
+    }
+
+    if (linkType === "page") {
+      return (
+        <>
+          Open page: <strong>{normalizeInternalPath(slide.pagePath ?? "") || "/"}</strong>
+        </>
+      );
+    }
+
+    if (linkType === "product") {
+      return (
+        <>
+          View product: <strong>{slide.productSlug ?? "product"}</strong>
+        </>
+      );
+    }
+
+    return (
+      <>
+        Open link
+      </>
+    );
   }
 
   function formatMoney(currency: string, value: number) {
@@ -308,10 +409,7 @@ export default function CatalogPage() {
             {seriesStats.map((it) => {
               const isActive = activeSeries === it.series;
               const isOpen = openSeries === it.series;
-
-              // ✅ corrigido aqui
               const catList = categoryStatsBySeries.get(it.series) ?? [];
-
               const totalInSeries = products.filter((p) => p.series === it.series).length;
 
               return (
@@ -359,7 +457,6 @@ export default function CatalogPage() {
         </aside>
 
         <section className="content">
-          {/* ✅ Carrossel (mesmo layout/CSS; só muda a origem dos slides) */}
           <div className="carousel">
             <button
               className="nav prev"
@@ -382,7 +479,7 @@ export default function CatalogPage() {
                     key={idx}
                     type="button"
                     className="slide"
-                    onClick={() => applySlideFilter(s)}
+                    onClick={() => handleSlideClick(s)}
                   >
                     {s.src ? (
                       // eslint-disable-next-line @next/next/no-img-element
@@ -391,9 +488,7 @@ export default function CatalogPage() {
                       <div className="slidePlaceholder">
                         <div className="phTitle">{s.title}</div>
                         {s.subtitle ? <div className="phSub">{s.subtitle}</div> : null}
-                        <div className="phHint">
-                          Click to filter: <strong>{s.series ?? "All"}</strong>
-                        </div>
+                        <div className="phHint">{getSlideHint(s)}</div>
                       </div>
                     )}
                   </button>
@@ -611,7 +706,6 @@ export default function CatalogPage() {
           min-width: 0;
         }
 
-        /* ✅ CARROSSEL */
         .carousel {
           position: relative;
           width: 100%;
@@ -639,6 +733,13 @@ export default function CatalogPage() {
           background: transparent;
           cursor: pointer;
           position: relative;
+        }
+
+        .slide img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          display: block;
         }
 
         .slidePlaceholder {

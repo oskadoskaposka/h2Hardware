@@ -18,7 +18,7 @@ export default function Footer() {
         </div>
 
         <div className={styles.column}>
-          <h4 className={styles.title}>About StarPro</h4>
+          <h4 className={styles.title}>About H2 Hardware</h4>
           <Link href="/about" className={styles.link}>
             About Us
           </Link>
@@ -50,7 +50,7 @@ export default function Footer() {
 
       <div className={styles.bottom}>
         <div className={styles.bottomContent}>
-          <div className={styles.bottomLeft}>© {year} StarPro Doors</div>
+          <div className={styles.bottomLeft}>© {year} H2 Hardware</div>
           <div className={styles.bottomRight}>
             We accept major credit cards
           </div>

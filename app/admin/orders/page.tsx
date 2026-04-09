@@ -3,8 +3,15 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { onAuthStateChanged } from "firebase/auth";
-import { collection, getDocs, getFirestore, orderBy, query } from "firebase/firestore";
-
+import {
+  collection,
+  deleteDoc,
+  doc,
+  getDocs,
+  getFirestore,
+  orderBy,
+  query,
+} from "firebase/firestore";
 import { auth, app } from "../../../lib/firebaseClient";
 import GenerateQuotePdfButton from "../../../components/GenerateQuotePdfButton";
 
@@ -90,7 +97,9 @@ export default function AdminOrdersPage() {
   const [page, setPage] = useState(1);
 
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (u) => setIsAdmin(isAdminEmail(u?.email)));
+    const unsub = onAuthStateChanged(auth, (u) =>
+      setIsAdmin(isAdminEmail(u?.email)),
+    );
     return () => unsub();
   }, []);
 
@@ -146,7 +155,7 @@ export default function AdminOrdersPage() {
 
   const totalPages = useMemo(
     () => Math.max(1, Math.ceil(filteredOrders.length / PAGE_SIZE)),
-    [filteredOrders.length]
+    [filteredOrders.length],
   );
 
   const pageSafe = Math.min(Math.max(page, 1), totalPages);
@@ -194,32 +203,95 @@ export default function AdminOrdersPage() {
     return { customer, items, filename };
   }
 
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  async function handleDeleteOrder(orderId: string) {
+    const ok = window.confirm(
+      `Delete order ${orderId.slice(0, 8).toUpperCase()}?\n\nThis cannot be undone.`,
+    );
+    if (!ok) return;
+
+    try {
+      setDeletingId(orderId);
+      setError(null);
+
+      const db = getFirestore(app);
+      await deleteDoc(doc(db, "orders", orderId));
+
+      // remove from UI immediately
+      setOrders((prev) => prev.filter((o) => o.id !== orderId));
+    } catch (e: any) {
+      setError(e?.message ?? "Failed to delete order.");
+    } finally {
+      setDeletingId(null);
+    }
+  }
+
   if (!isAdmin) return <p style={{ padding: 24 }}>Access denied.</p>;
 
   return (
     <main style={{ padding: 24, background: "#f4f6f8", minHeight: "70vh" }}>
       <div style={{ maxWidth: 1180, margin: "0 auto", padding: "0 18px" }}>
         {/* Header */}
-        <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12 }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "baseline",
+            justifyContent: "space-between",
+            gap: 12,
+          }}
+        >
           <div>
-            <h1 style={{ margin: 0, fontSize: 26, fontWeight: 900, color: "#0f172a", letterSpacing: -0.2 }}>
+            <h1
+              style={{
+                margin: 0,
+                fontSize: 26,
+                fontWeight: 900,
+                color: "#0f172a",
+                letterSpacing: -0.2,
+              }}
+            >
               Orders
             </h1>
-            <div style={{ marginTop: 6, color: "#64748b", fontSize: 13 }}>{headerText}</div>
+            <div style={{ marginTop: 6, color: "#64748b", fontSize: 13 }}>
+              {headerText}
+            </div>
           </div>
 
           <div style={{ display: "flex", gap: 12 }}>
-            <Link href="/admin/products" style={{ fontWeight: 800, color: "#b91c1c", textDecoration: "none" }}>
+            <Link
+              href="/admin/products"
+              style={{
+                fontWeight: 800,
+                color: "#b91c1c",
+                textDecoration: "none",
+              }}
+            >
               Manage products
             </Link>
-            <Link href="/catalog" style={{ fontWeight: 800, color: "#b91c1c", textDecoration: "none" }}>
+            <Link
+              href="/catalog"
+              style={{
+                fontWeight: 800,
+                color: "#b91c1c",
+                textDecoration: "none",
+              }}
+            >
               Catalog
             </Link>
           </div>
         </div>
 
         {/* Search + Pagination */}
-        <div style={{ marginTop: 14, display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+        <div
+          style={{
+            marginTop: 14,
+            display: "flex",
+            gap: 10,
+            flexWrap: "wrap",
+            alignItems: "center",
+          }}
+        >
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -254,8 +326,11 @@ export default function AdminOrdersPage() {
               Prev
             </button>
 
-            <div style={{ color: "#64748b", fontSize: 13, whiteSpace: "nowrap" }}>
-              Page <strong style={{ color: "#0f172a" }}>{pageSafe}</strong> / {totalPages} · {PAGE_SIZE}/page
+            <div
+              style={{ color: "#64748b", fontSize: 13, whiteSpace: "nowrap" }}
+            >
+              Page <strong style={{ color: "#0f172a" }}>{pageSafe}</strong> /{" "}
+              {totalPages} · {PAGE_SIZE}/page
             </div>
 
             <button
@@ -293,14 +368,29 @@ export default function AdminOrdersPage() {
         ) : loading ? (
           <div style={{ marginTop: 16, color: "#64748b" }}>Loading…</div>
         ) : filteredOrders.length === 0 ? (
-          <div style={{ marginTop: 16, background: "#fff", border: "1px solid #e2e8f0", borderRadius: 12, padding: 14 }}>
-            <div style={{ fontWeight: 900, color: "#0f172a" }}>No orders found</div>
-            <div style={{ marginTop: 6, color: "#64748b", fontSize: 13 }}>Try a different search.</div>
+          <div
+            style={{
+              marginTop: 16,
+              background: "#fff",
+              border: "1px solid #e2e8f0",
+              borderRadius: 12,
+              padding: 14,
+            }}
+          >
+            <div style={{ fontWeight: 900, color: "#0f172a" }}>
+              No orders found
+            </div>
+            <div style={{ marginTop: 6, color: "#64748b", fontSize: 13 }}>
+              Try a different search.
+            </div>
           </div>
         ) : (
           <div style={{ marginTop: 14, display: "grid", gap: 10 }}>
             {pagedOrders.map((o) => {
-              const dt = o.createdAt?.toDate?.() instanceof Date ? o.createdAt.toDate() : null;
+              const dt =
+                o.createdAt?.toDate?.() instanceof Date
+                  ? o.createdAt.toDate()
+                  : null;
               const pdf = buildPdfProps(o);
 
               const rows = (o.items || []).map((it) => {
@@ -321,8 +411,15 @@ export default function AdminOrdersPage() {
                 };
               });
 
-              const itemsSum = rows.reduce((acc, r) => acc + safeNumber(r.lineTotal), 0);
-              const showMismatch = !approxEqual(itemsSum, safeNumber(o.total), 0.05);
+              const itemsSum = rows.reduce(
+                (acc, r) => acc + safeNumber(r.lineTotal),
+                0,
+              );
+              const showMismatch = !approxEqual(
+                itemsSum,
+                safeNumber(o.total),
+                0.05,
+              );
 
               return (
                 <div
@@ -336,39 +433,88 @@ export default function AdminOrdersPage() {
                   }}
                 >
                   {/* Card header */}
-                  <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "flex-start", flexWrap: "wrap" }}>
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      gap: 12,
+                      alignItems: "flex-start",
+                      flexWrap: "wrap",
+                    }}
+                  >
                     <div style={{ minWidth: 260 }}>
-                      <div style={{ fontWeight: 950 as any, color: "#0f172a", fontSize: 16, letterSpacing: 0.2 }}>
+                      <div
+                        style={{
+                          fontWeight: 950 as any,
+                          color: "#0f172a",
+                          fontSize: 16,
+                          letterSpacing: 0.2,
+                        }}
+                      >
                         {orderLabel(o)}
                       </div>
 
-                      <div style={{ marginTop: 3, color: "#64748b", fontSize: 12, lineHeight: 1.2 }}>
-                        <span style={{ fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" }}>
+                      <div
+                        style={{
+                          marginTop: 3,
+                          color: "#64748b",
+                          fontSize: 12,
+                          lineHeight: 1.2,
+                        }}
+                      >
+                        <span
+                          style={{
+                            fontFamily:
+                              "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
+                          }}
+                        >
                           {o.id}
                         </span>
                       </div>
 
-                      <div style={{ marginTop: 8, color: "#64748b", fontSize: 13 }}>
+                      <div
+                        style={{ marginTop: 8, color: "#64748b", fontSize: 13 }}
+                      >
                         <span style={{ color: "#0f172a", fontWeight: 800 }}>
                           {o.customer?.email || o.userEmail || o.uid}
                         </span>
-                        {o.customer?.name ? <span> · {o.customer.name}</span> : null}
+                        {o.customer?.name ? (
+                          <span> · {o.customer.name}</span>
+                        ) : null}
                       </div>
 
-                      <div style={{ marginTop: 4, color: "#94a3b8", fontSize: 12 }}>
+                      <div
+                        style={{ marginTop: 4, color: "#94a3b8", fontSize: 12 }}
+                      >
                         {dt ? dt.toLocaleString("en-CA") : "—"}
                       </div>
                     </div>
 
                     <div style={{ textAlign: "right" }}>
-                      <div style={{ fontWeight: 950 as any, color: "#0f172a", fontSize: 18 }}>
+                      <div
+                        style={{
+                          fontWeight: 950 as any,
+                          color: "#0f172a",
+                          fontSize: 18,
+                        }}
+                      >
                         {formatMoney(o.currency, o.total)}
                       </div>
-                      <div style={{ marginTop: 2, color: "#64748b", fontSize: 12 }}>
+                      <div
+                        style={{ marginTop: 2, color: "#64748b", fontSize: 12 }}
+                      >
                         {rows.length} item(s)
                       </div>
 
-                      <div style={{ marginTop: 8, display: "flex", justifyContent: "flex-end" }}>
+                      <div
+                        style={{
+                          marginTop: 8,
+                          display: "flex",
+                          justifyContent: "flex-end",
+                          gap: 10,
+                          flexWrap: "wrap",
+                        }}
+                      >
                         <GenerateQuotePdfButton
                           items={pdf.items as any}
                           customer={pdf.customer}
@@ -378,12 +524,39 @@ export default function AdminOrdersPage() {
                           title="StarPro"
                           subtitle={`Order / Copy — ${orderLabel(o)}`}
                         />
+
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteOrder(o.id)}
+                          disabled={deletingId === o.id}
+                          style={{
+                            height: 40,
+                            padding: "0 12px",
+                            borderRadius: 10,
+                            border: "1px solid rgba(185,28,28,.35)",
+                            background:
+                              deletingId === o.id ? "#fee2e2" : "#fff",
+                            cursor:
+                              deletingId === o.id ? "not-allowed" : "pointer",
+                            fontWeight: 900,
+                            color: "#b91c1c",
+                          }}
+                          title="Delete order"
+                        >
+                          {deletingId === o.id ? "Deleting…" : "Delete"}
+                        </button>
                       </div>
                     </div>
                   </div>
 
                   {/* Items list */}
-                  <div style={{ marginTop: 10, borderTop: "1px solid #f1f5f9", paddingTop: 10 }}>
+                  <div
+                    style={{
+                      marginTop: 10,
+                      borderTop: "1px solid #f1f5f9",
+                      paddingTop: 10,
+                    }}
+                  >
                     <div style={{ display: "grid", gap: 8 }}>
                       {rows.map((r, idx) => (
                         <div
@@ -396,33 +569,80 @@ export default function AdminOrdersPage() {
                           }}
                         >
                           <div style={{ minWidth: 0 }}>
-                            <div style={{ display: "flex", gap: 8, alignItems: "baseline", flexWrap: "wrap" }}>
-                              <span style={{ fontWeight: 850 as any, color: "#0f172a", fontSize: 14 }}>
+                            <div
+                              style={{
+                                display: "flex",
+                                gap: 8,
+                                alignItems: "baseline",
+                                flexWrap: "wrap",
+                              }}
+                            >
+                              <span
+                                style={{
+                                  fontWeight: 850 as any,
+                                  color: "#0f172a",
+                                  fontSize: 14,
+                                }}
+                              >
                                 {r.name}
                               </span>
-                              <span style={{ color: "#64748b", fontWeight: 900, fontSize: 12 }}>x{r.qty}</span>
+                              <span
+                                style={{
+                                  color: "#64748b",
+                                  fontWeight: 900,
+                                  fontSize: 12,
+                                }}
+                              >
+                                x{r.qty}
+                              </span>
                             </div>
 
-                            <div style={{ marginTop: 2, color: "#94a3b8", fontSize: 12 }}>
-                              <span style={{ fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" }}>
+                            <div
+                              style={{
+                                marginTop: 2,
+                                color: "#94a3b8",
+                                fontSize: 12,
+                              }}
+                            >
+                              <span
+                                style={{
+                                  fontFamily:
+                                    "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
+                                }}
+                              >
                                 {r.slug}
                               </span>
                               {r.tierApplied ? (
                                 <>
                                   {" · "}
-                                  <span style={{ color: "#64748b", fontWeight: 900 }}>
+                                  <span
+                                    style={{
+                                      color: "#64748b",
+                                      fontWeight: 900,
+                                    }}
+                                  >
                                     Tier {r.tierApplied}
                                   </span>
                                 </>
                               ) : null}
                               {" · "}
                               <span>
-                                Unit: <strong style={{ color: "#0f172a" }}>{formatMoney(o.currency, r.unit)}</strong>
+                                Unit:{" "}
+                                <strong style={{ color: "#0f172a" }}>
+                                  {formatMoney(o.currency, r.unit)}
+                                </strong>
                               </span>
                             </div>
                           </div>
 
-                          <div style={{ color: "#0f172a", fontWeight: 950 as any, fontSize: 14, whiteSpace: "nowrap" }}>
+                          <div
+                            style={{
+                              color: "#0f172a",
+                              fontWeight: 950 as any,
+                              fontSize: 14,
+                              whiteSpace: "nowrap",
+                            }}
+                          >
                             {formatMoney(o.currency, r.lineTotal)}
                           </div>
                         </div>
@@ -446,7 +666,8 @@ export default function AdminOrdersPage() {
                       >
                         <div>Mismatch detected</div>
                         <div>
-                          Items sum: {formatMoney(o.currency, itemsSum)} · Stored total: {formatMoney(o.currency, o.total)}
+                          Items sum: {formatMoney(o.currency, itemsSum)} ·
+                          Stored total: {formatMoney(o.currency, o.total)}
                         </div>
                       </div>
                     ) : null}
@@ -456,7 +677,14 @@ export default function AdminOrdersPage() {
             })}
 
             {/* Pagination footer */}
-            <div style={{ display: "flex", justifyContent: "center", gap: 10, marginTop: 4 }}>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "center",
+                gap: 10,
+                marginTop: 4,
+              }}
+            >
               <button
                 type="button"
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
@@ -473,8 +701,11 @@ export default function AdminOrdersPage() {
               >
                 Prev
               </button>
-              <div style={{ alignSelf: "center", color: "#64748b", fontSize: 13 }}>
-                Page <strong style={{ color: "#0f172a" }}>{pageSafe}</strong> / {totalPages}
+              <div
+                style={{ alignSelf: "center", color: "#64748b", fontSize: 13 }}
+              >
+                Page <strong style={{ color: "#0f172a" }}>{pageSafe}</strong> /{" "}
+                {totalPages}
               </div>
               <button
                 type="button"

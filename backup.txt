@@ -1,0 +1,23 @@
+This project uses:
+- Node >= 18
+- Next.js
+- Firebase Hosting + Firestore
+
+- Env vars required:
+
+  NEXT_PUBLIC_FIREBASE_API_KEY=
+  NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=
+  NEXT_PUBLIC_FIREBASE_PROJECT_ID=
+  NEXT_PUBLIC_ADMIN_EMAILS=
+
+
+Env vars example
+
+
+NEXT_PUBLIC_FIREBASE_API_KEY=kkkk
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=starpro-web.firebaseapp.com
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=starpro-web
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=starpro-web.firebasestorage.app
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=kkkkkk
+NEXT_PUBLIC_FIREBASE_APP_ID=kkkkkkkk
+NEXT_PUBLIC_ADMIN_EMAILS=admin@starpro.com

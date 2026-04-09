@@ -5,8 +5,12 @@ import Footer from "../components/Footer";
 import AuthSync from "../components/AuthSync";
 
 export const metadata = {
-  title: "StarPro",
-  description: "Gate catalog and custom solutions",
+  title: {
+    default: "H2 Hardware",
+    template: "H2 Hardware | %s",
+  },
+  description:
+    "H2 Hardware supplies door hardware components, accessories and installation parts for professionals and contractors.",
 };
 
 export default function RootLayout({
