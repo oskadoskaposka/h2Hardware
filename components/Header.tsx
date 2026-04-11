@@ -32,7 +32,7 @@ export default function Header() {
     });
 
     return () => unsub();
-  }, []); // ✅ deps sempre constante
+  }, []);
 
   async function handleLogout() {
     try {
@@ -72,6 +72,7 @@ export default function Header() {
               <span style={{ color: "#ffffff" }}>Hardware</span>
             </span>
           </Link>
+
           <div className={styles.topLinks}>
             {isAdmin && (
               <>
@@ -101,13 +102,20 @@ export default function Header() {
                       Manage Products
                     </Link>
 
-                    {/* ✅ Carousel Builder no menu do admin */}
                     <Link
                       href="/admin/carousel-builder"
                       className={styles.adminItem}
                       role="menuitem"
                     >
                       Carousel Builder
+                    </Link>
+
+                    <Link
+                      href="/admin/sample-requests"
+                      className={styles.adminItem}
+                      role="menuitem"
+                    >
+                      Sample Requests
                     </Link>
                   </div>
                 </div>
@@ -132,7 +140,6 @@ export default function Header() {
               View Cart
             </Link>
 
-            {/* ✅ Logout do lado direito do View Cart, mesma tipografia */}
             {isLogged ? (
               <>
                 <span className={styles.sep}>|</span>
@@ -159,9 +166,6 @@ export default function Header() {
       <div className={styles.navBar}>
         <div className={`${styles.inner} container`}>
           <nav className={styles.nav} aria-label="Primary navigation">
-            {/* ✅ esconder HOME (removido) */}
-
-            {/* ✅ CATALOG agora vai para Home */}
             <Link
               href="/"
               className={styles.navItem}
@@ -186,7 +190,6 @@ export default function Header() {
               CONTACT
             </Link>
 
-            {/* ✅ troca SERVICES por ORDERS */}
             <Link
               href="/orders"
               className={styles.navItem}
