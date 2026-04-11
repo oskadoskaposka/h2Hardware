@@ -10,8 +10,8 @@ import { auth, app } from "../../../lib/firebaseClient";
 type SampleRequestDoc = {
   id: string;
   companyName: string;
+  contactName?: string;
   website?: string;
-  nameCardImageUrl?: string;
   phone?: string;
   email?: string;
   deliveryAddress: string;
@@ -33,8 +33,8 @@ function toSearchText(item: SampleRequestDoc) {
   return [
     item.id,
     item.companyName,
+    item.contactName || "",
     item.website || "",
-    item.nameCardImageUrl || "",
     item.phone || "",
     item.email || "",
     item.deliveryAddress || "",
@@ -80,8 +80,8 @@ export default function AdminSampleRequestsPage() {
           return {
             id: d.id,
             companyName: String(data.companyName ?? "").trim(),
+            contactName: String(data.contactName ?? "").trim(),
             website: String(data.website ?? "").trim(),
-            nameCardImageUrl: String(data.nameCardImageUrl ?? "").trim(),
             phone: String(data.phone ?? "").trim(),
             email: String(data.email ?? "").trim(),
             deliveryAddress: String(data.deliveryAddress ?? "").trim(),
@@ -173,7 +173,7 @@ export default function AdminSampleRequestsPage() {
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search: company, website, phone, email, address..."
+            placeholder="Search: company, contact name, website, phone, email, address..."
             style={{
               width: "100%",
               minHeight: 42,
@@ -254,6 +254,13 @@ export default function AdminSampleRequestsPage() {
                         {item.companyName || "Unnamed company"}
                       </div>
 
+                      <div style={{ marginTop: 6, color: "#64748b", fontSize: 13 }}>
+                        Contact:{" "}
+                        <strong style={{ color: "#0f172a" }}>
+                          {item.contactName || "—"}
+                        </strong>
+                      </div>
+
                       <div style={{ marginTop: 6, color: "#64748b", fontSize: 12 }}>
                         ID:{" "}
                         <span
@@ -297,31 +304,28 @@ export default function AdminSampleRequestsPage() {
                     style={{
                       marginTop: 14,
                       display: "grid",
-                      gridTemplateColumns: "1.1fr 1fr",
+                      gridTemplateColumns: "1fr 1fr",
                       gap: 14,
                     }}
                   >
                     <div style={{ display: "grid", gap: 10 }}>
+                      <InfoRow label="Contact Name" value={item.contactName || "—"} />
                       <InfoRow
                         label="Website"
                         value={
                           item.website ? (
-                            <a
-                              href={item.website}
-                              target="_blank"
-                              rel="noreferrer"
-                              style={{ color: "#b91c1c", fontWeight: 800 }}
-                            >
+                            <span style={{ color: "#0f172a", fontWeight: 700 }}>
                               {item.website}
-                            </a>
+                            </span>
                           ) : (
                             "—"
                           )
                         }
                       />
-
                       <InfoRow label="Phone" value={item.phone || "—"} />
+                    </div>
 
+                    <div style={{ display: "grid", gap: 10 }}>
                       <InfoRow
                         label="Email"
                         value={
@@ -339,7 +343,7 @@ export default function AdminSampleRequestsPage() {
                       />
 
                       <InfoRow
-                        label="Sample delivery address"
+                        label="Sample Delivery Address"
                         value={
                           <div style={{ whiteSpace: "pre-wrap", lineHeight: 1.45 }}>
                             {item.deliveryAddress || "—"}
@@ -347,62 +351,7 @@ export default function AdminSampleRequestsPage() {
                         }
                       />
 
-                      <InfoRow label="Thank you text" value={item.thankYouText || "—"} />
-                    </div>
-
-                    <div style={{ display: "grid", gap: 10, alignContent: "start" }}>
-                      <div
-                        style={{
-                          border: "1px solid #e2e8f0",
-                          borderRadius: 12,
-                          overflow: "hidden",
-                          background: "#f8fafc",
-                          minHeight: 220,
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                        }}
-                      >
-                        {item.nameCardImageUrl ? (
-                          <a
-                            href={item.nameCardImageUrl}
-                            target="_blank"
-                            rel="noreferrer"
-                            style={{ display: "block", width: "100%", height: "100%" }}
-                          >
-                            <img
-                              src={item.nameCardImageUrl}
-                              alt={`${item.companyName} name card`}
-                              style={{
-                                display: "block",
-                                width: "100%",
-                                height: "100%",
-                                objectFit: "contain",
-                                background: "#fff",
-                              }}
-                            />
-                          </a>
-                        ) : (
-                          <div style={{ color: "#64748b", fontSize: 13, fontWeight: 700 }}>
-                            No name card image provided
-                          </div>
-                        )}
-                      </div>
-
-                      {item.nameCardImageUrl ? (
-                        <a
-                          href={item.nameCardImageUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                          style={{
-                            color: "#b91c1c",
-                            fontWeight: 800,
-                            textDecoration: "none",
-                          }}
-                        >
-                          Open name card image
-                        </a>
-                      ) : null}
+                      <InfoRow label="Thank You Text" value={item.thankYouText || "—"} />
                     </div>
                   </div>
                 </div>

@@ -1,14 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useState } from "react";
 import { addDoc, collection, getFirestore, serverTimestamp } from "firebase/firestore";
 import { app } from "../../lib/firebaseClient";
 
 type FormState = {
   companyName: string;
+  contactName: string;
   website: string;
-  nameCardImageUrl: string;
   phone: string;
   email: string;
   deliveryAddress: string;
@@ -24,8 +24,8 @@ function isValidEmail(value: string) {
 export default function SampleRequestPage() {
   const [form, setForm] = useState<FormState>({
     companyName: "",
+    contactName: "",
     website: "",
-    nameCardImageUrl: "",
     phone: "",
     email: "",
     deliveryAddress: "",
@@ -35,18 +35,13 @@ export default function SampleRequestPage() {
   const [errorMsg, setErrorMsg] = useState<string>("");
   const [successMsg, setSuccessMsg] = useState<string>("");
 
-  const previewImage = useMemo(() => {
-    return form.nameCardImageUrl.trim();
-  }, [form.nameCardImageUrl]);
-
   function update<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
   }
 
   function validate() {
     const companyName = form.companyName.trim();
-    const website = form.website.trim();
-    const nameCardImageUrl = form.nameCardImageUrl.trim();
+    const contactName = form.contactName.trim();
     const phone = form.phone.trim();
     const email = form.email.trim();
     const deliveryAddress = form.deliveryAddress.trim();
@@ -55,8 +50,8 @@ export default function SampleRequestPage() {
       return "Company name is required.";
     }
 
-    if (!website && !nameCardImageUrl) {
-      return "Please provide a website or a name card picture.";
+    if (!contactName) {
+      return "Contact name is required.";
     }
 
     if (!phone && !email) {
@@ -92,8 +87,8 @@ export default function SampleRequestPage() {
 
       await addDoc(collection(db, "sample_requests"), {
         companyName: form.companyName.trim(),
+        contactName: form.contactName.trim(),
         website: form.website.trim(),
-        nameCardImageUrl: form.nameCardImageUrl.trim(),
         phone: form.phone.trim(),
         email: form.email.trim(),
         deliveryAddress: form.deliveryAddress.trim(),
@@ -105,8 +100,8 @@ export default function SampleRequestPage() {
       setSuccessMsg(THANK_YOU_TEXT);
       setForm({
         companyName: "",
+        contactName: "",
         website: "",
-        nameCardImageUrl: "",
         phone: "",
         email: "",
         deliveryAddress: "",
@@ -145,18 +140,29 @@ export default function SampleRequestPage() {
           <section className="card">
             <h2>Request form</h2>
             <p className="muted">
-              Please provide your company information, contact details, and sample
-              delivery address.
+              Please provide the company information, the contact person who will
+              receive the sample, and the delivery address.
             </p>
 
             <form onSubmit={handleSubmit} className="form">
-              <div className="field">
-                <label>Company Name *</label>
-                <input
-                  value={form.companyName}
-                  onChange={(e) => update("companyName", e.target.value)}
-                  placeholder="e.g. ABC Garage Doors Ltd."
-                />
+              <div className="fieldRow">
+                <div className="field">
+                  <label>Company Name *</label>
+                  <input
+                    value={form.companyName}
+                    onChange={(e) => update("companyName", e.target.value)}
+                    placeholder="e.g. ABC Garage Doors Ltd."
+                  />
+                </div>
+
+                <div className="field">
+                  <label>Contact Name *</label>
+                  <input
+                    value={form.contactName}
+                    onChange={(e) => update("contactName", e.target.value)}
+                    placeholder="e.g. John Smith"
+                  />
+                </div>
               </div>
 
               <div className="field">
@@ -166,21 +172,7 @@ export default function SampleRequestPage() {
                   onChange={(e) => update("website", e.target.value)}
                   placeholder="Company website"
                 />
-                <div className="help">
-                  Provide a website or a name card picture. You can also provide both.
-                </div>
-              </div>
-
-              <div className="field">
-                <label>Name Card Picture</label>
-                <input
-                  value={form.nameCardImageUrl}
-                  onChange={(e) => update("nameCardImageUrl", e.target.value)}
-                  placeholder="Image link or reference"
-                />
-                <div className="help">
-                  URL format validation was removed to keep the form simpler.
-                </div>
+                <div className="help">Optional.</div>
               </div>
 
               <div className="fieldRow">
@@ -237,6 +229,11 @@ export default function SampleRequestPage() {
               </div>
 
               <div className="summaryItem">
+                <div className="summaryLabel">Contact Name</div>
+                <div className="summaryValue">{form.contactName.trim() || "—"}</div>
+              </div>
+
+              <div className="summaryItem">
                 <div className="summaryLabel">Website</div>
                 <div className="summaryValue">{form.website.trim() || "—"}</div>
               </div>
@@ -252,19 +249,11 @@ export default function SampleRequestPage() {
               </div>
 
               <div className="summaryItem">
-                <div className="summaryLabel">Delivery address</div>
+                <div className="summaryLabel">Delivery Address</div>
                 <div className="summaryValue multiline">
                   {form.deliveryAddress.trim() || "—"}
                 </div>
               </div>
-            </div>
-
-            <div className="previewWrap">
-              {previewImage ? (
-                <img src={previewImage} alt="Name card preview" className="previewImage" />
-              ) : (
-                <div className="previewEmpty">Name card preview will appear here</div>
-              )}
             </div>
           </aside>
         </div>
@@ -480,29 +469,6 @@ export default function SampleRequestPage() {
         }
         .multiline {
           white-space: pre-wrap;
-        }
-        .previewWrap {
-          border: 1px solid #e2e8f0;
-          border-radius: 14px;
-          overflow: hidden;
-          background: #f8fafc;
-          min-height: 220px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-        .previewImage {
-          width: 100%;
-          height: auto;
-          display: block;
-          object-fit: contain;
-        }
-        .previewEmpty {
-          color: #64748b;
-          font-size: 13px;
-          font-weight: 700;
-          padding: 18px;
-          text-align: center;
         }
       `}</style>
     </main>
