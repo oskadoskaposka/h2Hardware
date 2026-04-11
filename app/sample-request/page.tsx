@@ -21,17 +21,6 @@ function isValidEmail(value: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
 }
 
-function isLikelyUrl(value: string) {
-  const v = value.trim();
-  if (!v) return false;
-  try {
-    const u = new URL(v);
-    return u.protocol === "http:" || u.protocol === "https:";
-  } catch {
-    return false;
-  }
-}
-
 export default function SampleRequestPage() {
   const [form, setForm] = useState<FormState>({
     companyName: "",
@@ -47,7 +36,7 @@ export default function SampleRequestPage() {
   const [successMsg, setSuccessMsg] = useState<string>("");
 
   const previewImage = useMemo(() => {
-    return isLikelyUrl(form.nameCardImageUrl) ? form.nameCardImageUrl.trim() : "";
+    return form.nameCardImageUrl.trim();
   }, [form.nameCardImageUrl]);
 
   function update<K extends keyof FormState>(key: K, value: FormState[K]) {
@@ -67,15 +56,7 @@ export default function SampleRequestPage() {
     }
 
     if (!website && !nameCardImageUrl) {
-      return "Please provide a website or a name card picture URL.";
-    }
-
-    if (website && !isLikelyUrl(website)) {
-      return "Website must be a valid URL starting with http:// or https://";
-    }
-
-    if (nameCardImageUrl && !isLikelyUrl(nameCardImageUrl)) {
-      return "Name card picture must be a valid image URL starting with http:// or https://";
+      return "Please provide a website or a name card picture.";
     }
 
     if (!phone && !email) {
@@ -183,22 +164,22 @@ export default function SampleRequestPage() {
                 <input
                   value={form.website}
                   onChange={(e) => update("website", e.target.value)}
-                  placeholder="https://your-company.com"
+                  placeholder="Company website"
                 />
                 <div className="help">
-                  Provide a website or a name card picture URL. You can also provide both.
+                  Provide a website or a name card picture. You can also provide both.
                 </div>
               </div>
 
               <div className="field">
-                <label>Name Card Picture URL</label>
+                <label>Name Card Picture</label>
                 <input
                   value={form.nameCardImageUrl}
                   onChange={(e) => update("nameCardImageUrl", e.target.value)}
-                  placeholder="https://example.com/name-card.jpg"
+                  placeholder="Image link or reference"
                 />
                 <div className="help">
-                  For speed and stability, this version uses an image URL instead of file upload.
+                  URL format validation was removed to keep the form simpler.
                 </div>
               </div>
 
