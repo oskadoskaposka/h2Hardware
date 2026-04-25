@@ -13,6 +13,7 @@ import {
   query,
   setDoc,
   updateDoc,
+  deleteDoc,
   getFirestore,
 } from "firebase/firestore";
 import { auth, app } from "../../../../lib/firebaseClient";
@@ -113,6 +114,10 @@ function AdminProductEditInner() {
   const [bulkTiersText, setBulkTiersText] = useState("");
   const [saving, setSaving] = useState(false);
 
+  // Change slug
+  const [newSlug, setNewSlug] = useState("");
+  const [renaming, setRenaming] = useState(false);
+
   const title = useMemo(() => {
     if (slugParam === "new") return "Create Product";
     return `Edit Product: ${slugParam}`;
@@ -190,6 +195,7 @@ function AdminProductEditInner() {
             featuresCsv: "",
           });
           setTiers([]);
+          setNewSlug("");
           return;
         }
 
@@ -230,6 +236,7 @@ function AdminProductEditInner() {
         });
 
         setTiers(normalizeTiers(loadedTiers));
+        setNewSlug(data.slug ?? slugParam);
       } catch (e) {
         alert("Failed to load product.");
       } finally {
@@ -341,6 +348,152 @@ function AdminProductEditInner() {
     setBulkTiersText("");
   }
 
+  function buildPayload(slugOverride?: string) {
+    const slug = String(slugOverride ?? form.slug ?? "").trim();
+    if (!slug) {
+      throw new Error("Slug is required.");
+    }
+
+    const name = String(form.name || "").trim();
+    if (!name) {
+      throw new Error("Name is required.");
+    }
+
+    const category = canonicalizeFromOptions(
+      String(form.category || ""),
+      categoryOptions,
+    );
+    const subcategory = canonicalizeFromOptions(
+      String(form.subcategory || ""),
+      subcategoryOptions,
+    );
+
+    if (!category) {
+      throw new Error("Category is required.");
+    }
+    if (!subcategory) {
+      throw new Error("Subcategory is required.");
+    }
+
+    const stock = Math.floor(toNumberOr(form.stock, NaN));
+    if (!Number.isFinite(stock)) {
+      throw new Error("Stock is required.");
+    }
+
+    const publicPrice = toNumberOr(form.publicPrice, NaN);
+    if (!Number.isFinite(publicPrice)) {
+      throw new Error("Public price is required.");
+    }
+
+    const images = String(form.imagesCsv || "")
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+
+    const features = String(form.featuresCsv || "")
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+
+    const normalizedTiers = normalizeTiers(tiers).map((t, idx) => {
+      if (t.maxQty !== null && t.maxQty < t.minQty) {
+        throw new Error(
+          `Tier ${t.id ?? `t${idx + 1}`}: Max qty cannot be less than Min qty.`,
+        );
+      }
+
+      return {
+        id: t.id ?? `t${idx + 1}`,
+        minQty: t.minQty,
+        maxQty: t.maxQty,
+        price: t.price,
+      };
+    });
+
+    const payload: any = {
+      slug,
+      name,
+
+      // Firestore field names unchanged:
+      series: category,
+      category: subcategory,
+
+      description: String(form.description || "").trim(),
+
+      publicPrice: Math.max(0, publicPrice),
+
+      // ✅ FIXO
+      currency: "CAD",
+
+      tiers: normalizedTiers,
+
+      active: !!form.active,
+      sortOrder: Math.floor(toNumberOr(form.sortOrder, 9999)),
+      stock: Math.max(0, stock),
+      images,
+      features,
+    };
+
+    if (!payload.description) delete payload.description;
+
+    return payload;
+  }
+
+  async function handleChangeSlug() {
+    if (slugParam === "new") return;
+    if (renaming || saving) return;
+
+    const targetSlug = String(newSlug || "").trim();
+    const currentSlug = String(slugParam || "").trim();
+
+    if (!targetSlug) {
+      alert("New slug is required.");
+      return;
+    }
+
+    if (targetSlug === currentSlug) {
+      alert("The new slug is the same as the current slug.");
+      return;
+    }
+
+    const confirmed = confirm(
+      `Change slug from '${currentSlug}' to '${targetSlug}'?\n\nThis will create a new product record with the new slug and delete the current one.`,
+    );
+    if (!confirmed) return;
+
+    try {
+      setRenaming(true);
+
+      const db = getFirestore(app);
+      const oldRef = doc(db, "products", currentSlug);
+      const newRef = doc(db, "products", targetSlug);
+
+      const newSnap = await getDoc(newRef);
+      if (newSnap.exists()) {
+        alert("A product with this slug already exists.");
+        return;
+      }
+
+      const oldSnap = await getDoc(oldRef);
+      if (!oldSnap.exists()) {
+        alert("Current product not found.");
+        return;
+      }
+
+      const payload = buildPayload(targetSlug);
+
+      await setDoc(newRef, payload);
+      await deleteDoc(oldRef);
+
+      alert("Slug changed successfully.");
+      router.push(`/admin/products/edit?slug=${encodeURIComponent(targetSlug)}`);
+    } catch (err: any) {
+      alert(err?.message ?? "Failed to change slug.");
+    } finally {
+      setRenaming(false);
+    }
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (saving) return;
@@ -348,104 +501,10 @@ function AdminProductEditInner() {
     try {
       setSaving(true);
 
-      const slug = String(form.slug || "").trim();
-      if (!slug) {
-        alert("Slug is required.");
-        return;
-      }
-
-      // REQUIRED fields (per your request)
-      const name = String(form.name || "").trim();
-      if (!name) {
-        alert("Name is required.");
-        return;
-      }
-
-      // category/subcategory are required (UI), mapped to Firestore series/category
-      const category = canonicalizeFromOptions(
-        String(form.category || ""),
-        categoryOptions,
-      );
-      const subcategory = canonicalizeFromOptions(
-        String(form.subcategory || ""),
-        subcategoryOptions,
-      );
-
-      if (!category) {
-        alert("Category is required.");
-        return;
-      }
-      if (!subcategory) {
-        alert("Subcategory is required.");
-        return;
-      }
-
-      const stock = Math.floor(toNumberOr(form.stock, NaN));
-      if (!Number.isFinite(stock)) {
-        alert("Stock is required.");
-        return;
-      }
-
-      const publicPrice = toNumberOr(form.publicPrice, NaN);
-      if (!Number.isFinite(publicPrice)) {
-        alert("Public price is required.");
-        return;
-      }
-
-      const images = String(form.imagesCsv || "")
-        .split(",")
-        .map((s) => s.trim())
-        .filter(Boolean);
-
-      const features = String(form.featuresCsv || "")
-        .split(",")
-        .map((s) => s.trim())
-        .filter(Boolean);
-
-      const normalizedTiers = normalizeTiers(tiers).map((t, idx) => {
-        if (t.maxQty !== null && t.maxQty < t.minQty) {
-          throw new Error(
-            `Tier ${t.id ?? `t${idx + 1}`}: Max qty cannot be less than Min qty.`,
-          );
-        }
-
-        return {
-          id: t.id ?? `t${idx + 1}`,
-          minQty: t.minQty,
-          maxQty: t.maxQty,
-          price: t.price,
-        };
-      });
-
-      const payload: any = {
-        slug,
-        name,
-
-        // Firestore field names unchanged:
-        series: category,
-        category: subcategory,
-
-        description: String(form.description || "").trim(),
-
-        publicPrice: Math.max(0, publicPrice),
-
-        // ✅ FIXO
-        currency: "CAD",
-
-        tiers: normalizedTiers,
-
-        active: !!form.active,
-        sortOrder: Math.floor(toNumberOr(form.sortOrder, 9999)),
-        stock: Math.max(0, stock),
-        images,
-        features,
-      };
-
-      // ✅ don't write empty optional-ish fields
-      if (!payload.description) delete payload.description;
+      const payload = buildPayload();
 
       const db = getFirestore(app);
-      const ref = doc(db, "products", slug);
+      const ref = doc(db, "products", payload.slug);
 
       if (slugParam === "new") {
         await setDoc(ref, payload);
@@ -454,6 +513,9 @@ function AdminProductEditInner() {
       }
 
       // keep options fresh (in case admin added new values)
+      const category = String(payload.series || "").trim();
+      const subcategory = String(payload.category || "").trim();
+
       if (
         category &&
         !categoryOptions.some((c) => c.toLowerCase() === category.toLowerCase())
@@ -630,6 +692,54 @@ function AdminProductEditInner() {
             </label>
           </div>
         </section>
+
+        {/* Change slug */}
+        {slugParam !== "new" ? (
+          <section
+            style={{
+              border: "1px solid #e5e5e5",
+              borderRadius: 10,
+              padding: 16,
+              marginTop: 16,
+            }}
+          >
+            <h2 style={{ marginTop: 0 }}>Change slug</h2>
+
+            <div style={{ color: "#666", fontSize: 13, marginBottom: 12 }}>
+              This will create a new product record with the new slug and delete
+              the current one. Old links, cart items, or carousel references
+              using the previous slug will not update automatically.
+            </div>
+
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr auto",
+                gap: 12,
+                alignItems: "end",
+              }}
+            >
+              <label>
+                New slug
+                <input
+                  value={newSlug}
+                  onChange={(e) => setNewSlug(e.target.value)}
+                  style={{ width: "100%" }}
+                  placeholder="Enter the new slug"
+                />
+              </label>
+
+              <button
+                type="button"
+                onClick={handleChangeSlug}
+                disabled={renaming || saving}
+                style={{ height: 38 }}
+              >
+                {renaming ? "Changing…" : "Change slug"}
+              </button>
+            </div>
+          </section>
+        ) : null}
 
         {/* Pricing */}
         <section
@@ -895,7 +1005,7 @@ function AdminProductEditInner() {
         </section>
 
         <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
-          <button type="submit" disabled={saving}>
+          <button type="submit" disabled={saving || renaming}>
             {saving ? "Saving…" : "Save"}
           </button>
           <button type="button" onClick={() => router.push("/admin/products")}>
