@@ -3,11 +3,16 @@
 import { useEffect } from "react";
 import { usePathname } from "next/navigation";
 
+function isCarouselBuilderPath(pathname: string | null) {
+  const path = (pathname || "").replace(/\/$/, "");
+  return path === "/admin/carousel-builder";
+}
+
 export default function CarouselBuilderGuidelines() {
   const pathname = usePathname();
 
   useEffect(() => {
-    if (pathname !== "/admin/carousel-builder") return;
+    if (!isCarouselBuilderPath(pathname)) return;
 
     const addGuidance = () => {
       const top = document.querySelector(".cb-top");
@@ -42,7 +47,7 @@ export default function CarouselBuilderGuidelines() {
   }, [pathname]);
 
   useEffect(() => {
-    if (pathname !== "/admin/carousel-builder") return;
+    if (!isCarouselBuilderPath(pathname)) return;
 
     const styleId = "carousel-builder-guidance-styles";
     if (document.getElementById(styleId)) return;
