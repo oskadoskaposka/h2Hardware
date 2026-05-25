@@ -3,6 +3,7 @@ import styles from "../styles/layout.module.css";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
 import AuthSync from "../components/AuthSync";
+import CatalogNavigationState from "../components/CatalogNavigationState";
 
 export const metadata = {
   title: {
@@ -23,6 +24,7 @@ export default function RootLayout({
       <body className={styles.body}>
         <Header />
         <AuthSync />
+        <CatalogNavigationState />
         <main className={styles.main}>{children}</main>
         <Footer />
       </body>
