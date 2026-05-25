@@ -1,4 +1,4 @@
-// app/catalog/page.tsx
+// app/page.tsx
 "use client";
 
 import Link from "next/link";
@@ -59,6 +59,8 @@ type CarouselSlide = {
   subtitle?: string;
 };
 
+const PAGE_SIZE = 18;
+
 export default function CatalogPage() {
   const [qText, setQText] = useState("");
 
@@ -74,6 +76,7 @@ export default function CatalogPage() {
   const [loading, setLoading] = useState(true);
   const [products, setProducts] = useState<Product[]>([]);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
   const router = useRouter();
 
   // ✅ Carrossel: fallback estático (o que você já tinha)
@@ -270,6 +273,25 @@ export default function CatalogPage() {
     });
   }, [products, qText, activeSeries, activeCategory]);
 
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [qText, activeSeries, activeCategory]);
+
+  const totalPages = useMemo(() => {
+    return Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  }, [filtered.length]);
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
+
+  const paginatedProducts = useMemo(() => {
+    const start = (currentPage - 1) * PAGE_SIZE;
+    return filtered.slice(start, start + PAGE_SIZE);
+  }, [filtered, currentPage]);
+
   function handleSelectAll() {
     setActiveSeries("all");
     setOpenSeries(null);
@@ -301,40 +323,39 @@ export default function CatalogPage() {
   }
 
   function normalizeInternalPath(p?: string) {
-  const v = (p ?? "").trim();
-  if (!v) return "";
-  return v.startsWith("/") ? v : `/${v}`;
-}
-
-function handleSlideClick(slide: CarouselSlide) {
-  const type = slide.linkType ?? "filter";
-
-  // Backward compatible: se não tiver linkType, continua filtrando
-  if (type === "filter") {
-    applySlideFilter(slide);
-    return;
+    const v = (p ?? "").trim();
+    if (!v) return "";
+    return v.startsWith("/") ? v : `/${v}`;
   }
 
-  if (type === "product") {
-    if (!slide.productSlug) return;
-    // IMPORTANT: seu catálogo usa /product?slug=... (igual nos cards)
-    router.push(`/product?slug=${encodeURIComponent(slide.productSlug)}`);
-    return;
-  }
+  function handleSlideClick(slide: CarouselSlide) {
+    const type = slide.linkType ?? "filter";
 
-  if (type === "page") {
-    const path = normalizeInternalPath(slide.pagePath);
-    if (!path) return;
-    router.push(path);
-    return;
-  }
+    // Backward compatible: se não tiver linkType, continua filtrando
+    if (type === "filter") {
+      applySlideFilter(slide);
+      return;
+    }
 
-  if (type === "url") {
-    if (!slide.url) return;
-    window.location.href = slide.url;
-  }
-}
+    if (type === "product") {
+      if (!slide.productSlug) return;
+      // IMPORTANT: seu catálogo usa /product?slug=... (igual nos cards)
+      router.push(`/product?slug=${encodeURIComponent(slide.productSlug)}`);
+      return;
+    }
 
+    if (type === "page") {
+      const path = normalizeInternalPath(slide.pagePath);
+      if (!path) return;
+      router.push(path);
+      return;
+    }
+
+    if (type === "url") {
+      if (!slide.url) return;
+      window.location.href = slide.url;
+    }
+  }
 
   function formatMoney(currency: string, value: number) {
     return `${currency} ${value.toLocaleString("en-CA", {
@@ -490,7 +511,9 @@ function handleSlideClick(slide: CarouselSlide) {
           <div className="subtitle">
             {loading
               ? "Loading…"
-              : `${filtered.length} product${filtered.length === 1 ? "" : "s"}`}
+              : `${filtered.length} product${filtered.length === 1 ? "" : "s"}${
+                  filtered.length > PAGE_SIZE ? ` • page ${currentPage} of ${totalPages}` : ""
+                }`}
           </div>
 
           {errorMsg ? (
@@ -504,51 +527,79 @@ function handleSlideClick(slide: CarouselSlide) {
               ))}
             </div>
           ) : (
-            <div className="grid">
-              {filtered.map((p) => {
-                const img = p.images?.[0] || "";
-                return (
-                  <Link
-                    key={p.slug}
-                    href={`/product?slug=${encodeURIComponent(p.slug)}`}
-                    className="productCard"
-                  >
-                    <div className="imgWrap">
-                      {img ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={img} alt={p.name} className="img" />
-                      ) : (
-                        <div className="imgFallback">No image</div>
-                      )}
-                    </div>
-
-                    <div className="productName">{p.name}</div>
-
-                    <div className="metaRow">
-                      <span className="badge">{p.series}</span>
-                      {p.category ? (
-                        <span className="badge2">{p.category}</span>
-                      ) : null}
-                    </div>
-
-                    <div className="muted">
-                      {p.description ? p.description : "No description."}
-                    </div>
-
-                    <div className="productBottom">
-                      <div className="price">
-                        {p.price > 0 ? (
-                          formatMoney(p.currency, p.price)
+            <>
+              <div className="grid">
+                {paginatedProducts.map((p) => {
+                  const img = p.images?.[0] || "";
+                  return (
+                    <Link
+                      key={p.slug}
+                      href={`/product?slug=${encodeURIComponent(p.slug)}`}
+                      className="productCard"
+                    >
+                      <div className="imgWrap">
+                        {img ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={img} alt={p.name} className="img" />
                         ) : (
-                          <span className="muted">Price on request</span>
+                          <div className="imgFallback">No image</div>
                         )}
                       </div>
-                      <div className="cta">View</div>
-                    </div>
-                  </Link>
-                );
-              })}
-            </div>
+
+                      <div className="productName">{p.name}</div>
+
+                      <div className="metaRow">
+                        <span className="badge">{p.series}</span>
+                        {p.category ? (
+                          <span className="badge2">{p.category}</span>
+                        ) : null}
+                      </div>
+
+                      <div className="muted">
+                        {p.description ? p.description : "No description."}
+                      </div>
+
+                      <div className="productBottom">
+                        <div className="price">
+                          {p.price > 0 ? (
+                            formatMoney(p.currency, p.price)
+                          ) : (
+                            <span className="muted">Price on request</span>
+                          )}
+                        </div>
+                        <div className="cta">View</div>
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+
+              {totalPages > 1 ? (
+                <div className="pagination">
+                  <button
+                    className="pageButton"
+                    type="button"
+                    disabled={currentPage === 1}
+                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  >
+                    Previous
+                  </button>
+
+                  <div className="paginationInfo">
+                    Page <strong>{currentPage}</strong> of <strong>{totalPages}</strong>
+                  </div>
+
+                  <button
+                    className="pageButton"
+                    type="button"
+                    disabled={currentPage === totalPages}
+                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                  >
+                    Next
+                  </button>
+                </div>
+              ) : null}
+            </>
           )}
         </section>
       </div>
@@ -893,6 +944,39 @@ function handleSlideClick(slide: CarouselSlide) {
         .cta {
           font-weight: 900;
           color: #b91c1c;
+        }
+
+        .pagination {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 12px;
+          margin-top: 22px;
+          flex-wrap: wrap;
+        }
+        .pageButton {
+          border: 1px solid #d1d5db;
+          background: #fff;
+          color: #111827;
+          border-radius: 10px;
+          padding: 10px 14px;
+          font-size: 14px;
+          font-weight: 900;
+          cursor: pointer;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+        }
+        .pageButton:hover:not(:disabled) {
+          border-color: #b91c1c;
+          color: #b91c1c;
+        }
+        .pageButton:disabled {
+          opacity: 0.45;
+          cursor: not-allowed;
+        }
+        .paginationInfo {
+          color: #6b7280;
+          font-size: 14px;
+          font-weight: 700;
         }
 
         .skeleton {
