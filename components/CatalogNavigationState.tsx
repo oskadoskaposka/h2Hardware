@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
 const STORAGE_KEY = "h2CatalogState";
 const PAGE_SIZE = 18;
@@ -12,17 +12,25 @@ type CatalogState = {
   scrollY: number;
 };
 
+function isCatalogPath(pathname = window.location.pathname) {
+  return pathname === "/" || pathname === "/catalog" || pathname === "/catalog/";
+}
+
+function getCurrentPath() {
+  return `${window.location.pathname}${window.location.search}`;
+}
+
 function normalizePath(value?: string | null) {
   const path = String(value || "").trim();
-
   if (!path) return "";
   if (!path.startsWith("/")) return "";
   if (path.startsWith("//")) return "";
-
   return path;
 }
 
-function getLinkPath(link: HTMLAnchorElement) {
+function getLinkPath(link: HTMLAnchorElement | null) {
+  if (!link) return "";
+
   const rawHref = link.getAttribute("href") || "";
 
   try {
@@ -34,10 +42,26 @@ function getLinkPath(link: HTMLAnchorElement) {
   }
 }
 
+function readPageFromUrl() {
+  const params = new URLSearchParams(window.location.search);
+  return Math.max(1, Number(params.get("page") || "1") || 1);
+}
+
 function readCurrentPage() {
   const info = document.querySelector(".paginationInfo")?.textContent || "";
   const match = info.match(/Page\s+(\d+)\s+of/i);
   return Math.max(1, Number(match?.[1] || "1") || 1);
+}
+
+function buildCatalogPath(page: number) {
+  const basePath = window.location.pathname || "/catalog";
+  const params = new URLSearchParams(window.location.search);
+
+  if (page > 1) params.set("page", String(page));
+  else params.delete("page");
+
+  const qs = params.toString();
+  return `${basePath}${qs ? `?${qs}` : ""}`;
 }
 
 function readState(): CatalogState | null {
@@ -60,37 +84,28 @@ function readState(): CatalogState | null {
   }
 }
 
-function saveState() {
+function writeState(page = readCurrentPage(), scrollY = window.scrollY || 0) {
   if (typeof window === "undefined") return null;
-
-  const path = `${window.location.pathname}${window.location.search}`;
-  if (window.location.pathname !== "/" && window.location.pathname !== "/catalog") {
-    return null;
-  }
+  if (!isCatalogPath()) return null;
 
   const state: CatalogState = {
-    path: normalizedPath,
+    path: buildCatalogPath(page),
     page,
     scrollY,
   };
 
   window.sessionStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+
+  if (getCurrentPath() !== state.path) {
+    window.history.replaceState(window.history.state, "", state.path);
+  }
+
   return state;
 }
 
-function addReturnParamToProductLink(link: HTMLAnchorElement, state: CatalogState | null) {
-  if (!state) return;
-
-  try {
-    const url = new URL(link.href, window.location.origin);
-    if (url.origin !== window.location.origin) return;
-    if (url.pathname !== "/product") return;
-
-    url.searchParams.set("from", state.path);
-    link.href = `${url.pathname}${url.search}${url.hash}`;
-  } catch {
-    // keep original href
-  }
+function updateStateAfterCatalogChange() {
+  window.setTimeout(() => writeState(readCurrentPage(), window.scrollY || 0), 80);
+  window.setTimeout(() => writeState(readCurrentPage(), window.scrollY || 0), 250);
 }
 
 function clarifySubtitle() {
@@ -123,15 +138,16 @@ function restorePageAndScroll(targetPage: number, targetScrollY: number) {
     clarifySubtitle();
 
     const currentPage = readCurrentPage();
-    const nextButton = Array.from(document.querySelectorAll<HTMLButtonElement>(".pageButton"))
-      .find((button) => (button.textContent || "").trim().toLowerCase() === "next");
+    const nextButton = Array.from(document.querySelectorAll<HTMLButtonElement>(".pageButton")).find(
+      (button) => (button.textContent || "").trim().toLowerCase() === "next"
+    );
 
     if (currentPage < targetPage && nextButton && !nextButton.disabled) {
       nextButton.click();
       return;
     }
 
-    if (currentPage >= targetPage || attempts > 40) {
+    if (currentPage >= targetPage || attempts > 50) {
       window.clearInterval(timer);
       writeState(currentPage, targetScrollY);
 
@@ -142,65 +158,44 @@ function restorePageAndScroll(targetPage: number, targetScrollY: number) {
   }, 120);
 }
 
-function getLinkPath(link: HTMLAnchorElement) {
-  const rawHref = link.getAttribute("href") || "";
-
-  try {
-    const url = new URL(rawHref, window.location.origin);
-    if (url.origin !== window.location.origin) return rawHref;
-    return `${url.pathname}${url.search}${url.hash}`;
-  } catch {
-    return rawHref;
-  }
-}
-
 export default function CatalogNavigationState() {
   const pathname = usePathname();
   const router = useRouter();
-  const searchParams = useSearchParams();
 
   useEffect(() => {
-    function handlePossibleProductNavigation(event: Event) {
+    function handleDocumentClick(event: MouseEvent) {
       const target = event.target as HTMLElement | null;
       const button = target?.closest?.("button") as HTMLButtonElement | null;
       const link = target?.closest?.("a") as HTMLAnchorElement | null;
 
-      const href = getLinkPath(link);
-      if ((pathname === "/" || pathname === "/catalog") && href.startsWith("/product")) {
-        const state = saveState();
-        addReturnParamToProductLink(link, state);
+      if (isCatalogPath(pathname)) {
+        if (button?.classList.contains("pageButton")) {
+          updateStateAfterCatalogChange();
+          return;
+        }
+
+        if (getLinkPath(link).startsWith("/product")) {
+          writeState(readCurrentPage(), window.scrollY || 0);
+          return;
+        }
+      }
+
+      if (pathname === "/product") {
+        const href = getLinkPath(link);
+
+        if (href === "/catalog" || href === "/catalog/" || href === "/") {
+          const state = readState();
+          if (!state) return;
+
+          event.preventDefault();
+          router.push(state.path || "/catalog");
+        }
       }
     }
 
-    function handleDocumentClick(event: MouseEvent) {
-      handlePossibleProductNavigation(event);
-
-      const target = event.target as HTMLElement | null;
-      const link = target?.closest?.("a") as HTMLAnchorElement | null;
-      if (!link) return;
-
-      const href = getLinkPath(link);
-
-      if (pathname === "/product" && (href === "/catalog" || href === "/")) {
-        const fromParam = normalizePath(searchParams.get("from"));
-        const state = readState();
-        const targetPath = fromParam || state?.path || "/catalog";
-
-        event.preventDefault();
-        router.push(targetPath);
-      }
-    }
-
-    document.addEventListener("pointerdown", handlePossibleProductNavigation, true);
-    document.addEventListener("mousedown", handlePossibleProductNavigation, true);
     document.addEventListener("click", handleDocumentClick, true);
-
-    return () => {
-      document.removeEventListener("pointerdown", handlePossibleProductNavigation, true);
-      document.removeEventListener("mousedown", handlePossibleProductNavigation, true);
-      document.removeEventListener("click", handleDocumentClick, true);
-    };
-  }, [pathname, router, searchParams]);
+    return () => document.removeEventListener("click", handleDocumentClick, true);
+  }, [pathname, router]);
 
   useEffect(() => {
     if (!isCatalogPath(pathname)) return;
@@ -209,26 +204,23 @@ export default function CatalogNavigationState() {
 
     const targetPage = readPageFromUrl();
     const saved = readState();
-    const targetScrollY = saved?.path === getCurrentUrlPath() ? saved.scrollY : window.scrollY || 0;
+    const currentPath = getCurrentPath();
+    const targetScrollY = saved?.path === currentPath ? saved.scrollY : window.scrollY || 0;
 
-    const state = readState();
-    const currentPath = `${window.location.pathname}${window.location.search}`;
-
-    if (state && state.path === currentPath) {
-      restorePageAndScroll(state.page, state.scrollY);
+    if (targetPage > 1) {
+      restorePageAndScroll(targetPage, targetScrollY);
+    } else {
+      writeState(1, window.scrollY || 0);
     }
 
     const observer = new MutationObserver(() => {
       clarifySubtitle();
-      window.setTimeout(() => {
-        if (isCatalogPath()) writeState(readCurrentPage(), window.scrollY || 0);
-      }, 0);
     });
 
     observer.observe(document.body, { childList: true, subtree: true, characterData: true });
 
     return () => observer.disconnect();
-  }, [pathname, searchParams]);
+  }, [pathname]);
 
   return null;
 }
