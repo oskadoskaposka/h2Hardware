@@ -220,6 +220,7 @@ function ProductPageInner() {
     fontWeight: 900,
     textDecoration: "none",
     color: "#111",
+    cursor: "pointer",
   };
 
   function handleCheckStock() {
@@ -234,6 +235,15 @@ function ProductPageInner() {
     }
 
     alert("Please contact our team to confirm availability for this quantity.");
+  }
+
+  function handleBackToCatalog() {
+    if (typeof window !== "undefined" && window.history.length > 1) {
+      router.back();
+      return;
+    }
+
+    router.push("/catalog");
   }
 
   if (!slug) {
@@ -818,9 +828,13 @@ function ProductPageInner() {
               ) : null}
 
               <div style={{ marginTop: 18 }}>
-                <a href="/catalog" style={{ ...secondaryLink, width: "100%" }}>
+                <button
+                  type="button"
+                  onClick={handleBackToCatalog}
+                  style={{ ...secondaryLink, width: "100%" }}
+                >
                   Back to catalog
-                </a>
+                </button>
               </div>
             </div>
           </div>
