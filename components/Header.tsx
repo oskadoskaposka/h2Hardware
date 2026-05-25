@@ -55,22 +55,11 @@ export default function Header() {
             aria-label="H2 Hardware Home"
             style={{ textDecoration: "none" }}
           >
-            <span
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 6,
-                fontWeight: 900,
-                fontSize: 28,
-                letterSpacing: 1.2,
-                textTransform: "uppercase",
-                textDecoration: "none",
-                whiteSpace: "nowrap",
-              }}
-            >
-              <span style={{ color: "#b91c1c" }}>H2</span>
-              <span style={{ color: "#ffffff" }}>Hardware</span>
-            </span>
+            <img
+              src="/h2-logo.svg"
+              alt="H2 Hardware"
+              className={styles.logo}
+            />
           </Link>
 
           <div className={styles.topLinks}>
