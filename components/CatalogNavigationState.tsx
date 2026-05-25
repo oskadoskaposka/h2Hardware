@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 const STORAGE_KEY = "h2CatalogState";
 const PAGE_SIZE = 18;
@@ -12,22 +12,26 @@ type CatalogState = {
   scrollY: number;
 };
 
-function getCurrentUrlPath() {
-  return `${window.location.pathname}${window.location.search}`;
+function normalizePath(value?: string | null) {
+  const path = String(value || "").trim();
+
+  if (!path) return "";
+  if (!path.startsWith("/")) return "";
+  if (path.startsWith("//")) return "";
+
+  return path;
 }
 
-function isCatalogPath(pathname = window.location.pathname) {
-  return pathname === "/" || pathname === "/catalog" || pathname === "/catalog/";
-}
+function getLinkPath(link: HTMLAnchorElement) {
+  const rawHref = link.getAttribute("href") || "";
 
-function normalizeCatalogPath(path: string, page: number) {
-  const base = window.location.pathname === "/" ? "/" : "/catalog/";
-  return page > 1 ? `${base}?page=${page}` : base;
-}
-
-function readPageFromUrl() {
-  const params = new URLSearchParams(window.location.search);
-  return Math.max(1, Number(params.get("page") || "1") || 1);
+  try {
+    const url = new URL(rawHref, window.location.origin);
+    if (url.origin !== window.location.origin) return rawHref;
+    return `${url.pathname}${url.search}${url.hash}`;
+  } catch {
+    return rawHref;
+  }
 }
 
 function readCurrentPage() {
@@ -42,9 +46,9 @@ function readState(): CatalogState | null {
     if (!raw) return null;
 
     const parsed = JSON.parse(raw) as Partial<CatalogState>;
-    const path = String(parsed.path || "").trim();
+    const path = normalizePath(parsed.path);
 
-    if (!path.startsWith("/")) return null;
+    if (!path) return null;
 
     return {
       path,
@@ -56,11 +60,13 @@ function readState(): CatalogState | null {
   }
 }
 
-function writeState(page = readCurrentPage(), scrollY = window.scrollY || 0) {
+function saveState() {
   if (typeof window === "undefined") return null;
-  if (!isCatalogPath()) return null;
 
-  const normalizedPath = normalizeCatalogPath(getCurrentUrlPath(), page);
+  const path = `${window.location.pathname}${window.location.search}`;
+  if (window.location.pathname !== "/" && window.location.pathname !== "/catalog") {
+    return null;
+  }
 
   const state: CatalogState = {
     path: normalizedPath,
@@ -69,17 +75,22 @@ function writeState(page = readCurrentPage(), scrollY = window.scrollY || 0) {
   };
 
   window.sessionStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-
-  if (getCurrentUrlPath() !== normalizedPath) {
-    window.history.replaceState(window.history.state, "", normalizedPath);
-  }
-
   return state;
 }
 
-function updateStateAfterCatalogChange() {
-  window.setTimeout(() => writeState(readCurrentPage(), window.scrollY || 0), 80);
-  window.setTimeout(() => writeState(readCurrentPage(), window.scrollY || 0), 250);
+function addReturnParamToProductLink(link: HTMLAnchorElement, state: CatalogState | null) {
+  if (!state) return;
+
+  try {
+    const url = new URL(link.href, window.location.origin);
+    if (url.origin !== window.location.origin) return;
+    if (url.pathname !== "/product") return;
+
+    url.searchParams.set("from", state.path);
+    link.href = `${url.pathname}${url.search}${url.hash}`;
+  } catch {
+    // keep original href
+  }
 }
 
 function clarifySubtitle() {
@@ -120,7 +131,7 @@ function restorePageAndScroll(targetPage: number, targetScrollY: number) {
       return;
     }
 
-    if (currentPage >= targetPage || attempts > 50) {
+    if (currentPage >= targetPage || attempts > 40) {
       window.clearInterval(timer);
       writeState(currentPage, targetScrollY);
 
@@ -146,40 +157,50 @@ function getLinkPath(link: HTMLAnchorElement) {
 export default function CatalogNavigationState() {
   const pathname = usePathname();
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   useEffect(() => {
-    function handleDocumentClick(event: MouseEvent) {
+    function handlePossibleProductNavigation(event: Event) {
       const target = event.target as HTMLElement | null;
       const button = target?.closest?.("button") as HTMLButtonElement | null;
       const link = target?.closest?.("a") as HTMLAnchorElement | null;
 
-      if (isCatalogPath(pathname)) {
-        if (button?.classList.contains("pageButton")) {
-          updateStateAfterCatalogChange();
-          return;
-        }
-
-        if (link && getLinkPath(link).startsWith("/product")) {
-          writeState(readCurrentPage(), window.scrollY || 0);
-          return;
-        }
-      }
-
-      if (pathname === "/product" && link) {
-        const href = getLinkPath(link);
-        if (href === "/catalog" || href === "/catalog/" || href === "/") {
-          const state = readState();
-          if (!state) return;
-
-          event.preventDefault();
-          router.push(state.path || "/catalog/");
-        }
+      const href = getLinkPath(link);
+      if ((pathname === "/" || pathname === "/catalog") && href.startsWith("/product")) {
+        const state = saveState();
+        addReturnParamToProductLink(link, state);
       }
     }
 
+    function handleDocumentClick(event: MouseEvent) {
+      handlePossibleProductNavigation(event);
+
+      const target = event.target as HTMLElement | null;
+      const link = target?.closest?.("a") as HTMLAnchorElement | null;
+      if (!link) return;
+
+      const href = getLinkPath(link);
+
+      if (pathname === "/product" && (href === "/catalog" || href === "/")) {
+        const fromParam = normalizePath(searchParams.get("from"));
+        const state = readState();
+        const targetPath = fromParam || state?.path || "/catalog";
+
+        event.preventDefault();
+        router.push(targetPath);
+      }
+    }
+
+    document.addEventListener("pointerdown", handlePossibleProductNavigation, true);
+    document.addEventListener("mousedown", handlePossibleProductNavigation, true);
     document.addEventListener("click", handleDocumentClick, true);
-    return () => document.removeEventListener("click", handleDocumentClick, true);
-  }, [pathname, router]);
+
+    return () => {
+      document.removeEventListener("pointerdown", handlePossibleProductNavigation, true);
+      document.removeEventListener("mousedown", handlePossibleProductNavigation, true);
+      document.removeEventListener("click", handleDocumentClick, true);
+    };
+  }, [pathname, router, searchParams]);
 
   useEffect(() => {
     if (!isCatalogPath(pathname)) return;
@@ -190,10 +211,11 @@ export default function CatalogNavigationState() {
     const saved = readState();
     const targetScrollY = saved?.path === getCurrentUrlPath() ? saved.scrollY : window.scrollY || 0;
 
-    if (targetPage > 1) {
-      restorePageAndScroll(targetPage, targetScrollY);
-    } else {
-      writeState(1, window.scrollY || 0);
+    const state = readState();
+    const currentPath = `${window.location.pathname}${window.location.search}`;
+
+    if (state && state.path === currentPath) {
+      restorePageAndScroll(state.page, state.scrollY);
     }
 
     const observer = new MutationObserver(() => {
@@ -206,7 +228,7 @@ export default function CatalogNavigationState() {
     observer.observe(document.body, { childList: true, subtree: true, characterData: true });
 
     return () => observer.disconnect();
-  }, [pathname]);
+  }, [pathname, searchParams]);
 
   return null;
 }
