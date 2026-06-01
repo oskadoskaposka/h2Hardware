@@ -6,13 +6,8 @@ import { useEffect, useState } from "react";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { usePathname } from "next/navigation";
 import { auth } from "../lib/firebaseClient";
+import { isAdminEmail } from "../lib/admin";
 import styles from "../styles/header.module.css";
-
-// ✅ fora do componente = não muda entre renders
-const ADMIN_EMAILS = (process.env.NEXT_PUBLIC_ADMIN_EMAILS || "")
-  .split(",")
-  .map((e) => e.trim().toLowerCase())
-  .filter(Boolean);
 
 export default function Header() {
   const pathname = usePathname();
@@ -23,12 +18,7 @@ export default function Header() {
     const unsub = onAuthStateChanged(auth, (u) => {
       const logged = !!u;
       setIsLogged(logged);
-
-      if (logged && u?.email) {
-        setIsAdmin(ADMIN_EMAILS.includes(u.email.toLowerCase()));
-      } else {
-        setIsAdmin(false);
-      }
+      setIsAdmin(isAdminEmail(u?.email));
     });
 
     return () => unsub();
