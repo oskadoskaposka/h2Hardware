@@ -60,13 +60,32 @@ export default function RegistrationRequestPage() {
     try {
       setSubmitting(true);
 
+      const name = form.name.trim();
+      const email = form.email.trim().toLowerCase();
+      const company = form.company.trim();
+
       const db = getFirestore(app);
-      await addDoc(collection(db, "registration_requests"), {
-        name: form.name.trim(),
-        email: form.email.trim().toLowerCase(),
-        company: form.company.trim(),
-        status: "new",
+
+      // Store in the already-enabled sample_requests collection to avoid adding
+      // a new public Firestore rule during the handoff. Admin pages separate it
+      // by requestType, so no account is created or approved automatically.
+      await addDoc(collection(db, "sample_requests"), {
+        requestType: "registration_request",
         source: "registration_request",
+
+        name,
+        company,
+
+        // Keep compatibility with the existing sample_requests schema/rules.
+        companyName: company,
+        contactName: name,
+        website: "",
+        phone: "",
+        email,
+        deliveryAddress: "Registration request - no sample delivery address.",
+        thankYouText: THANK_YOU_TEXT,
+
+        status: "new",
         createdAt: serverTimestamp(),
       });
 
