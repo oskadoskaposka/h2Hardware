@@ -15,6 +15,7 @@ type RegistrationRequestDoc = {
   company: string;
   status?: string;
   source?: string;
+  requestType?: string;
   createdAt?: any;
 };
 
@@ -58,22 +59,25 @@ export default function AdminRegistrationRequestsPage() {
         setError(null);
 
         const db = getFirestore(app);
-        const col = collection(db, "registration_requests");
+        const col = collection(db, "sample_requests");
         const qq = query(col, orderBy("createdAt", "desc"));
         const snap = await getDocs(qq);
 
-        const list: RegistrationRequestDoc[] = snap.docs.map((d) => {
-          const data = d.data() as any;
-          return {
-            id: d.id,
-            name: String(data.name ?? "").trim(),
-            email: String(data.email ?? "").trim(),
-            company: String(data.company ?? "").trim(),
-            status: String(data.status ?? "new").trim(),
-            source: String(data.source ?? "registration_request").trim(),
-            createdAt: data.createdAt,
-          };
-        });
+        const list: RegistrationRequestDoc[] = snap.docs
+          .map((d) => {
+            const data = d.data() as any;
+            return {
+              id: d.id,
+              name: String(data.name ?? data.contactName ?? "").trim(),
+              email: String(data.email ?? "").trim(),
+              company: String(data.company ?? data.companyName ?? "").trim(),
+              status: String(data.status ?? "new").trim(),
+              source: String(data.source ?? "registration_request").trim(),
+              requestType: String(data.requestType ?? "").trim(),
+              createdAt: data.createdAt,
+            };
+          })
+          .filter((item) => item.requestType === "registration_request");
 
         setItems(list);
       } catch (e: any) {
