@@ -6,6 +6,7 @@ import { onAuthStateChanged } from "firebase/auth";
 import { collection, getDocs, getFirestore, orderBy, query } from "firebase/firestore";
 
 import { auth, app } from "../../../lib/firebaseClient";
+import { isAdminEmail } from "../../../lib/admin";
 
 type SampleRequestDoc = {
   id: string;
@@ -19,15 +20,6 @@ type SampleRequestDoc = {
   status?: string;
   createdAt?: any;
 };
-
-const adminEmails =
-  process.env.NEXT_PUBLIC_ADMIN_EMAILS?.split(",")
-    .map((s) => s.trim().toLowerCase())
-    .filter(Boolean) || [];
-
-function isAdminEmail(email: string | null | undefined) {
-  return !!email && adminEmails.includes((email || "").toLowerCase());
-}
 
 function toSearchText(item: SampleRequestDoc) {
   return [
