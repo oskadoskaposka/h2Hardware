@@ -96,6 +96,14 @@ export default function Header() {
                     >
                       Sample Requests
                     </Link>
+
+                    <Link
+                      href="/admin/registration-requests"
+                      className={styles.adminItem}
+                      role="menuitem"
+                    >
+                      Registration Requests
+                    </Link>
                   </div>
                 </div>
 
