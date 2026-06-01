@@ -12,11 +12,7 @@ import {
   updateDoc,
 } from "firebase/firestore";
 import { auth, app } from "../../../lib/firebaseClient";
-
-const adminEmails =
-  process.env.NEXT_PUBLIC_ADMIN_EMAILS?.split(",")
-    .map((s) => s.trim().toLowerCase())
-    .filter(Boolean) || [];
+import { isAdminEmail } from "../../../lib/admin";
 
 function toNumberOr(value: any, fallback: number) {
   const n = Number(value);
@@ -74,8 +70,7 @@ export default function AdminProductsPage() {
   // Auth gate
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
-      const email = user?.email?.toLowerCase() || "";
-      setIsAdmin(!!email && adminEmails.includes(email));
+      setIsAdmin(isAdminEmail(user?.email));
       setLoadingUser(false);
     });
     return () => unsubscribe();
