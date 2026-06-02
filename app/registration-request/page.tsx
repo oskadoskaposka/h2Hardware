@@ -60,31 +60,11 @@ export default function RegistrationRequestPage() {
     try {
       setSubmitting(true);
 
-      const name = form.name.trim();
-      const email = form.email.trim().toLowerCase();
-      const company = form.company.trim();
-
       const db = getFirestore(app);
-
-      // Store in the already-enabled sample_requests collection to avoid adding
-      // a new public Firestore rule during the handoff. Admin pages separate it
-      // by requestType, so no account is created or approved automatically.
-      await addDoc(collection(db, "sample_requests"), {
-        requestType: "registration_request",
-        source: "registration_request",
-
-        name,
-        company,
-
-        // Keep compatibility with the existing sample_requests schema/rules.
-        companyName: company,
-        contactName: name,
-        website: "",
-        phone: "",
-        email,
-        deliveryAddress: "Registration request - no sample delivery address.",
-        thankYouText: THANK_YOU_TEXT,
-
+      await addDoc(collection(db, "registration_requests"), {
+        name: form.name.trim(),
+        email: form.email.trim().toLowerCase(),
+        company: form.company.trim(),
         status: "new",
         createdAt: serverTimestamp(),
       });
@@ -204,209 +184,37 @@ export default function RegistrationRequestPage() {
       </div>
 
       <style jsx>{`
-        .page {
-          min-height: 100vh;
-          background: #f4f6f8;
-          padding: 24px 0 60px;
-        }
-        .wrap {
-          max-width: 1180px;
-          margin: 0 auto;
-          padding: 0 18px;
-        }
-        .hero {
-          display: flex;
-          align-items: flex-start;
-          justify-content: space-between;
-          gap: 16px;
-          flex-wrap: wrap;
-          margin-bottom: 18px;
-        }
-        .eyebrow {
-          display: inline-block;
-          font-size: 12px;
-          font-weight: 900;
-          letter-spacing: 0.08em;
-          text-transform: uppercase;
-          color: #b91c1c;
-          margin-bottom: 8px;
-        }
-        h1 {
-          margin: 0;
-          font-size: 34px;
-          line-height: 1.05;
-          font-weight: 950;
-          color: #0f172a;
-        }
-        .hero p {
-          margin: 10px 0 0;
-          color: #64748b;
-          font-size: 14px;
-          max-width: 700px;
-        }
-        .heroLinks {
-          display: flex;
-          gap: 10px;
-          flex-wrap: wrap;
-        }
-        .ghostBtn {
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          height: 42px;
-          padding: 0 14px;
-          border-radius: 10px;
-          background: #fff;
-          border: 1px solid #e2e8f0;
-          color: #0f172a;
-          font-weight: 800;
-          text-decoration: none;
-        }
-        .grid {
-          display: grid;
-          grid-template-columns: minmax(320px, 560px) minmax(320px, 420px);
-          gap: 28px;
-          justify-content: center;
-          align-items: start;
-        }
-        @media (max-width: 980px) {
-          .grid {
-            grid-template-columns: 1fr;
-          }
-        }
-        .starCard {
-          background: #fff;
-          border: 1px solid #e5e7eb;
-          border-radius: 14px;
-          overflow: hidden;
-          box-shadow: 0 10px 26px rgba(0, 0, 0, 0.07);
-        }
-        .starCardHeader {
-          background: linear-gradient(180deg, #121212, #000);
-          color: #fff;
-          font-weight: 900;
-          font-size: 13px;
-          padding: 12px 14px;
-          letter-spacing: 0.08em;
-          text-transform: uppercase;
-          border-bottom: 3px solid #b91c1c;
-        }
-        .starCardBody {
-          padding: 16px;
-        }
-        .miniNotice {
-          background: rgba(185, 28, 28, 0.06);
-          border: 1px solid rgba(185, 28, 28, 0.22);
-          border-left: 5px solid #b91c1c;
-          border-radius: 12px;
-          padding: 12px;
-          margin-bottom: 14px;
-        }
-        .miniNoticeTitle {
-          font-weight: 900;
-          color: #b91c1c;
-          font-size: 13px;
-          margin-bottom: 6px;
-        }
-        .miniNoticeText,
-        .muted {
-          font-size: 13px;
-          font-weight: 650;
-          color: #111;
-          line-height: 1.45;
-        }
-        .muted {
-          margin: 0 0 14px;
-          color: #555;
-          font-weight: 500;
-        }
-        .form {
-          display: grid;
-          gap: 14px;
-        }
-        .field {
-          display: grid;
-          gap: 6px;
-        }
-        .field label {
-          color: #0f172a;
-          font-size: 13px;
-          font-weight: 900;
-        }
-        .field input {
-          width: 100%;
-          border: 1px solid #d1d5db;
-          border-radius: 12px;
-          padding: 12px 14px;
-          font-size: 14px;
-          outline: none;
-          background: #fff;
-        }
-        .field input:focus {
-          border-color: #94a3b8;
-        }
-        .error {
-          background: #fff;
-          border: 1px solid rgba(185, 28, 28, 0.24);
-          border-left: 6px solid #b91c1c;
-          border-radius: 12px;
-          padding: 14px;
-          color: #7f1d1d;
-          font-size: 13px;
-          font-weight: 700;
-        }
-        .success {
-          background: rgba(16, 185, 129, 0.07);
-          border: 1px solid rgba(16, 185, 129, 0.22);
-          border-left: 6px solid #10b981;
-          border-radius: 12px;
-          padding: 14px;
-          color: #065f46;
-          font-size: 13px;
-          font-weight: 700;
-        }
-        .submitBtn {
-          height: 46px;
-          border: none;
-          border-radius: 12px;
-          background: #b91c1c;
-          color: #fff;
-          font-weight: 900;
-          font-size: 14px;
-          cursor: pointer;
-        }
-        .submitBtn:disabled {
-          opacity: 0.7;
-          cursor: not-allowed;
-        }
-        .sideCard {
-          align-content: start;
-        }
-        .summary {
-          display: grid;
-          gap: 10px;
-        }
-        .summaryItem {
-          border: 1px solid #eef2f7;
-          border-radius: 12px;
-          padding: 12px;
-          background: #fbfcfd;
-        }
-        .summaryLabel {
-          color: #64748b;
-          font-size: 12px;
-          font-weight: 800;
-          text-transform: uppercase;
-          letter-spacing: 0.04em;
-          margin-bottom: 4px;
-        }
-        .summaryValue {
-          color: #0f172a;
-          font-size: 14px;
-          font-weight: 700;
-          line-height: 1.45;
-          overflow-wrap: anywhere;
-        }
+        .page { min-height: 100vh; background: #f4f6f8; padding: 24px 0 60px; }
+        .wrap { max-width: 1180px; margin: 0 auto; padding: 0 18px; }
+        .hero { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 18px; }
+        .eyebrow { display: inline-block; font-size: 12px; font-weight: 900; letter-spacing: 0.08em; text-transform: uppercase; color: #b91c1c; margin-bottom: 8px; }
+        h1 { margin: 0; font-size: 34px; line-height: 1.05; font-weight: 950; color: #0f172a; }
+        .hero p { margin: 10px 0 0; color: #64748b; font-size: 14px; max-width: 700px; }
+        .heroLinks { display: flex; gap: 10px; flex-wrap: wrap; }
+        .ghostBtn { display: inline-flex; align-items: center; justify-content: center; height: 42px; padding: 0 14px; border-radius: 10px; background: #fff; border: 1px solid #e2e8f0; color: #0f172a; font-weight: 800; text-decoration: none; }
+        .grid { display: grid; grid-template-columns: minmax(320px, 560px) minmax(320px, 420px); gap: 28px; justify-content: center; align-items: start; }
+        @media (max-width: 980px) { .grid { grid-template-columns: 1fr; } }
+        .starCard { background: #fff; border: 1px solid #e5e7eb; border-radius: 14px; overflow: hidden; box-shadow: 0 10px 26px rgba(0, 0, 0, 0.07); }
+        .starCardHeader { background: linear-gradient(180deg, #121212, #000); color: #fff; font-weight: 900; font-size: 13px; padding: 12px 14px; letter-spacing: 0.08em; text-transform: uppercase; border-bottom: 3px solid #b91c1c; }
+        .starCardBody { padding: 16px; }
+        .miniNotice { background: rgba(185, 28, 28, 0.06); border: 1px solid rgba(185, 28, 28, 0.22); border-left: 5px solid #b91c1c; border-radius: 12px; padding: 12px; margin-bottom: 14px; }
+        .miniNoticeTitle { font-weight: 900; color: #b91c1c; font-size: 13px; margin-bottom: 6px; }
+        .miniNoticeText, .muted { font-size: 13px; font-weight: 650; color: #111; line-height: 1.45; }
+        .muted { margin: 0 0 14px; color: #555; font-weight: 500; }
+        .form { display: grid; gap: 14px; }
+        .field { display: grid; gap: 6px; }
+        .field label { color: #0f172a; font-size: 13px; font-weight: 900; }
+        .field input { width: 100%; border: 1px solid #d1d5db; border-radius: 12px; padding: 12px 14px; font-size: 14px; outline: none; background: #fff; }
+        .field input:focus { border-color: #94a3b8; }
+        .error { background: #fff; border: 1px solid rgba(185, 28, 28, 0.24); border-left: 6px solid #b91c1c; border-radius: 12px; padding: 14px; color: #7f1d1d; font-size: 13px; font-weight: 700; }
+        .success { background: rgba(16, 185, 129, 0.07); border: 1px solid rgba(16, 185, 129, 0.22); border-left: 6px solid #10b981; border-radius: 12px; padding: 14px; color: #065f46; font-size: 13px; font-weight: 700; }
+        .submitBtn { height: 46px; border: none; border-radius: 12px; background: #b91c1c; color: #fff; font-weight: 900; font-size: 14px; cursor: pointer; }
+        .submitBtn:disabled { opacity: 0.7; cursor: not-allowed; }
+        .sideCard { align-content: start; }
+        .summary { display: grid; gap: 10px; }
+        .summaryItem { border: 1px solid #eef2f7; border-radius: 12px; padding: 12px; background: #fbfcfd; }
+        .summaryLabel { color: #64748b; font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 4px; }
+        .summaryValue { color: #0f172a; font-size: 14px; font-weight: 700; line-height: 1.45; overflow-wrap: anywhere; }
       `}</style>
     </main>
   );
