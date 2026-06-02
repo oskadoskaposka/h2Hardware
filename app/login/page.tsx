@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import {
   signInWithEmailAndPassword,
@@ -189,8 +190,11 @@ export default function LoginPage() {
               <div className="miniNotice">
                 <div className="miniNoticeTitle">Don’t have a login yet?</div>
                 <div className="miniNoticeText">
-                  Accounts are created by our team. Please contact H2 Hardware to request access.
+                  H2 Hardware reviews and releases account access before login is enabled.
                 </div>
+                <Link href="/registration-request" className="requestAccessBtn">
+                  Request pre-registration here
+                </Link>
               </div>
             ) : null}
 
@@ -320,16 +324,8 @@ export default function LoginPage() {
                   </a>
                 </div>
 
-                <div
-                  style={{
-                    marginTop: 18,
-                    borderTop: "1px solid #eee",
-                    paddingTop: 16,
-                  }}
-                >
-                  <h2 style={{ margin: 0, fontSize: 18, fontWeight: 900 }}>
-                    Your details
-                  </h2>
+                <div style={{ marginTop: 18, borderTop: "1px solid #eee", paddingTop: 16 }}>
+                  <h2 style={{ margin: 0, fontSize: 18, fontWeight: 900 }}>Your details</h2>
                   <p style={{ marginTop: 6, opacity: 0.75 }}>
                     These details will be used automatically on checkout.
                   </p>
@@ -362,12 +358,7 @@ export default function LoginPage() {
                         placeholder="you@email.com"
                       />
 
-                      <button
-                        className={styles.primary}
-                        onClick={handleSaveProfile}
-                        disabled={savingProfile}
-                        style={{ marginTop: 10 }}
-                      >
+                      <button className={styles.primary} onClick={handleSaveProfile} disabled={savingProfile} style={{ marginTop: 10 }}>
                         {savingProfile ? "Saving…" : "Save details"}
                       </button>
                     </>
@@ -413,112 +404,23 @@ export default function LoginPage() {
       </div>
 
       <style jsx>{`
-        .twoColWrap {
-          display: grid;
-          grid-template-columns: minmax(320px, 520px) minmax(320px, 420px);
-          gap: 28px;
-          justify-content: center;
-          align-items: start;
-          margin-top: 10px;
-        }
-
-        .starCard {
-          background: #fff;
-          border: 1px solid #e5e7eb;
-          border-radius: 14px;
-          overflow: hidden;
-          box-shadow: 0 10px 26px rgba(0, 0, 0, 0.07);
-        }
-
-        .starCardHeader {
-          background: linear-gradient(180deg, #121212, #000);
-          color: #fff;
-          font-weight: 900;
-          font-size: 13px;
-          padding: 12px 14px;
-          letter-spacing: 0.08em;
-          text-transform: uppercase;
-          border-bottom: 3px solid #b91c1c;
-        }
-
-        .starCardBody {
-          padding: 16px;
-        }
-
-        .miniNotice {
-          background: rgba(185, 28, 28, 0.06);
-          border: 1px solid rgba(185, 28, 28, 0.22);
-          border-left: 5px solid #b91c1c;
-          border-radius: 12px;
-          padding: 12px;
-          margin-bottom: 14px;
-        }
-
-        .miniNoticeTitle {
-          font-weight: 900;
-          color: #b91c1c;
-          font-size: 13px;
-          margin-bottom: 6px;
-        }
-
-        .miniNoticeText {
-          font-size: 13px;
-          font-weight: 650;
-          color: #111;
-          line-height: 1.45;
-        }
-
-        .cBlock {
-          margin-top: 12px;
-        }
-
-        .cLabel {
-          font-weight: 900;
-          font-size: 12px;
-          text-transform: uppercase;
-          letter-spacing: 0.03em;
-          color: #111;
-          margin-bottom: 2px;
-        }
-
-        .cValue {
-          font-size: 13px;
-          font-weight: 700;
-          color: #111;
-          line-height: 1.35;
-        }
-
-        .cPhone {
-          color: #111;
-          text-decoration: none;
-          font-weight: 700;
-        }
-
-        .cLink {
-          display: inline-block;
-          margin-top: 2px;
-          font-size: 13px;
-          font-weight: 900;
-          color: #b91c1c;
-          text-decoration: none;
-        }
-
-        .cLink:hover {
-          text-decoration: underline;
-        }
-
-        .cHint {
-          font-size: 13px;
-          line-height: 1.5;
-          color: #555;
-        }
-
-        @media (max-width: 980px) {
-          .twoColWrap {
-            grid-template-columns: 1fr;
-            justify-content: stretch;
-          }
-        }
+        .twoColWrap { display: grid; grid-template-columns: minmax(320px, 520px) minmax(320px, 420px); gap: 28px; justify-content: center; align-items: start; margin-top: 10px; }
+        .starCard { background: #fff; border: 1px solid #e5e7eb; border-radius: 14px; overflow: hidden; box-shadow: 0 10px 26px rgba(0, 0, 0, 0.07); }
+        .starCardHeader { background: linear-gradient(180deg, #121212, #000); color: #fff; font-weight: 900; font-size: 13px; padding: 12px 14px; letter-spacing: 0.08em; text-transform: uppercase; border-bottom: 3px solid #b91c1c; }
+        .starCardBody { padding: 16px; }
+        .miniNotice { background: rgba(185, 28, 28, 0.06); border: 1px solid rgba(185, 28, 28, 0.22); border-left: 5px solid #b91c1c; border-radius: 12px; padding: 12px; margin-bottom: 14px; }
+        .miniNoticeTitle { font-weight: 900; color: #b91c1c; font-size: 13px; margin-bottom: 6px; }
+        .miniNoticeText { font-size: 13px; font-weight: 650; color: #111; line-height: 1.45; }
+        .requestAccessBtn { display: inline-flex; align-items: center; justify-content: center; margin-top: 10px; min-height: 38px; padding: 0 14px; border-radius: 10px; background: #b91c1c; color: #fff; font-size: 13px; font-weight: 900; text-decoration: none; }
+        .requestAccessBtn:hover { background: #991b1b; text-decoration: none; }
+        .cBlock { margin-top: 12px; }
+        .cLabel { font-weight: 900; font-size: 12px; text-transform: uppercase; letter-spacing: 0.03em; color: #111; margin-bottom: 2px; }
+        .cValue { font-size: 13px; font-weight: 700; color: #111; line-height: 1.35; }
+        .cPhone { color: #111; text-decoration: none; font-weight: 700; }
+        .cLink { display: inline-block; margin-top: 2px; font-size: 13px; font-weight: 900; color: #b91c1c; text-decoration: none; }
+        .cLink:hover { text-decoration: underline; }
+        .cHint { font-size: 13px; line-height: 1.5; color: #555; }
+        @media (max-width: 980px) { .twoColWrap { grid-template-columns: 1fr; justify-content: stretch; } }
       `}</style>
     </div>
   );
