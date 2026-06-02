@@ -14,20 +14,11 @@ type RegistrationRequestDoc = {
   email: string;
   company: string;
   status?: string;
-  source?: string;
-  requestType?: string;
   createdAt?: any;
 };
 
 function toSearchText(item: RegistrationRequestDoc) {
-  return [
-    item.id,
-    item.name,
-    item.email,
-    item.company,
-    item.status || "",
-    item.source || "",
-  ]
+  return [item.id, item.name, item.email, item.company, item.status || ""]
     .join(" ")
     .toLowerCase();
 }
@@ -59,25 +50,21 @@ export default function AdminRegistrationRequestsPage() {
         setError(null);
 
         const db = getFirestore(app);
-        const col = collection(db, "sample_requests");
+        const col = collection(db, "registration_requests");
         const qq = query(col, orderBy("createdAt", "desc"));
         const snap = await getDocs(qq);
 
-        const list: RegistrationRequestDoc[] = snap.docs
-          .map((d) => {
-            const data = d.data() as any;
-            return {
-              id: d.id,
-              name: String(data.name ?? data.contactName ?? "").trim(),
-              email: String(data.email ?? "").trim(),
-              company: String(data.company ?? data.companyName ?? "").trim(),
-              status: String(data.status ?? "new").trim(),
-              source: String(data.source ?? "registration_request").trim(),
-              requestType: String(data.requestType ?? "").trim(),
-              createdAt: data.createdAt,
-            };
-          })
-          .filter((item) => item.requestType === "registration_request");
+        const list: RegistrationRequestDoc[] = snap.docs.map((d) => {
+          const data = d.data() as any;
+          return {
+            id: d.id,
+            name: String(data.name ?? "").trim(),
+            email: String(data.email ?? "").trim(),
+            company: String(data.company ?? "").trim(),
+            status: String(data.status ?? "new").trim(),
+            createdAt: data.createdAt,
+          };
+        });
 
         setItems(list);
       } catch (e: any) {
@@ -101,69 +88,30 @@ export default function AdminRegistrationRequestsPage() {
   return (
     <main style={{ padding: 24, background: "#f4f6f8", minHeight: "70vh" }}>
       <div style={{ maxWidth: 1180, margin: "0 auto", padding: "0 18px" }}>
-        <div
-          style={{
-            display: "flex",
-            alignItems: "baseline",
-            justifyContent: "space-between",
-            gap: 12,
-            flexWrap: "wrap",
-          }}
-        >
+        <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
           <div>
-            <h1
-              style={{
-                margin: 0,
-                fontSize: 26,
-                fontWeight: 900,
-                color: "#0f172a",
-                letterSpacing: -0.2,
-              }}
-            >
+            <h1 style={{ margin: 0, fontSize: 26, fontWeight: 900, color: "#0f172a", letterSpacing: -0.2 }}>
               Registration Requests
             </h1>
             <div style={{ marginTop: 6, color: "#64748b", fontSize: 13 }}>
-              {loading
-                ? "Loading…"
-                : `${filtered.length} request${filtered.length === 1 ? "" : "s"}`}
+              {loading ? "Loading…" : `${filtered.length} request${filtered.length === 1 ? "" : "s"}`}
             </div>
           </div>
 
           <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-            <Link
-              href="/registration-request"
-              style={{ fontWeight: 800, color: "#b91c1c", textDecoration: "none" }}
-            >
+            <Link href="/registration-request" style={{ fontWeight: 800, color: "#b91c1c", textDecoration: "none" }}>
               Public request form
             </Link>
-            <Link
-              href="/admin/orders"
-              style={{ fontWeight: 800, color: "#b91c1c", textDecoration: "none" }}
-            >
+            <Link href="/admin/orders" style={{ fontWeight: 800, color: "#b91c1c", textDecoration: "none" }}>
               Orders
             </Link>
-            <Link
-              href="/admin/products"
-              style={{ fontWeight: 800, color: "#b91c1c", textDecoration: "none" }}
-            >
+            <Link href="/admin/products" style={{ fontWeight: 800, color: "#b91c1c", textDecoration: "none" }}>
               Manage products
             </Link>
           </div>
         </div>
 
-        <div
-          style={{
-            marginTop: 14,
-            background: "rgba(185, 28, 28, 0.06)",
-            border: "1px solid rgba(185, 28, 28, 0.18)",
-            borderLeft: "6px solid #b91c1c",
-            borderRadius: 12,
-            padding: 14,
-            color: "#7f1d1d",
-            fontSize: 13,
-            fontWeight: 700,
-          }}
-        >
+        <div style={{ marginTop: 14, background: "rgba(185, 28, 28, 0.06)", border: "1px solid rgba(185, 28, 28, 0.18)", borderLeft: "6px solid #b91c1c", borderRadius: 12, padding: 14, color: "#7f1d1d", fontSize: 13, fontWeight: 700 }}>
           Review-only list. This page does not approve users, create accounts, or change login permissions automatically.
         </div>
 
@@ -172,156 +120,52 @@ export default function AdminRegistrationRequestsPage() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search: name, email, company, status..."
-            style={{
-              width: "100%",
-              minHeight: 42,
-              padding: "0 12px",
-              borderRadius: 10,
-              border: "1px solid #e2e8f0",
-              background: "#fff",
-              outline: "none",
-            }}
+            style={{ width: "100%", minHeight: 42, padding: "0 12px", borderRadius: 10, border: "1px solid #e2e8f0", background: "#fff", outline: "none" }}
           />
         </div>
 
         {error ? (
-          <div
-            style={{
-              marginTop: 16,
-              background: "#fff",
-              border: "1px solid rgba(185,28,28,.25)",
-              borderLeft: "6px solid #b91c1c",
-              borderRadius: 12,
-              padding: 14,
-            }}
-          >
+          <div style={{ marginTop: 16, background: "#fff", border: "1px solid rgba(185,28,28,.25)", borderLeft: "6px solid #b91c1c", borderRadius: 12, padding: 14 }}>
             <strong>Firestore error:</strong> {error}
           </div>
         ) : loading ? (
           <div style={{ marginTop: 16, color: "#64748b" }}>Loading…</div>
         ) : filtered.length === 0 ? (
-          <div
-            style={{
-              marginTop: 16,
-              background: "#fff",
-              border: "1px solid #e2e8f0",
-              borderRadius: 12,
-              padding: 14,
-            }}
-          >
+          <div style={{ marginTop: 16, background: "#fff", border: "1px solid #e2e8f0", borderRadius: 12, padding: 14 }}>
             <div style={{ fontWeight: 900, color: "#0f172a" }}>No registration requests found</div>
-            <div style={{ marginTop: 6, color: "#64748b", fontSize: 13 }}>
-              Try a different search.
-            </div>
+            <div style={{ marginTop: 6, color: "#64748b", fontSize: 13 }}>Try a different search.</div>
           </div>
         ) : (
           <div style={{ marginTop: 14, display: "grid", gap: 12 }}>
             {filtered.map((item) => {
-              const dt =
-                item.createdAt?.toDate?.() instanceof Date ? item.createdAt.toDate() : null;
+              const dt = item.createdAt?.toDate?.() instanceof Date ? item.createdAt.toDate() : null;
 
               return (
-                <div
-                  key={item.id}
-                  style={{
-                    background: "#fff",
-                    border: "1px solid #e2e8f0",
-                    borderRadius: 14,
-                    padding: 14,
-                    boxShadow: "0 1px 0 rgba(15,23,42,.03)",
-                  }}
-                >
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      gap: 12,
-                      alignItems: "flex-start",
-                      flexWrap: "wrap",
-                    }}
-                  >
+                <div key={item.id} style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 14, padding: 14, boxShadow: "0 1px 0 rgba(15,23,42,.03)" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "flex-start", flexWrap: "wrap" }}>
                     <div style={{ minWidth: 260 }}>
-                      <div
-                        style={{
-                          fontWeight: 950 as any,
-                          color: "#0f172a",
-                          fontSize: 18,
-                          letterSpacing: 0.1,
-                        }}
-                      >
+                      <div style={{ fontWeight: 950 as any, color: "#0f172a", fontSize: 18, letterSpacing: 0.1 }}>
                         {item.name || "Unnamed requester"}
                       </div>
-
                       <div style={{ marginTop: 6, color: "#64748b", fontSize: 13 }}>
-                        Company:{" "}
-                        <strong style={{ color: "#0f172a" }}>
-                          {item.company || "—"}
-                        </strong>
+                        Company: <strong style={{ color: "#0f172a" }}>{item.company || "—"}</strong>
                       </div>
-
                       <div style={{ marginTop: 6, color: "#64748b", fontSize: 12 }}>
-                        ID:{" "}
-                        <span
-                          style={{
-                            fontFamily:
-                              "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
-                          }}
-                        >
-                          {item.id}
-                        </span>
+                        ID: <span style={{ fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" }}>{item.id}</span>
                       </div>
-
                       <div style={{ marginTop: 6, color: "#64748b", fontSize: 12 }}>
                         {dt ? dt.toLocaleString("en-CA") : "—"}
                       </div>
                     </div>
 
-                    <div
-                      style={{
-                        display: "inline-flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        minWidth: 84,
-                        height: 32,
-                        padding: "0 12px",
-                        borderRadius: 999,
-                        background: "rgba(185, 28, 28, 0.08)",
-                        color: "#b91c1c",
-                        border: "1px solid rgba(185, 28, 28, 0.18)",
-                        fontSize: 12,
-                        fontWeight: 900,
-                        textTransform: "uppercase",
-                        letterSpacing: "0.04em",
-                      }}
-                    >
+                    <div style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", minWidth: 84, height: 32, padding: "0 12px", borderRadius: 999, background: "rgba(185, 28, 28, 0.08)", color: "#b91c1c", border: "1px solid rgba(185, 28, 28, 0.18)", fontSize: 12, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.04em" }}>
                       {item.status || "new"}
                     </div>
                   </div>
 
-                  <div
-                    style={{
-                      marginTop: 14,
-                      display: "grid",
-                      gridTemplateColumns: "1fr 1fr 1fr",
-                      gap: 14,
-                    }}
-                  >
+                  <div style={{ marginTop: 14, display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 14 }}>
                     <InfoRow label="Name" value={item.name || "—"} />
-                    <InfoRow
-                      label="Email"
-                      value={
-                        item.email ? (
-                          <a
-                            href={`mailto:${item.email}`}
-                            style={{ color: "#b91c1c", fontWeight: 800 }}
-                          >
-                            {item.email}
-                          </a>
-                        ) : (
-                          "—"
-                        )
-                      }
-                    />
+                    <InfoRow label="Email" value={item.email ? <a href={`mailto:${item.email}`} style={{ color: "#b91c1c", fontWeight: 800 }}>{item.email}</a> : "—"} />
                     <InfoRow label="Company" value={item.company || "—"} />
                   </div>
                 </div>
@@ -334,45 +178,11 @@ export default function AdminRegistrationRequestsPage() {
   );
 }
 
-function InfoRow({
-  label,
-  value,
-}: {
-  label: string;
-  value: React.ReactNode;
-}) {
+function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
-    <div
-      style={{
-        border: "1px solid #eef2f7",
-        borderRadius: 12,
-        padding: 12,
-        background: "#fbfcfd",
-        minWidth: 0,
-      }}
-    >
-      <div
-        style={{
-          color: "#64748b",
-          fontSize: 12,
-          fontWeight: 800,
-          textTransform: "uppercase",
-          letterSpacing: "0.04em",
-          marginBottom: 4,
-        }}
-      >
-        {label}
-      </div>
-      <div
-        style={{
-          color: "#0f172a",
-          fontSize: 14,
-          fontWeight: 700,
-          overflowWrap: "anywhere",
-        }}
-      >
-        {value}
-      </div>
+    <div style={{ border: "1px solid #eef2f7", borderRadius: 12, padding: 12, background: "#fbfcfd", minWidth: 0 }}>
+      <div style={{ color: "#64748b", fontSize: 12, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 4 }}>{label}</div>
+      <div style={{ color: "#0f172a", fontSize: 14, fontWeight: 700, overflowWrap: "anywhere" }}>{value}</div>
     </div>
   );
 }
