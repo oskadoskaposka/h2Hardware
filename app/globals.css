@@ -32,3 +32,7 @@ a:hover { text-decoration: underline; }
   width: min(1120px, calc(100% - 24px));
   margin: 0 auto;
 }
+
+.productCard > .muted {
+  display: none !important;
+}
