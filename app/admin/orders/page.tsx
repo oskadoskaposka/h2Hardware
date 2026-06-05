@@ -521,7 +521,6 @@ export default function AdminOrdersPage() {
                           customerType={"tiered" as any}
                           currency={o.currency || "CAD"}
                           filename={pdf.filename}
-                          title="StarPro"
                           subtitle={`Order / Copy — ${orderLabel(o)}`}
                         />
 
