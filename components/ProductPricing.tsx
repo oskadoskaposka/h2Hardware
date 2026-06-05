@@ -13,7 +13,7 @@ type Tier = {
 type ProductLike = {
   publicPrice: number;
   tiers?: Tier[];
-  currency?: string; // ✅ now allowed
+  currency?: string;
 };
 
 export default function ProductPricing({
@@ -25,7 +25,7 @@ export default function ProductPricing({
 }) {
   const currency = product.currency || "CAD";
 
-  const { unitPriceApplied, tierApplied } = resolveUnitPrice(
+  const { unitPriceApplied } = resolveUnitPrice(
     {
       publicPrice: product.publicPrice,
       currency,
@@ -46,16 +46,6 @@ export default function ProductPricing({
             style: "currency",
             currency,
           })}
-        </div>
-
-        <div className={styles.mutedSmall}>
-          {tierApplied ? (
-            <>
-              Tier applied: <strong>{tierApplied}</strong>
-            </>
-          ) : (
-            <>Public price</>
-          )}
         </div>
       </div>
     </div>
