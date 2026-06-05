@@ -148,7 +148,7 @@ export default function GenerateQuotePdfButton({
 
       const logo = await loadImageDataUrl("/h2-logo.svg");
       if (logo) {
-        doc.addImage(logo, "PNG", marginX, y - 8, 96, 44);
+        doc.addImage(logo, "PNG", marginX, y - 8, 44, 52);
       } else {
         doc.setFont("helvetica", "bold");
         doc.setFontSize(18);
@@ -163,7 +163,7 @@ export default function GenerateQuotePdfButton({
       y += 16;
       doc.text(dateStr, 555, y, { align: "right" });
 
-      y += 42;
+      y += 58;
 
       doc.setFont("helvetica", "bold");
       doc.text("Customer:", marginX, y);
