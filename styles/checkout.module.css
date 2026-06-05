@@ -1,5 +1,5 @@
 :root {
-  /* StarPro Doors-ish palette */
+  /* H2 Hardware palette */
   --bg: #f5f6f8;
   --panel: #ffffff;
   --panel-2: #fafafa;
@@ -9,14 +9,13 @@
   --text: #15171a;
   --muted: rgba(21, 23, 26, 0.72);
 
-  --brand: #b10000;         /* StarPro red */
+  --brand: #b10000;
   --brand-dark: #7f0000;
   --brand-soft: rgba(177, 0, 0, 0.12);
 
   --shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
 }
 
-/* ✅ Esse é o “segredo” do respiro: max-width + padding lateral */
 .page {
   background: var(--bg);
   color: var(--text);
@@ -83,6 +82,7 @@
   border: 1px solid var(--border);
   color: var(--text);
   outline: none;
+  font-family: inherit;
 }
 
 .input::placeholder {
@@ -94,7 +94,6 @@
   box-shadow: 0 0 0 3px var(--brand-soft);
 }
 
-/* ✅ Badge */
 .badge {
   margin-top: 12px;
   display: inline-flex;
@@ -146,7 +145,6 @@
   opacity: 0.65;
 }
 
-/* RIGHT: Preview */
 .preview {
   border-radius: 14px;
   padding: 16px;
@@ -160,7 +158,7 @@
   display: flex;
   justify-content: space-between;
   gap: 12px;
-  align-items: baseline;
+  align-items: center;
   padding-bottom: 10px;
   border-bottom: 1px solid rgba(0,0,0,0.10);
 }
@@ -191,6 +189,7 @@
   font-size: 12px;
   color: rgba(21, 23, 26, 0.78);
   margin: 2px 0;
+  word-break: break-word;
 }
 
 .infoLabel {
@@ -198,13 +197,12 @@
   color: rgba(21, 23, 26, 0.82);
 }
 
-/* ✅ Item 3: o header (QTY/UNIT/SUBTOTAL) precisa usar o MESMO grid das rows */
 .previewTableHeader,
 .previewRow,
 .previewTotal {
   display: grid;
-  grid-template-columns: 1fr 64px 110px 120px;
-  gap: 12px;
+  grid-template-columns: minmax(160px, 1fr) 92px 52px 96px 108px;
+  gap: 10px;
   align-items: end;
 }
 
@@ -237,10 +235,17 @@
   line-height: 1.15;
 }
 
-.prodModel {
+.prodModel,
+.productCode {
   font-size: 11px;
   color: rgba(21, 23, 26, 0.55);
   margin-top: 2px;
+  word-break: break-word;
+}
+
+.productCode {
+  font-weight: 800;
+  color: rgba(21, 23, 26, 0.72);
 }
 
 .num {
@@ -278,17 +283,28 @@
   color: rgba(21, 23, 26, 0.60);
 }
 
-/* Mobile tweaks */
-@media (max-width: 520px) {
-  .page {
-    padding: 18px 14px 42px;
-  }
-
+@media (max-width: 700px) {
   .previewTableHeader,
   .previewRow,
   .previewTotal {
-    grid-template-columns: 1fr 44px 86px 96px;
-    gap: 8px;
+    grid-template-columns: 1fr;
+    gap: 5px;
+  }
+
+  .num,
+  .totalLabel,
+  .numStrong {
+    text-align: left;
+  }
+
+  .previewInfo {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 520px) {
+  .page {
+    padding: 18px 14px 42px;
   }
 
   .grid {
