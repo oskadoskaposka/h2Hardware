@@ -2,7 +2,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
 import styles from "../../styles/checkout.module.css";
 
 import {
@@ -31,6 +30,7 @@ import { resolveUnitPrice } from "../../lib/pricing";
 
 type OrderItem = {
   slug: string;
+  productId: string;
   name?: string;
   model?: string;
   qty: number;
@@ -57,9 +57,38 @@ function formatMoney(v: number) {
   }).format(safeNumber(v));
 }
 
-export default function CheckoutPage() {
-  const router = useRouter();
+function getCheckoutPricing(product: any, qty: number, isLogged: boolean) {
+  const publicPrice = Number(product?.publicPrice ?? product?.price ?? 0);
+  const currency = String(product?.currency ?? "CAD");
 
+  if (!isLogged) {
+    return {
+      currency,
+      unitPriceApplied: safeNumber(publicPrice),
+      tierApplied: null as string | null,
+    };
+  }
+
+  const pricing = {
+    publicPrice,
+    currency,
+    tiers: Array.isArray(product?.tiers)
+      ? product.tiers
+      : Array.isArray(product?.discountTiers)
+        ? product.discountTiers
+        : [],
+  };
+
+  const r = resolveUnitPrice(pricing as any, qty);
+
+  return {
+    currency,
+    unitPriceApplied: safeNumber(r.unitPriceApplied),
+    tierApplied: r.tierApplied ?? null,
+  };
+}
+
+export default function CheckoutPage() {
   const [isLogged, setIsLogged] = useState(false);
   const [userEmail, setUserEmail] = useState<string>("");
 
@@ -74,15 +103,15 @@ export default function CheckoutPage() {
 
   const [finalizing, setFinalizing] = useState(false);
   const [uiError, setUiError] = useState<string | null>(null);
+  const [orderComplete, setOrderComplete] = useState(false);
 
-  // Customer info (now read-only)
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
   const [customerEmail, setCustomerEmail] = useState("");
+  const [shippingAddress, setShippingAddress] = useState("");
 
   const [loadingProfile, setLoadingProfile] = useState(false);
 
-  /* ================= AUTH + PROFILE ================= */
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (u) => {
       const logged = !!u;
@@ -91,7 +120,6 @@ export default function CheckoutPage() {
       const em = u?.email ?? "";
       setUserEmail(em);
 
-      // Load profile if logged
       if (u) {
         (async () => {
           setLoadingProfile(true);
@@ -106,18 +134,15 @@ export default function CheckoutPage() {
               setCustomerPhone(String(data.phone || ""));
               setCustomerEmail(String(data.email || u.email || ""));
             } else {
-              // fallback to auth email
               setCustomerEmail(String(u.email || ""));
             }
           } catch {
-            // keep silent, checkout still works
             setCustomerEmail(String(u.email || ""));
           } finally {
             setLoadingProfile(false);
           }
         })();
       } else {
-        // logged out: allow empty preview
         setCustomerName("");
         setCustomerPhone("");
         setCustomerEmail("");
@@ -127,7 +152,6 @@ export default function CheckoutPage() {
     return () => unsub();
   }, []);
 
-  /* ================= PRODUCTS (Firestore) ================= */
   useEffect(() => {
     (async () => {
       const db = getFirestore(app);
@@ -141,7 +165,6 @@ export default function CheckoutPage() {
     })();
   }, []);
 
-  /* ================= CART ================= */
   useEffect(() => {
     if (loadingProducts) return;
 
@@ -158,21 +181,10 @@ export default function CheckoutPage() {
   const total = useMemo(() => {
     return cartLinesSafe.reduce((sum, l) => {
       const p: any = l.product || {};
-
-      const pricing = {
-        publicPrice: Number(p.publicPrice ?? p.price ?? 0),
-        currency: String(p.currency ?? "CAD"),
-        tiers: Array.isArray(p.tiers)
-          ? p.tiers
-          : Array.isArray(p.discountTiers)
-            ? p.discountTiers
-            : [],
-      };
-
-      const r = resolveUnitPrice(pricing as any, l.qty);
-      return sum + safeNumber(r.unitPriceApplied) * safeNumber(l.qty);
+      const pricing = getCheckoutPricing(p, l.qty, isLogged);
+      return sum + pricing.unitPriceApplied * safeNumber(l.qty);
     }, 0);
-  }, [cartLinesSafe]);
+  }, [cartLinesSafe, isLogged]);
 
   const isEmpty = cartLinesSafe.length === 0;
 
@@ -185,39 +197,31 @@ export default function CheckoutPage() {
     [customerName, customerEmail, userEmail, customerPhone]
   );
 
-  const customerType = useMemo(() => "tiered" as any, []);
+  const customerType = useMemo(
+    () => (isLogged ? "tiered" : "avulso") as any,
+    [isLogged]
+  );
 
   const items = useMemo(() => {
     return cartLinesSafe.map((l) => {
       const p: any = l.product || {};
-
-      const pricing = {
-        publicPrice: Number(p.publicPrice ?? p.price ?? 0),
-        currency: String(p.currency ?? "CAD"),
-        tiers: Array.isArray(p.tiers)
-          ? p.tiers
-          : Array.isArray(p.discountTiers)
-            ? p.discountTiers
-            : [],
-      };
-
-      const r = resolveUnitPrice(pricing as any, l.qty);
-      const unit = safeNumber(r.unitPriceApplied);
+      const pricing = getCheckoutPricing(p, l.qty, isLogged);
+      const unit = safeNumber(pricing.unitPriceApplied);
       const subtotal = unit * safeNumber(l.qty);
 
       return {
         slug: l.slug,
+        productId: l.slug,
         name: p?.name ?? l.slug,
         model: p?.model ?? "",
         qty: l.qty,
         unit,
         subtotal,
-        tierApplied: r.tierApplied ?? null,
+        tierApplied: pricing.tierApplied ?? null,
       } as any;
     });
-  }, [cartLinesSafe]);
+  }, [cartLinesSafe, isLogged]);
 
-  // ✅ Stock decrement (requires Firestore rules to allow signed-in update of stock)
   async function decrementStockForOrder(
     orderItems: { slug: string; qty: number }[]
   ) {
@@ -250,11 +254,15 @@ export default function CheckoutPage() {
     const user = auth.currentUser;
 
     if (!user) {
-      setUiError("Please login to finalize your order.");
+      setUiError("Please login to check out your order.");
       return;
     }
     if (isEmpty) {
       setUiError("Your cart is empty.");
+      return;
+    }
+    if (!shippingAddress.trim()) {
+      setUiError("Please add the delivery address before checking out.");
       return;
     }
 
@@ -264,30 +272,19 @@ export default function CheckoutPage() {
 
       const orderItems: OrderItem[] = cartLinesSafe.map((l) => {
         const p: any = l.product || {};
-
-        const pricing = {
-          publicPrice: Number(p.publicPrice ?? p.price ?? 0),
-          currency: String(p.currency ?? "CAD"),
-          tiers: Array.isArray(p.tiers)
-            ? p.tiers
-            : Array.isArray(p.discountTiers)
-              ? p.discountTiers
-              : [],
-        };
-
-        const r = resolveUnitPrice(pricing as any, l.qty);
+        const pricing = getCheckoutPricing(p, l.qty, true);
 
         return {
           slug: l.slug,
+          productId: l.slug,
           name: p?.name ?? l.slug,
           model: p?.model ?? "",
           qty: l.qty,
-          unitPriceApplied: safeNumber(r.unitPriceApplied),
-          tierApplied: r.tierApplied ?? null,
+          unitPriceApplied: safeNumber(pricing.unitPriceApplied),
+          tierApplied: pricing.tierApplied ?? null,
         };
       });
 
-      // 1) create order
       await addDoc(collection(db, "orders"), {
         uid: user.uid,
         userEmail: user.email ?? "",
@@ -299,24 +296,49 @@ export default function CheckoutPage() {
           phone: customerPhone.trim(),
           email: (customerEmail || user.email || "").trim(),
         },
+        shippingAddress: shippingAddress.trim(),
         items: orderItems,
       });
 
-      // 2) decrement stock (signed-in users, per rules)
       await decrementStockForOrder(
         orderItems.map((x) => ({ slug: x.slug, qty: x.qty }))
       );
 
       clearCart();
-      router.push("/orders");
+      setCartLines([]);
+      setOrderComplete(true);
     } catch (e: any) {
-      setUiError(e?.message ?? "Failed to finalize order.");
+      setUiError(e?.message ?? "Failed to check out order.");
     } finally {
       setFinalizing(false);
     }
   }
 
   const canFinalize = isLogged && !isEmpty && !finalizing;
+
+  if (orderComplete) {
+    return (
+      <main className={styles.page}>
+        <section className={styles.card}>
+          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+            <img src="/h2-logo.svg" alt="H2 Hardware" style={{ height: 48 }} />
+            <h1 className={styles.title} style={{ margin: 0 }}>
+              Order received
+            </h1>
+          </div>
+
+          <p className={styles.subtitle} style={{ marginTop: 18, fontSize: 16 }}>
+            Thank you for your order. Our team will contact you shortly to review
+            and finalize your order.
+          </p>
+
+          <a href="/orders" className={styles.secondaryCta}>
+            View my orders
+          </a>
+        </section>
+      </main>
+    );
+  }
 
   return (
     <main className={styles.page}>
@@ -327,7 +349,6 @@ export default function CheckoutPage() {
       </p>
 
       <div className={styles.grid}>
-        {/* LEFT */}
         <section className={styles.card}>
           <h2 className={styles.cardTitle}>Customer details</h2>
 
@@ -361,9 +382,19 @@ export default function CheckoutPage() {
             onChange={() => {}}
           />
 
+          <label className={styles.label}>Delivery address</label>
+          <textarea
+            className={styles.input}
+            value={shippingAddress}
+            placeholder="Street, city, province, postal code"
+            rows={4}
+            onChange={(e) => setShippingAddress(e.target.value)}
+            style={{ resize: "vertical", minHeight: 90 }}
+          />
+
           {!isLogged ? (
             <div className={styles.badge}>
-              Login required to finalize.{" "}
+              Login required to check out. {" "}
               <a href="/login" style={{ color: "inherit", fontWeight: 800 }}>
                 Go to Login
               </a>
@@ -392,7 +423,7 @@ export default function CheckoutPage() {
             <p>
               1) Review your quote and download the PDF if needed.
               <br />
-              2) Place your order and our team will take care of the next steps.
+              2) Check out your order and our team will take care of the next steps.
             </p>
 
             {uiError ? (
@@ -405,13 +436,14 @@ export default function CheckoutPage() {
                   items={items}
                   customer={customer}
                   customerType={customerType}
+                  shippingAddress={shippingAddress}
                 />
               </div>
             </div>
 
             {!isLogged ? (
               <p style={{ marginTop: 10 }}>
-                Want to finalize? Please{" "}
+                Want to check out? Please {" "}
                 <a
                   href="/login"
                   style={{ fontWeight: 800, color: "var(--brand)" }}
@@ -424,10 +456,9 @@ export default function CheckoutPage() {
           </div>
         </section>
 
-        {/* RIGHT: PREVIEW */}
         <aside className={styles.preview}>
           <div className={styles.previewHeader}>
-            <div className={styles.brand}>StarPro Doors</div>
+            <img src="/h2-logo.svg" alt="H2 Hardware" style={{ height: 42 }} />
             <div className={styles.small}>Quote preview</div>
           </div>
 
@@ -435,28 +466,30 @@ export default function CheckoutPage() {
             <div className={styles.previewInfo}>
               <div>
                 <div className={styles.infoRow}>
-                  <span className={styles.infoLabel}>Customer:</span>{" "}
+                  <span className={styles.infoLabel}>Customer:</span> {" "}
                   {customerName || "—"}
                 </div>
                 <div className={styles.infoRow}>
-                  <span className={styles.infoLabel}>Phone:</span>{" "}
+                  <span className={styles.infoLabel}>Phone:</span> {" "}
                   {customerPhone || "—"}
                 </div>
               </div>
 
               <div>
                 <div className={styles.infoRow}>
-                  <span className={styles.infoLabel}>Email:</span>{" "}
+                  <span className={styles.infoLabel}>Email:</span> {" "}
                   {customerEmail || userEmail || "—"}
                 </div>
                 <div className={styles.infoRow}>
-                  <span className={styles.infoLabel}>Type:</span> {"tiered"}
+                  <span className={styles.infoLabel}>Delivery:</span> {" "}
+                  {shippingAddress || "—"}
                 </div>
               </div>
             </div>
 
             <div className={styles.previewTableHeader}>
               <div>Item</div>
+              <div>Item code</div>
               <div className={styles.num}>QTY</div>
               <div className={styles.num}>UNIT</div>
               <div className={styles.num}>SUBTOTAL</div>
@@ -468,35 +501,24 @@ export default function CheckoutPage() {
               <>
                 {cartLinesSafe.map((l) => {
                   const p: any = l.product || {};
-                  const pricing = {
-                    publicPrice: Number(p.publicPrice ?? p.price ?? 0),
-                    currency: String(p.currency ?? "CAD"),
-                    tiers: Array.isArray(p.tiers)
-                      ? p.tiers
-                      : Array.isArray(p.discountTiers)
-                        ? p.discountTiers
-                        : [],
-                  };
-
-                  const r = resolveUnitPrice(pricing as any, l.qty);
-                  const unit = safeNumber(r.unitPriceApplied);
+                  const pricing = getCheckoutPricing(p, l.qty, isLogged);
+                  const unit = safeNumber(pricing.unitPriceApplied);
                   const sub = unit * safeNumber(l.qty);
 
                   return (
                     <div key={l.slug} className={styles.previewRow}>
                       <div>
-                        <div className={styles.prodName}>
-                          {p?.name ?? l.slug}
-                        </div>
+                        <div className={styles.prodName}>{p?.name ?? l.slug}</div>
                         <div className={styles.prodModel}>
                           {p?.model ?? ""}
-                          {r.tierApplied ? (
+                          {isLogged && pricing.tierApplied ? (
                             <span style={{ marginLeft: 8, opacity: 0.7 }}>
-                              (tier: {r.tierApplied})
+                              (tier: {pricing.tierApplied})
                             </span>
                           ) : null}
                         </div>
                       </div>
+                      <div className={styles.productCode}>{l.slug}</div>
                       <div className={styles.num}>{l.qty}</div>
                       <div className={styles.num}>{formatMoney(unit)}</div>
                       <div className={styles.num}>{formatMoney(sub)}</div>
@@ -505,6 +527,7 @@ export default function CheckoutPage() {
                 })}
 
                 <div className={styles.previewTotal}>
+                  <div />
                   <div />
                   <div />
                   <div className={styles.totalLabel}>Total</div>
@@ -544,7 +567,7 @@ export default function CheckoutPage() {
                   color: "#fff",
                 }}
               >
-                {finalizing ? "Finalizing..." : "Finalize order"}
+                {finalizing ? "Checking out..." : "Check out order"}
               </button>
             </div>
           </div>
