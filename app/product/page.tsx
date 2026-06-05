@@ -710,7 +710,7 @@ function ProductPageInner() {
                                     color: "#111",
                                   }}
                                 >
-                                  {t.minQty}–{t.maxQty ?? "∞"}
+                                  {t.maxQty ? `${t.minQty}–${t.maxQty}` : `${t.minQty} or more`}
                                 </div>
                                 <div
                                   style={{
