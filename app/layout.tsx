@@ -4,6 +4,7 @@ import Header from "../components/Header";
 import Footer from "../components/Footer";
 import AuthSync from "../components/AuthSync";
 import CatalogNavigationState from "../components/CatalogNavigationState";
+import PhoneNumberPatch from "../components/PhoneNumberPatch";
 
 export const metadata = {
   title: {
@@ -25,6 +26,7 @@ export default function RootLayout({
         <Header />
         <AuthSync />
         <CatalogNavigationState />
+        <PhoneNumberPatch />
         <main className={styles.main}>{children}</main>
         <Footer />
       </body>
