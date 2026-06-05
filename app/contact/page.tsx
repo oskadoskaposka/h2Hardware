@@ -189,8 +189,8 @@ export default function ContactPage() {
         </p>
 
         <div style={actionsWrap}>
-          <a href="tel:+17809077827" style={primaryBtn}>
-            Call +1 (780) 907-7827
+          <a href="tel:+12267881924" style={primaryBtn}>
+            Call +1 (226) 788-1924
           </a>
 
           <a href="mailto:info@h2hardwareltd.com" style={secondaryBtn}>
@@ -211,8 +211,8 @@ export default function ContactPage() {
             <div style={infoBlock}>
               <div style={labelStyle}>Phone</div>
               <div style={valueStyle}>
-                <a href="tel:+17809077827" style={valueLinkStyle}>
-                  +1 (780) 907-7827
+                <a href="tel:+12267881924" style={valueLinkStyle}>
+                  +1 (226) 788-1924
                 </a>
               </div>
             </div>
