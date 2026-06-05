@@ -19,7 +19,8 @@ import {
   where,
   orderBy,
 } from "firebase/firestore";
-import { app } from "../../lib/firebaseClient";
+import { onAuthStateChanged } from "firebase/auth";
+import { auth, app } from "../../lib/firebaseClient";
 
 import { resolveUnitPrice } from "../../lib/pricing";
 
@@ -28,20 +29,14 @@ type Product = {
   name: string;
   series: string;
   model?: string;
-
-  // ✅ NEW pricing model (Form A)
   publicPrice: number;
   currency?: string;
   tiers?: { id?: string; minQty: number; maxQty?: number | null; price: number }[];
-
   active: boolean;
   sortOrder?: number;
-
   images?: string[];
   features?: string[];
   category?: string;
-
-  // compatibility (old)
   price?: number;
   discountTiers?: any[];
 };
@@ -50,20 +45,55 @@ function safeNumber(v: unknown) {
   return typeof v === "number" && Number.isFinite(v) ? v : 0;
 }
 
+function getCartPricing(product: any, qty: number, signedIn: boolean) {
+  const currency = String(product?.currency ?? "CAD");
+  const publicPrice = Number(product?.publicPrice ?? product?.price ?? 0);
+
+  if (!signedIn) {
+    return {
+      currency,
+      unitPriceApplied: safeNumber(publicPrice),
+      tierApplied: null as string | null,
+    };
+  }
+
+  const result = resolveUnitPrice(
+    {
+      publicPrice,
+      currency,
+      tiers: Array.isArray(product?.tiers)
+        ? product.tiers
+        : Array.isArray(product?.discountTiers)
+          ? product.discountTiers
+          : [],
+    } as any,
+    qty
+  );
+
+  return {
+    currency,
+    unitPriceApplied: safeNumber(result.unitPriceApplied),
+    tierApplied: result.tierApplied ?? null,
+  };
+}
+
 export default function CartPage() {
   const [tick, setTick] = useState(0);
-
+  const [signedIn, setSignedIn] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(true);
   const [productsError, setProductsError] = useState<string | null>(null);
 
-  // Re-render when cart changes (add/remove/update/clear)
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, (user) => setSignedIn(!!user));
+    return () => unsub();
+  }, []);
+
   useEffect(() => {
     const unsub = onCartChanged(() => setTick((x) => x + 1));
     return unsub;
   }, []);
 
-  // Load products from Firestore
   useEffect(() => {
     (async () => {
       try {
@@ -77,8 +107,6 @@ export default function CartPage() {
         const snap = await getDocs(q);
         const list: Product[] = snap.docs.map((d) => {
           const data = d.data() as any;
-
-          // ✅ new fields with compatibility fallback
           const publicPrice = Number(data.publicPrice ?? data.price ?? 0);
           const tiers = Array.isArray(data.tiers)
             ? data.tiers
@@ -89,18 +117,14 @@ export default function CartPage() {
             name: data.name ?? d.id,
             series: data.series ?? "Other",
             model: data.model ?? "",
-
             publicPrice,
             currency: data.currency ?? "CAD",
             tiers,
-
             active: Boolean(data.active ?? true),
             sortOrder: Number(data.sortOrder ?? 9999),
             images: Array.isArray(data.images) ? data.images : [],
             features: Array.isArray(data.features) ? data.features : [],
             category: data.category ?? data.series ?? "General",
-
-            // compat
             price: Number(data.price ?? 0),
             discountTiers: Array.isArray(data.discountTiers) ? data.discountTiers : [],
           };
@@ -126,23 +150,12 @@ export default function CartPage() {
     return getCartLines(products as any);
   }, [tick, products]);
 
-  // ✅ NEW total: sum(unitPriceApplied * qty)
   const total = useMemo(() => {
     return lines.reduce((sum, line) => {
-      const p: any = line.product || {};
-
-      const pricing = {
-        publicPrice: Number(p.publicPrice ?? p.price ?? 0),
-        currency: String(p.currency ?? "CAD"),
-        tiers: Array.isArray(p.tiers)
-          ? p.tiers
-          : (Array.isArray(p.discountTiers) ? p.discountTiers : []),
-      };
-
-      const r = resolveUnitPrice(pricing as any, line.qty);
-      return sum + safeNumber(r.unitPriceApplied) * safeNumber(line.qty);
+      const pricing = getCartPricing(line.product || {}, line.qty, signedIn);
+      return sum + pricing.unitPriceApplied * safeNumber(line.qty);
     }, 0);
-  }, [lines]);
+  }, [lines, signedIn]);
 
   return (
     <div className="container">
@@ -177,18 +190,8 @@ export default function CartPage() {
           <div className={styles.list}>
             {lines.map((line) => {
               const p: any = line.product || {};
-              const currency = (p.currency ?? "CAD") as string;
-
-              const pricing = {
-                publicPrice: Number(p.publicPrice ?? p.price ?? 0),
-                currency,
-                tiers: Array.isArray(p.tiers)
-                  ? p.tiers
-                  : (Array.isArray(p.discountTiers) ? p.discountTiers : []),
-              };
-
-              const r = resolveUnitPrice(pricing as any, line.qty);
-              const unit = safeNumber(r.unitPriceApplied);
+              const pricing = getCartPricing(p, line.qty, signedIn);
+              const unit = pricing.unitPriceApplied;
               const sub = unit * safeNumber(line.qty);
 
               return (
@@ -201,11 +204,11 @@ export default function CartPage() {
                       Unit:{" "}
                       {unit.toLocaleString("en-CA", {
                         style: "currency",
-                        currency,
+                        currency: pricing.currency,
                       })}
-                      {r.tierApplied ? (
+                      {signedIn && pricing.tierApplied ? (
                         <span style={{ marginLeft: 8, opacity: 0.7 }}>
-                          (tier: {r.tierApplied})
+                          (tier: {pricing.tierApplied})
                         </span>
                       ) : null}
                     </span>
@@ -223,7 +226,7 @@ export default function CartPage() {
                     <div className={styles.sub}>
                       {sub.toLocaleString("en-CA", {
                         style: "currency",
-                        currency,
+                        currency: pricing.currency,
                       })}
                     </div>
 
@@ -249,7 +252,6 @@ export default function CartPage() {
                 })}
               </div>
 
-              {/* ✅ NEW: Taxes / shipping note (below price) */}
               <div
                 className={styles.muted}
                 style={{ marginTop: 6, fontSize: 12, lineHeight: 1.35 }}
