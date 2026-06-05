@@ -381,8 +381,8 @@ export default function LoginPage() {
             <div className="cBlock">
               <div className="cLabel">Phone</div>
               <div className="cValue">
-                <a className="cPhone" href="tel:+17809077827">
-                  +1 (780) 907-7827
+                <a className="cPhone" href="tel:+12267881924">
+                  +1 (226) 788-1924
                 </a>
               </div>
             </div>
