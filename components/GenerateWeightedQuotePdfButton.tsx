@@ -183,13 +183,18 @@ export default function GenerateWeightedQuotePdfButton({
 
       const finalWeight = weightText(totalWeightLb, totalWeightKg);
       if (finalWeight) {
-        y += 16;
-        doc.setFontSize(11);
-        doc.text("Total weight", 420, y);
+        y += 22;
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(10);
+        doc.text("Total weight", 555, y, { align: "right" });
+
+        y += 12;
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(10);
         doc.text(finalWeight, 555, y, { align: "right" });
       }
 
-      y += 14;
+      y += 22;
       doc.setFont("helvetica", "normal");
       doc.setFontSize(10);
       doc.text(
