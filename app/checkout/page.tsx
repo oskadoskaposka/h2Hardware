@@ -27,6 +27,12 @@ import {
 } from "firebase/firestore";
 
 import { resolveUnitPrice } from "../../lib/pricing";
+import {
+  formatUnitWeightPair,
+  formatWeightPair,
+  getWeightPair,
+  type WeightUnit,
+} from "../../lib/weight";
 
 type OrderItem = {
   slug: string;
@@ -37,6 +43,13 @@ type OrderItem = {
 
   unitPriceApplied: number;
   tierApplied: string | null;
+
+  unitWeight?: number;
+  weightUnit?: WeightUnit;
+  unitWeightLb?: number;
+  unitWeightKg?: number;
+  totalWeightLb?: number;
+  totalWeightKg?: number;
 };
 
 type CustomerProfile = {
@@ -46,7 +59,7 @@ type CustomerProfile = {
 };
 
 function safeNumber(v: unknown) {
-  return typeof v === "number" && Number.isFinite(v) ? v : 0;
+  return typeof v === "number" && Number.isFinite(v) ? v : Number.isFinite(Number(v)) ? Number(v) : 0;
 }
 
 function formatMoney(v: number) {
@@ -186,6 +199,20 @@ export default function CheckoutPage() {
     }, 0);
   }, [cartLinesSafe, isLogged]);
 
+  const totalWeight = useMemo(() => {
+    return cartLinesSafe.reduce(
+      (sum, l) => {
+        const p: any = l.product || {};
+        const weight = getWeightPair(p?.unitWeight, p?.weightUnit, l.qty);
+        return {
+          lb: sum.lb + weight.totalWeightLb,
+          kg: sum.kg + weight.totalWeightKg,
+        };
+      },
+      { lb: 0, kg: 0 }
+    );
+  }, [cartLinesSafe]);
+
   const isEmpty = cartLinesSafe.length === 0;
 
   const customer = useMemo(
@@ -208,6 +235,7 @@ export default function CheckoutPage() {
       const pricing = getCheckoutPricing(p, l.qty, isLogged);
       const unit = safeNumber(pricing.unitPriceApplied);
       const subtotal = unit * safeNumber(l.qty);
+      const weight = getWeightPair(p?.unitWeight, p?.weightUnit, l.qty);
 
       return {
         slug: l.slug,
@@ -218,6 +246,12 @@ export default function CheckoutPage() {
         unit,
         subtotal,
         tierApplied: pricing.tierApplied ?? null,
+        unitWeight: safeNumber(p?.unitWeight),
+        weightUnit: weight.sourceUnit,
+        unitWeightLb: weight.unitWeightLb,
+        unitWeightKg: weight.unitWeightKg,
+        totalWeightLb: weight.totalWeightLb,
+        totalWeightKg: weight.totalWeightKg,
       } as any;
     });
   }, [cartLinesSafe, isLogged]);
@@ -273,6 +307,7 @@ export default function CheckoutPage() {
       const orderItems: OrderItem[] = cartLinesSafe.map((l) => {
         const p: any = l.product || {};
         const pricing = getCheckoutPricing(p, l.qty, true);
+        const weight = getWeightPair(p?.unitWeight, p?.weightUnit, l.qty);
 
         return {
           slug: l.slug,
@@ -282,6 +317,12 @@ export default function CheckoutPage() {
           qty: l.qty,
           unitPriceApplied: safeNumber(pricing.unitPriceApplied),
           tierApplied: pricing.tierApplied ?? null,
+          unitWeight: safeNumber(p?.unitWeight),
+          weightUnit: weight.sourceUnit,
+          unitWeightLb: weight.unitWeightLb,
+          unitWeightKg: weight.unitWeightKg,
+          totalWeightLb: weight.totalWeightLb,
+          totalWeightKg: weight.totalWeightKg,
         };
       });
 
@@ -291,6 +332,8 @@ export default function CheckoutPage() {
         createdAt: serverTimestamp(),
         currency: "CAD",
         total: safeNumber(total),
+        totalWeightLb: totalWeight.lb,
+        totalWeightKg: totalWeight.kg,
         customer: {
           name: customerName.trim(),
           phone: customerPhone.trim(),
@@ -504,6 +547,8 @@ export default function CheckoutPage() {
                   const pricing = getCheckoutPricing(p, l.qty, isLogged);
                   const unit = safeNumber(pricing.unitPriceApplied);
                   const sub = unit * safeNumber(l.qty);
+                  const unitWeightText = formatUnitWeightPair(p?.unitWeight, p?.weightUnit);
+                  const totalWeightText = formatWeightPair(p?.unitWeight, p?.weightUnit, l.qty);
 
                   return (
                     <div key={l.slug} className={styles.previewRow}>
@@ -514,6 +559,16 @@ export default function CheckoutPage() {
                           {isLogged && pricing.tierApplied ? (
                             <span style={{ marginLeft: 8, opacity: 0.7 }}>
                               (tier: {pricing.tierApplied})
+                            </span>
+                          ) : null}
+                          {unitWeightText ? (
+                            <span style={{ display: "block", marginTop: 3 }}>
+                              Unit weight: {unitWeightText}
+                            </span>
+                          ) : null}
+                          {totalWeightText ? (
+                            <span style={{ display: "block", marginTop: 2 }}>
+                              Total weight: {totalWeightText}
                             </span>
                           ) : null}
                         </div>
@@ -533,6 +588,15 @@ export default function CheckoutPage() {
                   <div className={styles.totalLabel}>Total</div>
                   <div className={styles.numStrong}>{formatMoney(total)}</div>
                 </div>
+
+                {totalWeight.lb > 0 || totalWeight.kg > 0 ? (
+                  <div
+                    className={styles.previewNote}
+                    style={{ marginTop: 8, fontSize: 12, lineHeight: 1.35, textAlign: "right" }}
+                  >
+                    Total weight: {formatWeightPair(totalWeight.lb, "lb", 1)}
+                  </div>
+                ) : null}
 
                 <div
                   className={styles.previewNote}
