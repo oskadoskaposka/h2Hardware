@@ -12,6 +12,7 @@ import styles from "../../styles/product.module.css";
 import AddToCartButton from "../../components/AddToCartButton";
 import ProductPricing from "../../components/ProductPricing";
 import { getQtyInCart, onCartChanged } from "../../lib/cart";
+import { formatUnitWeightPair, type WeightUnit } from "../../lib/weight";
 
 const ADMIN_EMAILS = (process.env.NEXT_PUBLIC_ADMIN_EMAILS || "")
   .split(",")
@@ -43,6 +44,8 @@ type Product = {
   tiers?: Tier[];
 
   stock?: number;
+  unitWeight?: number;
+  weightUnit?: WeightUnit;
 
   // legacy compat
   price?: number;
@@ -180,6 +183,9 @@ function ProductPageInner() {
   const model = String(product?.model || "").trim();
 
   const publicUnit = product ? getPublicUnitPrice(product) : null;
+  const unitWeightText = product
+    ? formatUnitWeightPair(product.unitWeight, product.weightUnit)
+    : "";
 
   // ✅ FIX: when NOT logged in, strip tiers so ProductPricing cannot apply discounts or show tier applied
   const pricingProduct = useMemo(() => {
@@ -570,6 +576,13 @@ function ProductPageInner() {
                   <div style={specRow}>
                     <div style={specKey}>Subcategory</div>
                     <div style={specVal}>{subcategory}</div>
+                  </div>
+                ) : null}
+
+                {unitWeightText ? (
+                  <div style={specRow}>
+                    <div style={specKey}>Unit weight</div>
+                    <div style={specVal}>{unitWeightText}</div>
                   </div>
                 ) : null}
 
