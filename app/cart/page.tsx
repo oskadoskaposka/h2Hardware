@@ -206,11 +206,6 @@ export default function CartPage() {
                         style: "currency",
                         currency: pricing.currency,
                       })}
-                      {signedIn && pricing.tierApplied ? (
-                        <span style={{ marginLeft: 8, opacity: 0.7 }}>
-                          (tier: {pricing.tierApplied})
-                        </span>
-                      ) : null}
                     </span>
                   </div>
 

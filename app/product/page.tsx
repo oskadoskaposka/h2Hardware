@@ -89,6 +89,7 @@ function ProductPageInner() {
   const [qty, setQty] = useState(1);
   const [cartTick, setCartTick] = useState(0);
   const [isLogged, setIsLogged] = useState(false);
+  const [availabilityNotice, setAvailabilityNotice] = useState<string | null>(null);
 
   // media
   const [activeImgIdx, setActiveImgIdx] = useState(0);
@@ -144,6 +145,10 @@ function ProductPageInner() {
   }, [loading, product, maxQty]);
 
   const safeQty = clamp(qty, 1, maxQty);
+
+  useEffect(() => {
+    setAvailabilityNotice(null);
+  }, [slug, safeQty]);
 
   const inCartQty = useMemo(() => {
     void cartTick;
@@ -235,6 +240,19 @@ function ProductPageInner() {
     }
 
     alert("Please contact our team to confirm availability for this quantity.");
+  }
+
+  function handleAddedToCart() {
+    setCartTick((x) => x + 1);
+
+    if (exceedsThreshold) {
+      setAvailabilityNotice(
+        "Added to cart. Our team will confirm availability for this quantity."
+      );
+      return;
+    }
+
+    setAvailabilityNotice(null);
   }
 
   function handleBackToCatalog() {
@@ -777,28 +795,12 @@ function ProductPageInner() {
 
               {/* Actions */}
               <div style={actionsRow}>
-                {/* Block add-to-cart if request exceeds 80% of stock */}
-                {exceedsThreshold ? (
-                  <button
-                    type="button"
-                    className={styles.primary}
-                    disabled
-                    title="Please contact our team to confirm availability for this quantity."
-                    style={{ opacity: 0.55, cursor: "not-allowed" }}
-                    onClick={() => {
-                      // no-op (defensive)
-                    }}
-                  >
-                    Add to cart
-                  </button>
-                ) : (
-                  <AddToCartButton
-                    slug={product.slug}
-                    qty={safeQty}
-                    className={styles.primary}
-                    onAdded={() => setCartTick((x) => x + 1)}
-                  />
-                )}
+                <AddToCartButton
+                  slug={product.slug}
+                  qty={safeQty}
+                  className={styles.primary}
+                  onAdded={handleAddedToCart}
+                />
 
                 <button
                   type="button"
@@ -813,7 +815,7 @@ function ProductPageInner() {
                 </a>
               </div>
 
-              {exceedsThreshold ? (
+              {availabilityNotice ? (
                 <div
                   style={{
                     marginTop: 10,
@@ -822,8 +824,7 @@ function ProductPageInner() {
                     opacity: 0.75,
                   }}
                 >
-                  Please contact our team to confirm availability for this
-                  quantity.
+                  {availabilityNotice}
                 </div>
               ) : null}
 
