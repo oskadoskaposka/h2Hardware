@@ -13,6 +13,7 @@ import {
 } from "firebase/firestore";
 import { auth, app } from "../../../lib/firebaseClient";
 import { isAdminEmail } from "../../../lib/admin";
+import { formatUnitWeightPair, normalizeWeightUnit, type WeightUnit } from "../../../lib/weight";
 
 function toNumberOr(value: any, fallback: number) {
   const n = Number(value);
@@ -31,6 +32,9 @@ type ProductRow = {
   currency?: string;
   stock?: number;
 
+  unitWeight?: number;
+  weightUnit?: WeightUnit;
+
   // Compatibility (old)
   price?: number;
 };
@@ -41,6 +45,8 @@ type DraftById = Record<
     publicPrice: string; // keep as string for inputs
     stock: string;
     active: boolean;
+    unitWeight: string;
+    weightUnit: WeightUnit;
   }
 >;
 
@@ -92,17 +98,21 @@ export default function AdminProductsPage() {
         list.sort((a, b) => (a.sortOrder ?? 9999) - (b.sortOrder ?? 9999));
         setProducts(list);
 
-        // Initialize draft from DB values (publicPrice/stock/active)
+        // Initialize draft from DB values
         const initial: DraftById = {};
         for (const p of list) {
           const publicPrice = p.publicPrice ?? p.price ?? 0; // compat
           const stock = p.stock ?? 0;
           const active = p.active ?? true;
+          const unitWeight = p.unitWeight ?? 0;
+          const weightUnit = normalizeWeightUnit(p.weightUnit);
 
           initial[p.id] = {
             publicPrice: String(publicPrice),
             stock: String(stock),
             active: !!active,
+            unitWeight: String(unitWeight),
+            weightUnit,
           };
         }
         setDraft(initial);
@@ -161,8 +171,16 @@ export default function AdminProductsPage() {
     const dbPublicPrice = String(p.publicPrice ?? p.price ?? 0);
     const dbStock = String(p.stock ?? 0);
     const dbActive = String(!!(p.active ?? true));
+    const dbUnitWeight = String(p.unitWeight ?? 0);
+    const dbWeightUnit = normalizeWeightUnit(p.weightUnit);
 
-    return d.publicPrice !== dbPublicPrice || d.stock !== dbStock || String(d.active) !== dbActive;
+    return (
+      d.publicPrice !== dbPublicPrice ||
+      d.stock !== dbStock ||
+      String(d.active) !== dbActive ||
+      d.unitWeight !== dbUnitWeight ||
+      d.weightUnit !== dbWeightUnit
+    );
   }
 
   async function saveRow(p: ProductRow) {
@@ -176,12 +194,16 @@ export default function AdminProductsPage() {
       const publicPrice = Math.max(0, toNumberOr(d.publicPrice, 0));
       const stock = Math.max(0, Math.floor(toNumberOr(d.stock, 0)));
       const active = !!d.active;
+      const unitWeight = Math.max(0, toNumberOr(d.unitWeight, 0));
+      const weightUnit = normalizeWeightUnit(d.weightUnit);
 
       const db = getFirestore(app);
       await updateDoc(doc(db, "products", id), {
         publicPrice,
         stock,
         active,
+        unitWeight,
+        weightUnit,
       });
 
       // Update local products list to reflect saved values
@@ -193,6 +215,8 @@ export default function AdminProductsPage() {
                 publicPrice,
                 stock,
                 active,
+                unitWeight,
+                weightUnit,
               }
             : x
         )
@@ -201,7 +225,14 @@ export default function AdminProductsPage() {
       // Keep input strings consistent after save
       setDraft((prev) => ({
         ...prev,
-        [id]: { ...prev[id], publicPrice: String(publicPrice), stock: String(stock), active },
+        [id]: {
+          ...prev[id],
+          publicPrice: String(publicPrice),
+          stock: String(stock),
+          active,
+          unitWeight: String(unitWeight),
+          weightUnit,
+        },
       }));
 
       setSaveState((prev) => ({ ...prev, [id]: { saving: false, saved: true, error: null } }));
@@ -244,7 +275,7 @@ export default function AdminProductsPage() {
   if (!isAdmin) return <p style={{ padding: 24 }}>Access denied. Admins only.</p>;
 
   return (
-    <main style={{ padding: 24, maxWidth: 1200, margin: "0 auto" }}>
+    <main style={{ padding: 24, maxWidth: 1300, margin: "0 auto" }}>
       <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center" }}>
         <h1 style={{ margin: 0 }}>Manage Products</h1>
 
@@ -294,7 +325,7 @@ export default function AdminProductsPage() {
         <p style={{ marginTop: 16, color: "red" }}>{error}</p>
       ) : (
         <div style={{ marginTop: 16, overflowX: "auto" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 900 }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 1120 }}>
             <thead>
               <tr>
                 <th style={{ borderBottom: "1px solid #ddd", textAlign: "left", padding: 8 }}>Slug</th>
@@ -302,6 +333,9 @@ export default function AdminProductsPage() {
                 <th style={{ borderBottom: "1px solid #ddd", textAlign: "left", padding: 8 }}>Currency</th>
                 <th style={{ borderBottom: "1px solid #ddd", textAlign: "left", padding: 8 }}>Public price</th>
                 <th style={{ borderBottom: "1px solid #ddd", textAlign: "left", padding: 8 }}>Stock</th>
+                <th style={{ borderBottom: "1px solid #ddd", textAlign: "left", padding: 8 }}>Unit weight</th>
+                <th style={{ borderBottom: "1px solid #ddd", textAlign: "left", padding: 8 }}>Unit</th>
+                <th style={{ borderBottom: "1px solid #ddd", textAlign: "left", padding: 8 }}>Both units</th>
                 <th style={{ borderBottom: "1px solid #ddd", textAlign: "left", padding: 8 }}>Active</th>
                 <th style={{ borderBottom: "1px solid #ddd", textAlign: "left", padding: 8 }}>Actions</th>
               </tr>
@@ -313,10 +347,13 @@ export default function AdminProductsPage() {
                   publicPrice: String(p.publicPrice ?? p.price ?? 0),
                   stock: String(p.stock ?? 0),
                   active: !!(p.active ?? true),
+                  unitWeight: String(p.unitWeight ?? 0),
+                  weightUnit: normalizeWeightUnit(p.weightUnit),
                 };
 
                 const rowState = saveState[p.id] || {};
                 const dirty = isRowDirty(p);
+                const weightPreview = formatUnitWeightPair(d.unitWeight, d.weightUnit);
 
                 return (
                   <tr key={p.id}>
@@ -338,7 +375,7 @@ export default function AdminProductsPage() {
                         step="0.01"
                         value={d.publicPrice}
                         onChange={(e) => setRowDraft(p.id, { publicPrice: e.target.value })}
-                        style={{ width: 140, padding: 6 }}
+                        style={{ width: 120, padding: 6 }}
                       />
                     </td>
 
@@ -347,8 +384,34 @@ export default function AdminProductsPage() {
                         type="number"
                         value={d.stock}
                         onChange={(e) => setRowDraft(p.id, { stock: e.target.value })}
-                        style={{ width: 120, padding: 6 }}
+                        style={{ width: 95, padding: 6 }}
                       />
+                    </td>
+
+                    <td style={{ borderBottom: "1px solid #f2f2f2", padding: 8 }}>
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={d.unitWeight}
+                        onChange={(e) => setRowDraft(p.id, { unitWeight: e.target.value })}
+                        style={{ width: 110, padding: 6 }}
+                      />
+                    </td>
+
+                    <td style={{ borderBottom: "1px solid #f2f2f2", padding: 8 }}>
+                      <select
+                        value={d.weightUnit}
+                        onChange={(e) => setRowDraft(p.id, { weightUnit: normalizeWeightUnit(e.target.value) })}
+                        style={{ width: 76, padding: 6 }}
+                      >
+                        <option value="lb">lb</option>
+                        <option value="kg">kg</option>
+                      </select>
+                    </td>
+
+                    <td style={{ borderBottom: "1px solid #f2f2f2", padding: 8, color: "#64748b", fontSize: 12, whiteSpace: "nowrap" }}>
+                      {weightPreview || "—"}
                     </td>
 
                     <td style={{ borderBottom: "1px solid #f2f2f2", padding: 8 }}>
@@ -395,8 +458,8 @@ export default function AdminProductsPage() {
           </table>
 
           <p style={{ color: "#666", marginTop: 10, fontSize: 13 }}>
-            Tip: use <strong>Save</strong> to quickly update Public price, Stock, and Active without opening the product.
-            Use <strong>Edit</strong> for tiers, images, and details.
+            Tip: use <strong>Save</strong> to quickly update Public price, Stock, Unit weight, Weight unit, and Active without opening the product.
+            Use <strong>Edit</strong> for tiers, images, and details. Weight preview always shows both lb and kg.
           </p>
         </div>
       )}
