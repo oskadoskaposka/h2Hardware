@@ -166,6 +166,7 @@ export const approveRegistrationRequest = onCall(
     const email = normalizeEmail(registration.email);
     const name = cleanText(registration.name);
     const company = cleanText(registration.company);
+    const shippingAddress = cleanText(registration.shippingAddress || registration.deliveryAddress);
     const displayName = name || company || email;
 
     if (!email || !email.includes("@")) {
@@ -208,6 +209,7 @@ export const approveRegistrationRequest = onCall(
         name,
         company,
         email,
+        shippingAddress,
         disabled: false,
         updatedAt: FieldValue.serverTimestamp(),
         ...(customerSnap.exists ? {} : { createdAt: FieldValue.serverTimestamp() }),
@@ -389,12 +391,14 @@ export const notifyNewRegistrationRequest = onDocumentCreated(
   async (event) => {
     const requestId = event.params.requestId;
     const data = event.data?.data() || {};
+    const shippingAddress = data.shippingAddress || data.deliveryAddress;
 
     const rows =
       field("Request ID", requestId) +
       field("Name", data.name) +
       field("Email", data.email) +
       field("Company", data.company) +
+      field("Delivery address", shippingAddress) +
       field("Status", data.status || "new");
 
     const html = emailFrame("New account access request", rows);
@@ -404,6 +408,7 @@ export const notifyNewRegistrationRequest = onDocumentCreated(
       `Name: ${data.name || "—"}`,
       `Email: ${data.email || "—"}`,
       `Company: ${data.company || "—"}`,
+      `Delivery address: ${shippingAddress || "—"}`,
       `Status: ${data.status || "new"}`,
     ].join("\n");
 
