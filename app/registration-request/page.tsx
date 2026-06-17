@@ -9,21 +9,25 @@ type FormState = {
   name: string;
   email: string;
   company: string;
+  shippingAddress: string;
 };
 
 const THANK_YOU_TEXT =
   "Thanks, we will review your request and contact you before creating the account.";
+
+const EMPTY_FORM: FormState = {
+  name: "",
+  email: "",
+  company: "",
+  shippingAddress: "",
+};
 
 function isValidEmail(value: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
 }
 
 export default function RegistrationRequestPage() {
-  const [form, setForm] = useState<FormState>({
-    name: "",
-    email: "",
-    company: "",
-  });
+  const [form, setForm] = useState<FormState>(EMPTY_FORM);
 
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
@@ -37,11 +41,13 @@ export default function RegistrationRequestPage() {
     const name = form.name.trim();
     const email = form.email.trim();
     const company = form.company.trim();
+    const shippingAddress = form.shippingAddress.trim();
 
     if (!name) return "Name is required.";
     if (!email) return "Email is required.";
     if (!isValidEmail(email)) return "Please enter a valid email address.";
     if (!company) return "Company is required.";
+    if (!shippingAddress) return "Delivery address is required.";
 
     return "";
   }
@@ -65,12 +71,13 @@ export default function RegistrationRequestPage() {
         name: form.name.trim(),
         email: form.email.trim().toLowerCase(),
         company: form.company.trim(),
+        shippingAddress: form.shippingAddress.trim(),
         status: "new",
         createdAt: serverTimestamp(),
       });
 
       setSuccessMsg(THANK_YOU_TEXT);
-      setForm({ name: "", email: "", company: "" });
+      setForm(EMPTY_FORM);
     } catch (e: any) {
       setErrorMsg(e?.message ?? "Failed to submit the request.");
     } finally {
@@ -144,6 +151,17 @@ export default function RegistrationRequestPage() {
                   />
                 </div>
 
+                <div className="field">
+                  <label>Delivery address *</label>
+                  <textarea
+                    value={form.shippingAddress}
+                    onChange={(e) => update("shippingAddress", e.target.value)}
+                    placeholder="Street, city, province, postal code"
+                    autoComplete="street-address"
+                    rows={4}
+                  />
+                </div>
+
                 {errorMsg ? <div className="error">{errorMsg}</div> : null}
                 {successMsg ? <div className="success">{successMsg}</div> : null}
 
@@ -177,6 +195,11 @@ export default function RegistrationRequestPage() {
                   <div className="summaryLabel">Company</div>
                   <div className="summaryValue">{form.company.trim() || "—"}</div>
                 </div>
+
+                <div className="summaryItem">
+                  <div className="summaryLabel">Delivery address</div>
+                  <div className="summaryValue">{form.shippingAddress.trim() || "—"}</div>
+                </div>
               </div>
             </div>
           </aside>
@@ -204,8 +227,9 @@ export default function RegistrationRequestPage() {
         .form { display: grid; gap: 14px; }
         .field { display: grid; gap: 6px; }
         .field label { color: #0f172a; font-size: 13px; font-weight: 900; }
-        .field input { width: 100%; border: 1px solid #d1d5db; border-radius: 12px; padding: 12px 14px; font-size: 14px; outline: none; background: #fff; }
-        .field input:focus { border-color: #94a3b8; }
+        .field input, .field textarea { width: 100%; border: 1px solid #d1d5db; border-radius: 12px; padding: 12px 14px; font-size: 14px; outline: none; background: #fff; font-family: inherit; }
+        .field textarea { resize: vertical; min-height: 90px; }
+        .field input:focus, .field textarea:focus { border-color: #94a3b8; }
         .error { background: #fff; border: 1px solid rgba(185, 28, 28, 0.24); border-left: 6px solid #b91c1c; border-radius: 12px; padding: 14px; color: #7f1d1d; font-size: 13px; font-weight: 700; }
         .success { background: rgba(16, 185, 129, 0.07); border: 1px solid rgba(16, 185, 129, 0.22); border-left: 6px solid #10b981; border-radius: 12px; padding: 14px; color: #065f46; font-size: 13px; font-weight: 700; }
         .submitBtn { height: 46px; border: none; border-radius: 12px; background: #b91c1c; color: #fff; font-weight: 900; font-size: 14px; cursor: pointer; }
@@ -214,7 +238,7 @@ export default function RegistrationRequestPage() {
         .summary { display: grid; gap: 10px; }
         .summaryItem { border: 1px solid #eef2f7; border-radius: 12px; padding: 12px; background: #fbfcfd; }
         .summaryLabel { color: #64748b; font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 4px; }
-        .summaryValue { color: #0f172a; font-size: 14px; font-weight: 700; line-height: 1.45; overflow-wrap: anywhere; }
+        .summaryValue { color: #0f172a; font-size: 14px; font-weight: 700; line-height: 1.45; overflow-wrap: anywhere; white-space: pre-wrap; }
       `}</style>
     </main>
   );

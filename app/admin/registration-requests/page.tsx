@@ -18,6 +18,7 @@ type RegistrationRequestDoc = {
   name: string;
   email: string;
   company: string;
+  shippingAddress?: string;
   status?: string;
   authUid?: string;
   createdAt?: any;
@@ -31,7 +32,15 @@ type UserActionResult = {
 };
 
 function toSearchText(item: RegistrationRequestDoc) {
-  return [item.id, item.name, item.email, item.company, item.status || "", item.authUid || ""]
+  return [
+    item.id,
+    item.name,
+    item.email,
+    item.company,
+    item.shippingAddress || "",
+    item.status || "",
+    item.authUid || "",
+  ]
     .join(" ")
     .toLowerCase();
 }
@@ -84,6 +93,7 @@ export default function AdminRegistrationRequestsPage() {
           name: String(data.name ?? "").trim(),
           email: String(data.email ?? "").trim(),
           company: String(data.company ?? "").trim(),
+          shippingAddress: String(data.shippingAddress ?? data.deliveryAddress ?? "").trim(),
           status: String(data.status ?? "new").trim(),
           authUid: String(data.authUid ?? "").trim(),
           createdAt: data.createdAt,
@@ -223,7 +233,7 @@ export default function AdminRegistrationRequestsPage() {
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search: name, email, company, status..."
+            placeholder="Search: name, email, company, address, status..."
             style={{ width: "100%", minHeight: 42, padding: "0 12px", borderRadius: 10, border: "1px solid #e2e8f0", background: "#fff", outline: "none" }}
           />
         </div>
@@ -275,6 +285,7 @@ export default function AdminRegistrationRequestsPage() {
                     <InfoRow label="Name" value={item.name || "—"} />
                     <InfoRow label="Email" value={item.email ? <a href={`mailto:${item.email}`} style={{ color: "#b91c1c", fontWeight: 800 }}>{item.email}</a> : "—"} />
                     <InfoRow label="Company" value={item.company || "—"} />
+                    <InfoRow label="Delivery address" value={item.shippingAddress || "—"} />
                     {item.authUid ? <InfoRow label="Firebase UID" value={item.authUid} /> : null}
                   </div>
 
@@ -315,7 +326,7 @@ function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div style={{ border: "1px solid #eef2f7", borderRadius: 12, padding: 12, background: "#fbfcfd", minWidth: 0 }}>
       <div style={{ color: "#64748b", fontSize: 12, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 4 }}>{label}</div>
-      <div style={{ color: "#0f172a", fontSize: 14, fontWeight: 700, overflowWrap: "anywhere" }}>{value}</div>
+      <div style={{ color: "#0f172a", fontSize: 14, fontWeight: 700, overflowWrap: "anywhere", whiteSpace: "pre-wrap" }}>{value}</div>
     </div>
   );
 }
