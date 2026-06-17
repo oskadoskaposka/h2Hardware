@@ -90,6 +90,14 @@ export default function Header() {
                     </Link>
 
                     <Link
+                      href="/admin/category-highlights"
+                      className={styles.adminItem}
+                      role="menuitem"
+                    >
+                      Category Highlights
+                    </Link>
+
+                    <Link
                       href="/admin/sample-requests"
                       className={styles.adminItem}
                       role="menuitem"
