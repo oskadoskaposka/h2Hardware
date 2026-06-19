@@ -1,22 +1,22 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { doc, getDoc, getFirestore } from "firebase/firestore";
+import { doc, getFirestore, onSnapshot } from "firebase/firestore";
 import { app } from "../lib/firebaseClient";
 
 const CONFIG_COLLECTION = "site_config";
 const CONFIG_DOC = "catalog_menu";
 
-function normalizeCategory(value: string) {
-  return String(value || "").trim().toLowerCase();
+function normalizeCategory(value: unknown) {
+  return String(value ?? "").trim().toLowerCase();
 }
 
-function readHighlightedCategories(data: any) {
-  const raw = data?.highlightedCategories;
+function readHighlightedCategories(data: unknown) {
+  const raw = (data as { highlightedCategories?: unknown } | null)?.highlightedCategories;
   if (!Array.isArray(raw)) return [];
 
   return raw
-    .map((item) => String(item || "").trim())
+    .map((item) => String(item ?? "").trim())
     .filter(Boolean);
 }
 
@@ -50,12 +50,22 @@ function ensureCatalogMenuStyle() {
   document.head.appendChild(style);
 }
 
+function getPillLabel(button: HTMLButtonElement) {
+  const pillLeft = button.querySelector<HTMLElement>(".pillLeft");
+  if (!pillLeft) return "";
+
+  const labelNode = Array.from(pillLeft.children).find(
+    (child) => !child.classList.contains("chev"),
+  );
+
+  return String(labelNode?.textContent || "").trim();
+}
+
 function applyCatalogMenuAdjustments(highlightedCategories: string[]) {
   const highlighted = new Set(highlightedCategories.map(normalizeCategory));
 
   document.querySelectorAll<HTMLButtonElement>("button.subpill").forEach((button) => {
-    const firstSpan = button.querySelector("span");
-    const label = String(firstSpan?.textContent || button.textContent || "").trim();
+    const label = String(button.querySelector("span")?.textContent || "").trim();
 
     if (/^All in\s+/i.test(label)) {
       button.setAttribute("data-hidden-catalog-all", "true");
@@ -64,8 +74,7 @@ function applyCatalogMenuAdjustments(highlightedCategories: string[]) {
   });
 
   document.querySelectorAll<HTMLButtonElement>("button.pill").forEach((button) => {
-    const labelNode = button.querySelector(".pillLeft span:not(.chev)");
-    const label = String(labelNode?.textContent || "").trim();
+    const label = getPillLabel(button);
     const shouldHighlight = !!label && highlighted.has(normalizeCategory(label));
 
     button.classList.toggle("catalogCategoryHighlighted", shouldHighlight);
@@ -77,39 +86,51 @@ export default function CatalogMenuAdjustments() {
   const [highlightedCategories, setHighlightedCategories] = useState<string[]>([]);
 
   useEffect(() => {
-    let mounted = true;
+    const db = getFirestore(app);
+    const configRef = doc(db, CONFIG_COLLECTION, CONFIG_DOC);
 
-    (async () => {
-      try {
-        const db = getFirestore(app);
-        const snap = await getDoc(doc(db, CONFIG_COLLECTION, CONFIG_DOC));
-        if (!mounted || !snap.exists()) return;
-
-        setHighlightedCategories(readHighlightedCategories(snap.data()));
-      } catch {
-        if (mounted) setHighlightedCategories([]);
-      }
-    })();
-
-    return () => {
-      mounted = false;
-    };
+    return onSnapshot(
+      configRef,
+      (snap) => {
+        setHighlightedCategories(snap.exists() ? readHighlightedCategories(snap.data()) : []);
+      },
+      (error) => {
+        console.error("Unable to load catalog category highlights.", error);
+        setHighlightedCategories([]);
+      },
+    );
   }, []);
 
   useEffect(() => {
     ensureCatalogMenuStyle();
-    applyCatalogMenuAdjustments(highlightedCategories);
 
-    const observer = new MutationObserver(() => {
-      applyCatalogMenuAdjustments(highlightedCategories);
-    });
+    let animationFrame = 0;
+    const apply = () => {
+      cancelAnimationFrame(animationFrame);
+      animationFrame = requestAnimationFrame(() => {
+        applyCatalogMenuAdjustments(highlightedCategories);
+      });
+    };
 
+    apply();
+
+    const observer = new MutationObserver(apply);
     observer.observe(document.body, {
       childList: true,
       subtree: true,
     });
 
-    return () => observer.disconnect();
+    // Catalog buttons are created after Firestore finishes loading products.
+    // Retry briefly as a safeguard instead of relying only on mutation timing.
+    const retryTimer = window.setInterval(apply, 300);
+    const stopRetryTimer = window.setTimeout(() => window.clearInterval(retryTimer), 10000);
+
+    return () => {
+      cancelAnimationFrame(animationFrame);
+      observer.disconnect();
+      window.clearInterval(retryTimer);
+      window.clearTimeout(stopRetryTimer);
+    };
   }, [highlightedCategories]);
 
   return null;
