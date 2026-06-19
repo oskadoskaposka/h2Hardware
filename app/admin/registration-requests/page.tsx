@@ -1,10 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import { getFunctions, httpsCallable } from "firebase/functions";
-import { collection, getDocs, getFirestore, orderBy, query } from "firebase/firestore";
+import { collection, getDocs, getFirestore } from "firebase/firestore";
 
 import { auth, app } from "../../../lib/firebaseClient";
 import { isAdminEmail } from "../../../lib/admin";
@@ -45,6 +45,11 @@ function toSearchText(item: RegistrationRequestDoc) {
     .toLowerCase();
 }
 
+function toMillis(value: any) {
+  const date = value?.toDate?.();
+  return date instanceof Date ? date.getTime() : 0;
+}
+
 function getReadableError(error: unknown) {
   if (typeof error === "object" && error !== null && "message" in error) {
     const message = String((error as { message?: unknown }).message || "").trim();
@@ -64,9 +69,10 @@ export default function AdminRegistrationRequestsPage() {
   const [search, setSearch] = useState("");
 
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (u) => {
-      setIsAdmin(isAdminEmail(u?.email));
+    const unsub = onAuthStateChanged(auth, (user) => {
+      setIsAdmin(isAdminEmail(user?.email));
     });
+
     return () => unsub();
   }, []);
 
@@ -82,14 +88,15 @@ export default function AdminRegistrationRequestsPage() {
       setError(null);
 
       const db = getFirestore(app);
-      const col = collection(db, "registration_requests");
-      const qq = query(col, orderBy("createdAt", "desc"));
-      const snap = await getDocs(qq);
+      // Do not rely on Firestore server-side orderBy here. Existing historical
+      // requests can have inconsistent timestamps, and a plain collection read
+      // keeps the page available even when the ordered query fails.
+      const snap = await getDocs(collection(db, "registration_requests"));
 
-      const list: RegistrationRequestDoc[] = snap.docs.map((d) => {
-        const data = d.data() as any;
+      const list: RegistrationRequestDoc[] = snap.docs.map((docSnap) => {
+        const data = docSnap.data() as any;
         return {
-          id: d.id,
+          id: docSnap.id,
           name: String(data.name ?? "").trim(),
           email: String(data.email ?? "").trim(),
           company: String(data.company ?? "").trim(),
@@ -100,9 +107,10 @@ export default function AdminRegistrationRequestsPage() {
         };
       });
 
+      list.sort((a, b) => toMillis(b.createdAt) - toMillis(a.createdAt));
       setItems(list);
-    } catch (e: any) {
-      setError(e?.message ?? "Failed to load registration requests.");
+    } catch (e) {
+      setError(getReadableError(e));
     } finally {
       setLoading(false);
     }
@@ -113,10 +121,8 @@ export default function AdminRegistrationRequestsPage() {
   }, [loadRegistrationRequests]);
 
   async function handleApprove(item: RegistrationRequestDoc) {
-    const label = item.status === "disabled" ? "approve and re-enable" : "approve and create";
-    const confirmed = window.confirm(`Do you want to ${label} the Firebase user for ${item.email}?`);
-
-    if (!confirmed) return;
+    const action = item.status === "disabled" ? "approve and re-enable" : "approve and create";
+    if (!window.confirm(`Do you want to ${action} the Firebase user for ${item.email}?`)) return;
 
     try {
       setError(null);
@@ -126,22 +132,18 @@ export default function AdminRegistrationRequestsPage() {
       const result = await approveRegistrationRequestFn({ requestId: item.id });
       const data = result.data as UserActionResult;
 
-      setItems((prev) =>
-        prev.map((current) =>
+      setItems((previous) =>
+        previous.map((current) =>
           current.id === item.id
-            ? {
-                ...current,
-                status: "approved",
-                authUid: data.uid || current.authUid,
-              }
-            : current
-        )
+            ? { ...current, status: "approved", authUid: data.uid || current.authUid }
+            : current,
+        ),
       );
 
       setActionMessage(
         data.created
           ? `User approved and created for ${item.email}. Ask the customer to use Forgot password on the login page to set their password.`
-          : `User approved and enabled for ${item.email}.`
+          : `User approved and enabled for ${item.email}.`,
       );
     } catch (e) {
       setError(getReadableError(e));
@@ -151,9 +153,7 @@ export default function AdminRegistrationRequestsPage() {
   }
 
   async function handleDisable(item: RegistrationRequestDoc) {
-    const confirmed = window.confirm(`Disable login access for ${item.email}?`);
-
-    if (!confirmed) return;
+    if (!window.confirm(`Disable login access for ${item.email}?`)) return;
 
     try {
       setError(null);
@@ -163,16 +163,12 @@ export default function AdminRegistrationRequestsPage() {
       const result = await disableRegistrationUserFn({ requestId: item.id });
       const data = result.data as UserActionResult;
 
-      setItems((prev) =>
-        prev.map((current) =>
+      setItems((previous) =>
+        previous.map((current) =>
           current.id === item.id
-            ? {
-                ...current,
-                status: "disabled",
-                authUid: data.uid || current.authUid,
-              }
-            : current
-        )
+            ? { ...current, status: "disabled", authUid: data.uid || current.authUid }
+            : current,
+        ),
       );
 
       setActionMessage(`User disabled for ${item.email}.`);
@@ -184,14 +180,11 @@ export default function AdminRegistrationRequestsPage() {
   }
 
   const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    if (!q) return items;
-    return items.filter((item) => toSearchText(item).includes(q));
+    const term = search.trim().toLowerCase();
+    return term ? items.filter((item) => toSearchText(item).includes(term)) : items;
   }, [items, search]);
 
-  if (!isAdmin) {
-    return <p style={{ padding: 24 }}>Access denied.</p>;
-  }
+  if (!isAdmin) return <p style={{ padding: 24 }}>Access denied.</p>;
 
   return (
     <main style={{ padding: 24, background: "#f4f6f8", minHeight: "70vh" }}>
@@ -207,15 +200,9 @@ export default function AdminRegistrationRequestsPage() {
           </div>
 
           <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-            <Link href="/registration-request" style={{ fontWeight: 800, color: "#b91c1c", textDecoration: "none" }}>
-              Public request form
-            </Link>
-            <Link href="/admin/orders" style={{ fontWeight: 800, color: "#b91c1c", textDecoration: "none" }}>
-              Orders
-            </Link>
-            <Link href="/admin/products" style={{ fontWeight: 800, color: "#b91c1c", textDecoration: "none" }}>
-              Manage products
-            </Link>
+            <Link href="/registration-request" style={linkStyle}>Public request form</Link>
+            <Link href="/admin/orders" style={linkStyle}>Orders</Link>
+            <Link href="/admin/products" style={linkStyle}>Manage products</Link>
           </div>
         </div>
 
@@ -223,67 +210,53 @@ export default function AdminRegistrationRequestsPage() {
           Approve creates or enables the Firebase Auth user. Disable blocks login access without deleting the request history.
         </div>
 
-        {actionMessage ? (
-          <div style={{ marginTop: 14, background: "rgba(16, 185, 129, 0.08)", border: "1px solid rgba(16, 185, 129, 0.24)", borderLeft: "6px solid #10b981", borderRadius: 12, padding: 14, color: "#065f46", fontSize: 13, fontWeight: 800 }}>
-            {actionMessage}
-          </div>
-        ) : null}
+        {actionMessage ? <div style={successStyle}>{actionMessage}</div> : null}
 
-        <div style={{ marginTop: 14 }}>
+        <div style={{ marginTop: 14, display: "flex", gap: 10 }}>
           <input
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(event) => setSearch(event.target.value)}
             placeholder="Search: name, email, company, address, status..."
             style={{ width: "100%", minHeight: 42, padding: "0 12px", borderRadius: 10, border: "1px solid #e2e8f0", background: "#fff", outline: "none" }}
           />
+          <button type="button" onClick={loadRegistrationRequests} disabled={loading} style={secondaryButtonStyle}>
+            Refresh
+          </button>
         </div>
 
         {error ? (
-          <div style={{ marginTop: 16, background: "#fff", border: "1px solid rgba(185,28,28,.25)", borderLeft: "6px solid #b91c1c", borderRadius: 12, padding: 14 }}>
+          <div style={errorStyle}>
             <strong>Admin error:</strong> {error}
           </div>
         ) : loading ? (
           <div style={{ marginTop: 16, color: "#64748b" }}>Loading…</div>
         ) : filtered.length === 0 ? (
-          <div style={{ marginTop: 16, background: "#fff", border: "1px solid #e2e8f0", borderRadius: 12, padding: 14 }}>
+          <div style={emptyStyle}>
             <div style={{ fontWeight: 900, color: "#0f172a" }}>No registration requests found</div>
             <div style={{ marginTop: 6, color: "#64748b", fontSize: 13 }}>Try a different search.</div>
           </div>
         ) : (
           <div style={{ marginTop: 14, display: "grid", gap: 12 }}>
             {filtered.map((item) => {
-              const dt = item.createdAt?.toDate?.() instanceof Date ? item.createdAt.toDate() : null;
+              const date = item.createdAt?.toDate?.() instanceof Date ? item.createdAt.toDate() : null;
               const status = (item.status || "new").toLowerCase();
-              const isActionBusy = busyAction?.id === item.id;
-              const isAnyActionBusy = busyAction !== null;
-              const approveLabel = status === "disabled" ? "Approve / Enable User" : "Approve / Create User";
+              const isCurrentAction = busyAction?.id === item.id;
+              const anyActionBusy = busyAction !== null;
 
               return (
-                <div key={item.id} style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 14, padding: 14, boxShadow: "0 1px 0 rgba(15,23,42,.03)" }}>
+                <article key={item.id} style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 14, padding: 14, boxShadow: "0 1px 0 rgba(15,23,42,.03)" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "flex-start", flexWrap: "wrap" }}>
                     <div style={{ minWidth: 260 }}>
-                      <div style={{ fontWeight: 950 as any, color: "#0f172a", fontSize: 18, letterSpacing: 0.1 }}>
-                        {item.name || "Unnamed requester"}
-                      </div>
-                      <div style={{ marginTop: 6, color: "#64748b", fontSize: 13 }}>
-                        Company: <strong style={{ color: "#0f172a" }}>{item.company || "—"}</strong>
-                      </div>
-                      <div style={{ marginTop: 6, color: "#64748b", fontSize: 12 }}>
-                        ID: <span style={{ fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" }}>{item.id}</span>
-                      </div>
-                      <div style={{ marginTop: 6, color: "#64748b", fontSize: 12 }}>
-                        {dt ? dt.toLocaleString("en-CA") : "—"}
-                      </div>
+                      <div style={{ fontWeight: 950, color: "#0f172a", fontSize: 18 }}>{item.name || "Unnamed requester"}</div>
+                      <div style={{ marginTop: 6, color: "#64748b", fontSize: 13 }}>Company: <strong style={{ color: "#0f172a" }}>{item.company || "—"}</strong></div>
+                      <div style={{ marginTop: 6, color: "#64748b", fontSize: 12 }}>{date ? date.toLocaleString("en-CA") : "—"}</div>
                     </div>
-
-                    <div style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", minWidth: 84, height: 32, padding: "0 12px", borderRadius: 999, background: status === "disabled" ? "rgba(15, 23, 42, 0.08)" : "rgba(185, 28, 28, 0.08)", color: status === "disabled" ? "#334155" : "#b91c1c", border: status === "disabled" ? "1px solid rgba(15, 23, 42, 0.16)" : "1px solid rgba(185, 28, 28, 0.18)", fontSize: 12, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.04em" }}>
-                      {item.status || "new"}
-                    </div>
+                    <div style={statusStyle(status)}>{item.status || "new"}</div>
                   </div>
 
                   <div style={{ marginTop: 14, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 14 }}>
                     <InfoRow label="Name" value={item.name || "—"} />
-                    <InfoRow label="Email" value={item.email ? <a href={`mailto:${item.email}`} style={{ color: "#b91c1c", fontWeight: 800 }}>{item.email}</a> : "—"} />
+                    <InfoRow label="Email" value={item.email ? <a href={`mailto:${item.email}`} style={linkStyle}>{item.email}</a> : "—"} />
                     <InfoRow label="Company" value={item.company || "—"} />
                     <InfoRow label="Delivery address" value={item.shippingAddress || "—"} />
                     {item.authUid ? <InfoRow label="Firebase UID" value={item.authUid} /> : null}
@@ -291,28 +264,17 @@ export default function AdminRegistrationRequestsPage() {
 
                   <div style={{ marginTop: 14, paddingTop: 14, borderTop: "1px solid #eef2f7", display: "flex", gap: 10, flexWrap: "wrap" }}>
                     {status !== "approved" ? (
-                      <button
-                        type="button"
-                        onClick={() => handleApprove(item)}
-                        disabled={isAnyActionBusy}
-                        style={{ minHeight: 38, padding: "0 14px", borderRadius: 10, border: "none", background: "#b91c1c", color: "#fff", cursor: isAnyActionBusy ? "not-allowed" : "pointer", fontWeight: 900, opacity: isAnyActionBusy && !isActionBusy ? 0.55 : 1 }}
-                      >
-                        {isActionBusy && busyAction?.type === "approve" ? "Approving…" : approveLabel}
+                      <button type="button" onClick={() => handleApprove(item)} disabled={anyActionBusy} style={primaryButtonStyle(anyActionBusy && !isCurrentAction)}>
+                        {isCurrentAction && busyAction?.type === "approve" ? "Approving…" : status === "disabled" ? "Approve / Enable User" : "Approve / Create User"}
                       </button>
                     ) : null}
-
                     {status === "approved" ? (
-                      <button
-                        type="button"
-                        onClick={() => handleDisable(item)}
-                        disabled={isAnyActionBusy}
-                        style={{ minHeight: 38, padding: "0 14px", borderRadius: 10, border: "1px solid #cbd5e1", background: "#fff", color: "#0f172a", cursor: isAnyActionBusy ? "not-allowed" : "pointer", fontWeight: 900, opacity: isAnyActionBusy && !isActionBusy ? 0.55 : 1 }}
-                      >
-                        {isActionBusy && busyAction?.type === "disable" ? "Disabling…" : "Disable User"}
+                      <button type="button" onClick={() => handleDisable(item)} disabled={anyActionBusy} style={secondaryButtonStyle}>
+                        {isCurrentAction && busyAction?.type === "disable" ? "Disabling…" : "Disable User"}
                       </button>
                     ) : null}
                   </div>
-                </div>
+                </article>
               );
             })}
           </div>
@@ -322,7 +284,22 @@ export default function AdminRegistrationRequestsPage() {
   );
 }
 
-function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
+const linkStyle = { fontWeight: 800, color: "#b91c1c", textDecoration: "none" };
+const successStyle = { marginTop: 14, background: "rgba(16, 185, 129, 0.08)", border: "1px solid rgba(16, 185, 129, 0.24)", borderLeft: "6px solid #10b981", borderRadius: 12, padding: 14, color: "#065f46", fontSize: 13, fontWeight: 800 };
+const errorStyle = { marginTop: 16, background: "#fff", border: "1px solid rgba(185,28,28,.25)", borderLeft: "6px solid #b91c1c", borderRadius: 12, padding: 14 };
+const emptyStyle = { marginTop: 16, background: "#fff", border: "1px solid #e2e8f0", borderRadius: 12, padding: 14 };
+const secondaryButtonStyle = { minHeight: 42, padding: "0 14px", borderRadius: 10, border: "1px solid #cbd5e1", background: "#fff", color: "#0f172a", cursor: "pointer", fontWeight: 900 };
+
+function primaryButtonStyle(dimmed: boolean) {
+  return { minHeight: 38, padding: "0 14px", borderRadius: 10, border: "none", background: "#b91c1c", color: "#fff", cursor: dimmed ? "not-allowed" : "pointer", fontWeight: 900, opacity: dimmed ? 0.55 : 1 };
+}
+
+function statusStyle(status: string) {
+  const disabled = status === "disabled";
+  return { display: "inline-flex", alignItems: "center", justifyContent: "center", minWidth: 84, height: 32, padding: "0 12px", borderRadius: 999, background: disabled ? "rgba(15, 23, 42, 0.08)" : "rgba(185, 28, 28, 0.08)", color: disabled ? "#334155" : "#b91c1c", border: disabled ? "1px solid rgba(15, 23, 42, 0.16)" : "1px solid rgba(185, 28, 28, 0.18)", fontSize: 12, fontWeight: 900, textTransform: "uppercase" as const, letterSpacing: "0.04em" };
+}
+
+function InfoRow({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div style={{ border: "1px solid #eef2f7", borderRadius: 12, padding: 12, background: "#fbfcfd", minWidth: 0 }}>
       <div style={{ color: "#64748b", fontSize: 12, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 4 }}>{label}</div>
