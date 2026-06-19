@@ -146,6 +146,7 @@ function errorCode(error: unknown) {
 export const approveRegistrationRequest = onCall(
   {
     region: REGION,
+    cors: true,
   },
   async (request) => {
     const admin = await assertAdmin(request.auth);
@@ -249,6 +250,7 @@ export const approveRegistrationRequest = onCall(
 export const disableRegistrationUser = onCall(
   {
     region: REGION,
+    cors: true,
   },
   async (request) => {
     const admin = await assertAdmin(request.auth);
