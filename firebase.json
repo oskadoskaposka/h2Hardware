@@ -2,7 +2,23 @@
   "hosting": {
     "public": "out",
     "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
-    "cleanUrls": true
+    "cleanUrls": true,
+    "rewrites": [
+      {
+        "source": "/api/admin/registration-requests/approve",
+        "function": {
+          "functionId": "approveRegistrationRequestHttp",
+          "region": "us-central1"
+        }
+      },
+      {
+        "source": "/api/admin/registration-requests/disable",
+        "function": {
+          "functionId": "disableRegistrationUserHttp",
+          "region": "us-central1"
+        }
+      }
+    ]
   },
   "functions": {
     "source": "functions",
