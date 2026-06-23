@@ -11,7 +11,11 @@ if (!getApps().length) {
 
 const db = getFirestore();
 const REGION = "us-central1";
-const DEFAULT_ADMIN_EMAILS = ["maia@h2hardwareltd.com"];
+const DEFAULT_ADMIN_EMAILS = [
+  "maia@h2hardwareltd.com",
+  "admin@starpro.com",
+  "admin@h2hardware.com",
+];
 
 function configuredAdminEmails() {
   const envEmails = [
