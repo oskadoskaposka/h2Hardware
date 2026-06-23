@@ -7,6 +7,8 @@
 .link, .linkBtn, .topActionBtn { color: rgba(255,255,255,.92); text-decoration: none; font-size: 13px; font-weight: 700; white-space: nowrap; }
 .link:hover, .linkBtn:hover, .topActionBtn:hover { color: #ff3b3b; }
 .linkBtn, .topActionBtn { background: transparent; border: 0; cursor: pointer; padding: 0; margin: 0; font: inherit; }
+.cartLink { display: inline-flex; align-items: center; gap: 7px; }
+.cartBadge { min-width: 18px; height: 18px; padding: 0 6px; border-radius: 999px; display: inline-flex; align-items: center; justify-content: center; background: #b91c1c; color: #fff; font-size: 11px; font-weight: 900; line-height: 1; box-shadow: 0 0 0 2px rgba(255,255,255,.12); }
 .sep { opacity: .45; color: rgba(255,255,255,.65); }
 .navBar { background: #fff; border-bottom: 1px solid #e7e7e7; justify-content: center; }
 .navBar .inner { justify-content: center; align-items: center; }
@@ -21,4 +23,4 @@
 .adminMenu:hover .adminDropdown, .adminMenu[data-open="true"] .adminDropdown { display: block; }
 .adminItem { display: block; padding: 9px 10px; border-radius: 8px; color: rgba(255,255,255,.92); text-decoration: none; font-size: 11px; font-weight: 700; line-height: 1; letter-spacing: 0; white-space: nowrap; }
 .adminItem:hover { background: rgba(255,59,59,.14); color: #ff3b3b; }
-@media (max-width: 720px) { .topBar { height: 66px; } .logo { height: 48px; max-width: 140px; } .topLinks { gap: 10px; } .link, .linkBtn, .topActionBtn { font-size: 12px; } .nav { flex-wrap: wrap; gap: 20px; padding: 10px 0; } .navItem { font-size: 12.5px; letter-spacing: .6px; padding: 6px 2px; } }
+@media (max-width: 720px) { .topBar { height: 66px; } .logo { height: 48px; max-width: 140px; } .topLinks { gap: 10px; } .link, .linkBtn, .topActionBtn { font-size: 12px; } .cartBadge { min-width: 17px; height: 17px; padding: 0 5px; font-size: 10px; } .nav { flex-wrap: wrap; gap: 20px; padding: 10px 0; } .navItem { font-size: 12.5px; letter-spacing: .6px; padding: 6px 2px; } }
