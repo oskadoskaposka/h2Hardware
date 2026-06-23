@@ -41,6 +41,7 @@ export default function Header() {
         <div className={`${styles.inner} container`}>
           <Link
             href="/"
+            prefetch={false}
             className={styles.brand}
             aria-label="H2 Hardware Home"
             style={{ textDecoration: "none" }}
@@ -56,7 +57,7 @@ export default function Header() {
             {isAdmin && (
               <>
                 <div className={styles.adminMenu}>
-                  <Link href="/admin/orders" className={styles.link}>
+                  <Link href="/admin/orders" prefetch={false} className={styles.link}>
                     Admin
                   </Link>
 
@@ -67,6 +68,7 @@ export default function Header() {
                   >
                     <Link
                       href="/admin/orders"
+                      prefetch={false}
                       className={styles.adminItem}
                       role="menuitem"
                     >
@@ -75,6 +77,7 @@ export default function Header() {
 
                     <Link
                       href="/admin/products"
+                      prefetch={false}
                       className={styles.adminItem}
                       role="menuitem"
                     >
@@ -83,6 +86,7 @@ export default function Header() {
 
                     <Link
                       href="/admin/carousel-builder"
+                      prefetch={false}
                       className={styles.adminItem}
                       role="menuitem"
                     >
@@ -91,6 +95,7 @@ export default function Header() {
 
                     <Link
                       href="/admin/category-highlights"
+                      prefetch={false}
                       className={styles.adminItem}
                       role="menuitem"
                     >
@@ -99,6 +104,7 @@ export default function Header() {
 
                     <Link
                       href="/admin/sample-requests"
+                      prefetch={false}
                       className={styles.adminItem}
                       role="menuitem"
                     >
@@ -107,6 +113,7 @@ export default function Header() {
 
                     <Link
                       href="/admin/registration-requests"
+                      prefetch={false}
                       className={styles.adminItem}
                       role="menuitem"
                     >
@@ -120,18 +127,18 @@ export default function Header() {
             )}
 
             {isLogged ? (
-              <Link className={styles.link} href="/login">
+              <Link className={styles.link} href="/login" prefetch={false}>
                 My Profile
               </Link>
             ) : (
-              <Link className={styles.link} href="/login">
+              <Link className={styles.link} href="/login" prefetch={false}>
                 Login
               </Link>
             )}
 
             <span className={styles.sep}>|</span>
 
-            <Link className={styles.link} href="/cart">
+            <Link className={styles.link} href="/cart" prefetch={false}>
               View Cart
             </Link>
 
@@ -163,6 +170,7 @@ export default function Header() {
           <nav className={styles.nav} aria-label="Primary navigation">
             <Link
               href="/"
+              prefetch={false}
               className={styles.navItem}
               aria-current={isCurrent("/")}
             >
@@ -171,6 +179,7 @@ export default function Header() {
 
             <Link
               href="/about"
+              prefetch={false}
               className={styles.navItem}
               aria-current={isCurrent("/about")}
             >
@@ -179,6 +188,7 @@ export default function Header() {
 
             <Link
               href="/contact"
+              prefetch={false}
               className={styles.navItem}
               aria-current={isCurrent("/contact")}
             >
@@ -187,6 +197,7 @@ export default function Header() {
 
             <Link
               href="/orders"
+              prefetch={false}
               className={styles.navItem}
               aria-current={isCurrent("/orders")}
             >
