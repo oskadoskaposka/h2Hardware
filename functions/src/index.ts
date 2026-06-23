@@ -1,4 +1,4 @@
-import { initializeApp } from "firebase-admin/app";
+import { initializeApp, getApps } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
 import { FieldValue, getFirestore } from "firebase-admin/firestore";
 import { onDocumentCreated } from "firebase-functions/v2/firestore";
@@ -8,7 +8,11 @@ import * as logger from "firebase-functions/logger";
 import nodemailer from "nodemailer";
 import { randomBytes } from "crypto";
 
-initializeApp();
+export { approveRegistrationRequestHttp, disableRegistrationUserHttp } from "./adminActionsHttp";
+
+if (!getApps().length) {
+  initializeApp();
+}
 
 const db = getFirestore();
 
