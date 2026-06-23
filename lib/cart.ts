@@ -113,6 +113,17 @@ export function getCartItems(): CartItem[] {
 }
 
 /**
+ * Retorna a soma de unidades no carrinho.
+ * Ex: produto A qty 3 + produto B qty 2 = 5.
+ */
+export function getCartItemCount(): number {
+  return readCart().reduce((sum, item) => {
+    const qty = Math.max(0, Math.floor(Number(item.qty || 0)));
+    return sum + qty;
+  }, 0);
+}
+
+/**
  * Converte itens brutos em linhas “ricas”, associando o produto pelo slug.
  * Você passa a lista de produtos já carregada (ex: do Firestore).
  *
