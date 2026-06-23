@@ -7,12 +7,14 @@ import { onAuthStateChanged, signOut } from "firebase/auth";
 import { usePathname } from "next/navigation";
 import { auth } from "../lib/firebaseClient";
 import { isAdminEmail } from "../lib/admin";
+import { getCartItemCount, onCartChanged } from "../lib/cart";
 import styles from "../styles/header.module.css";
 
 export default function Header() {
   const pathname = usePathname();
   const [isLogged, setIsLogged] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [cartCount, setCartCount] = useState(0);
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (u) => {
@@ -22,6 +24,17 @@ export default function Header() {
     });
 
     return () => unsub();
+  }, []);
+
+  useEffect(() => {
+    function refreshCartCount() {
+      setCartCount(getCartItemCount());
+    }
+
+    refreshCartCount();
+    const unsubscribe = onCartChanged(refreshCartCount);
+
+    return () => unsubscribe();
   }, []);
 
   async function handleLogout() {
@@ -138,8 +151,13 @@ export default function Header() {
 
             <span className={styles.sep}>|</span>
 
-            <Link className={styles.link} href="/cart" prefetch={false}>
-              View Cart
+            <Link className={`${styles.link} ${styles.cartLink}`} href="/cart" prefetch={false}>
+              <span>View Cart</span>
+              {cartCount > 0 ? (
+                <span className={styles.cartBadge} aria-label={`${cartCount} item${cartCount === 1 ? "" : "s"} in cart`}>
+                  {cartCount > 99 ? "99+" : cartCount}
+                </span>
+              ) : null}
             </Link>
 
             {isLogged ? (
