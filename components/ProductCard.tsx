@@ -9,7 +9,7 @@ export default function ProductCard({ product }: { product: Product }) {
   const customerType = useCustomerType();
 
   return (
-    <Link href={`/product/${product.slug}`} className={styles.card}>
+    <Link href={`/product/${product.slug}`} prefetch={false} className={styles.card}>
       <div className={styles.top}>
         <div className={styles.title}>{product.name}</div>
         <div className={styles.meta}>{product.model}</div>

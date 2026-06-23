@@ -200,9 +200,9 @@ export default function AdminRegistrationRequestsPage() {
           </div>
 
           <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-            <Link href="/registration-request" style={linkStyle}>Public request form</Link>
-            <Link href="/admin/orders" style={linkStyle}>Orders</Link>
-            <Link href="/admin/products" style={linkStyle}>Manage products</Link>
+            <Link href="/registration-request" prefetch={false} style={linkStyle}>Public request form</Link>
+            <Link href="/admin/orders" prefetch={false} style={linkStyle}>Orders</Link>
+            <Link href="/admin/products" prefetch={false} style={linkStyle}>Manage products</Link>
           </div>
         </div>
 

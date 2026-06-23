@@ -9,20 +9,20 @@ export default function Footer() {
       <div className={styles.columns}>
         <div className={styles.column}>
           <h4 className={styles.title}>Customer Service</h4>
-          <Link href="/contact" className={styles.link}>
+          <Link href="/contact" prefetch={false} className={styles.link}>
             Contact Us
           </Link>
-          <Link href="/catalog" className={styles.link}>
+          <Link href="/catalog" prefetch={false} className={styles.link}>
             Catalog
           </Link>
         </div>
 
         <div className={styles.column}>
           <h4 className={styles.title}>About H2 Hardware</h4>
-          <Link href="/about" className={styles.link}>
+          <Link href="/about" prefetch={false} className={styles.link}>
             About Us
           </Link>
-          <Link href="/" className={styles.link}>
+          <Link href="/" prefetch={false} className={styles.link}>
             Home
           </Link>
         </div>
