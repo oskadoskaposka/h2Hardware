@@ -3,15 +3,10 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { onAuthStateChanged } from "firebase/auth";
-import { getFunctions, httpsCallable } from "firebase/functions";
 import { collection, getDocs, getFirestore } from "firebase/firestore";
 
 import { auth, app } from "../../../lib/firebaseClient";
 import { isAdminEmail } from "../../../lib/admin";
-
-const functions = getFunctions(app, "us-central1");
-const approveRegistrationRequestFn = httpsCallable(functions, "approveRegistrationRequest");
-const disableRegistrationUserFn = httpsCallable(functions, "disableRegistrationUser");
 
 type RegistrationRequestDoc = {
   id: string;
@@ -57,6 +52,32 @@ function getReadableError(error: unknown) {
   }
 
   return "Action failed.";
+}
+
+async function callAdminRegistrationAction(action: "approve" | "disable", requestId: string) {
+  const user = auth.currentUser;
+
+  if (!user) {
+    throw new Error("Admin login is required.");
+  }
+
+  const token = await user.getIdToken();
+  const response = await fetch(`/api/admin/registration-requests/${action}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ requestId }),
+  });
+
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    throw new Error(String(data?.error || `Action failed (${response.status}).`));
+  }
+
+  return data as UserActionResult;
 }
 
 export default function AdminRegistrationRequestsPage() {
@@ -129,8 +150,7 @@ export default function AdminRegistrationRequestsPage() {
       setActionMessage(null);
       setBusyAction({ id: item.id, type: "approve" });
 
-      const result = await approveRegistrationRequestFn({ requestId: item.id });
-      const data = result.data as UserActionResult;
+      const data = await callAdminRegistrationAction("approve", item.id);
 
       setItems((previous) =>
         previous.map((current) =>
@@ -160,8 +180,7 @@ export default function AdminRegistrationRequestsPage() {
       setActionMessage(null);
       setBusyAction({ id: item.id, type: "disable" });
 
-      const result = await disableRegistrationUserFn({ requestId: item.id });
-      const data = result.data as UserActionResult;
+      const data = await callAdminRegistrationAction("disable", item.id);
 
       setItems((previous) =>
         previous.map((current) =>
