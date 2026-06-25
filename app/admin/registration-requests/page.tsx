@@ -3,7 +3,14 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { onAuthStateChanged } from "firebase/auth";
-import { collection, getDocs, getFirestore } from "firebase/firestore";
+import {
+  collection,
+  doc,
+  getDocs,
+  getFirestore,
+  serverTimestamp,
+  updateDoc,
+} from "firebase/firestore";
 
 import { auth, app } from "../../../lib/firebaseClient";
 import { isAdminEmail } from "../../../lib/admin";
@@ -16,6 +23,7 @@ type RegistrationRequestDoc = {
   shippingAddress?: string;
   status?: string;
   authUid?: string;
+  archived?: boolean;
   createdAt?: any;
 };
 
@@ -34,6 +42,7 @@ function toSearchText(item: RegistrationRequestDoc) {
     item.company,
     item.shippingAddress || "",
     item.status || "",
+    item.archived ? "archived" : "active",
     item.authUid || "",
   ]
     .join(" ")
@@ -86,8 +95,9 @@ export default function AdminRegistrationRequestsPage() {
   const [items, setItems] = useState<RegistrationRequestDoc[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [actionMessage, setActionMessage] = useState<string | null>(null);
-  const [busyAction, setBusyAction] = useState<{ id: string; type: "approve" | "disable" } | null>(null);
+  const [busyAction, setBusyAction] = useState<{ id: string; type: "approve" | "disable" | "archive" | "restore" } | null>(null);
   const [search, setSearch] = useState("");
+  const [showArchived, setShowArchived] = useState(false);
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (user) => {
@@ -124,6 +134,7 @@ export default function AdminRegistrationRequestsPage() {
           shippingAddress: String(data.shippingAddress ?? data.deliveryAddress ?? "").trim(),
           status: String(data.status ?? "new").trim(),
           authUid: String(data.authUid ?? "").trim(),
+          archived: data.archived === true,
           createdAt: data.createdAt,
         };
       });
@@ -155,7 +166,7 @@ export default function AdminRegistrationRequestsPage() {
       setItems((previous) =>
         previous.map((current) =>
           current.id === item.id
-            ? { ...current, status: "approved", authUid: data.uid || current.authUid }
+            ? { ...current, status: "approved", archived: false, authUid: data.uid || current.authUid }
             : current,
         ),
       );
@@ -185,7 +196,7 @@ export default function AdminRegistrationRequestsPage() {
       setItems((previous) =>
         previous.map((current) =>
           current.id === item.id
-            ? { ...current, status: "disabled", authUid: data.uid || current.authUid }
+            ? { ...current, status: "disabled", archived: false, authUid: data.uid || current.authUid }
             : current,
         ),
       );
@@ -198,10 +209,53 @@ export default function AdminRegistrationRequestsPage() {
     }
   }
 
+  async function handleArchive(item: RegistrationRequestDoc, archived: boolean) {
+    const label = archived ? "archive" : "restore";
+    const message = archived
+      ? `Archive ${item.email}? It will be hidden from the default list, but the history and Firebase user will be kept.`
+      : `Restore ${item.email} to the default list?`;
+
+    if (!window.confirm(message)) return;
+
+    try {
+      setError(null);
+      setActionMessage(null);
+      setBusyAction({ id: item.id, type: archived ? "archive" : "restore" });
+
+      const db = getFirestore(app);
+      await updateDoc(doc(db, "registration_requests", item.id), {
+        archived,
+        updatedAt: serverTimestamp(),
+        ...(archived
+          ? { archivedAt: serverTimestamp() }
+          : { restoredAt: serverTimestamp() }),
+      });
+
+      setItems((previous) =>
+        previous.map((current) =>
+          current.id === item.id ? { ...current, archived } : current,
+        ),
+      );
+
+      setActionMessage(
+        archived
+          ? `Request archived for ${item.email}.`
+          : `Request restored for ${item.email}.`,
+      );
+    } catch (e) {
+      setError(getReadableError(e));
+    } finally {
+      setBusyAction(null);
+    }
+  }
+
+  const archivedCount = useMemo(() => items.filter((item) => item.archived).length, [items]);
+
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();
-    return term ? items.filter((item) => toSearchText(item).includes(term)) : items;
-  }, [items, search]);
+    const visibleItems = showArchived ? items : items.filter((item) => !item.archived);
+    return term ? visibleItems.filter((item) => toSearchText(item).includes(term)) : visibleItems;
+  }, [items, search, showArchived]);
 
   if (!isAdmin) return <p style={{ padding: 24 }}>Access denied.</p>;
 
@@ -214,7 +268,7 @@ export default function AdminRegistrationRequestsPage() {
               Registration Requests
             </h1>
             <div style={{ marginTop: 6, color: "#64748b", fontSize: 13 }}>
-              {loading ? "Loading…" : `${filtered.length} request${filtered.length === 1 ? "" : "s"}`}
+              {loading ? "Loading…" : `${filtered.length} request${filtered.length === 1 ? "" : "s"}${!showArchived && archivedCount ? ` • ${archivedCount} archived hidden` : ""}`}
             </div>
           </div>
 
@@ -226,18 +280,26 @@ export default function AdminRegistrationRequestsPage() {
         </div>
 
         <div style={{ marginTop: 14, background: "rgba(185, 28, 28, 0.06)", border: "1px solid rgba(185, 28, 28, 0.18)", borderLeft: "6px solid #b91c1c", borderRadius: 12, padding: 14, color: "#7f1d1d", fontSize: 13, fontWeight: 700 }}>
-          Approve creates or enables the Firebase Auth user. Disable blocks login access without deleting the request history.
+          Approve creates or enables the Firebase Auth user. Disable blocks login access without deleting the request history. Archive only hides the request from the default admin list.
         </div>
 
         {actionMessage ? <div style={successStyle}>{actionMessage}</div> : null}
 
-        <div style={{ marginTop: 14, display: "flex", gap: 10 }}>
+        <div style={{ marginTop: 14, display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
           <input
             value={search}
             onChange={(event) => setSearch(event.target.value)}
             placeholder="Search: name, email, company, address, status..."
-            style={{ width: "100%", minHeight: 42, padding: "0 12px", borderRadius: 10, border: "1px solid #e2e8f0", background: "#fff", outline: "none" }}
+            style={{ flex: "1 1 360px", minHeight: 42, padding: "0 12px", borderRadius: 10, border: "1px solid #e2e8f0", background: "#fff", outline: "none" }}
           />
+          <label style={{ display: "inline-flex", alignItems: "center", gap: 8, minHeight: 42, padding: "0 12px", borderRadius: 10, border: "1px solid #cbd5e1", background: "#fff", color: "#0f172a", fontSize: 13, fontWeight: 900, whiteSpace: "nowrap" }}>
+            <input
+              type="checkbox"
+              checked={showArchived}
+              onChange={(event) => setShowArchived(event.target.checked)}
+            />
+            Show archived
+          </label>
           <button type="button" onClick={loadRegistrationRequests} disabled={loading} style={secondaryButtonStyle}>
             Refresh
           </button>
@@ -252,25 +314,26 @@ export default function AdminRegistrationRequestsPage() {
         ) : filtered.length === 0 ? (
           <div style={emptyStyle}>
             <div style={{ fontWeight: 900, color: "#0f172a" }}>No registration requests found</div>
-            <div style={{ marginTop: 6, color: "#64748b", fontSize: 13 }}>Try a different search.</div>
+            <div style={{ marginTop: 6, color: "#64748b", fontSize: 13 }}>Try a different search or enable Show archived.</div>
           </div>
         ) : (
           <div style={{ marginTop: 14, display: "grid", gap: 12 }}>
             {filtered.map((item) => {
               const date = item.createdAt?.toDate?.() instanceof Date ? item.createdAt.toDate() : null;
               const status = (item.status || "new").toLowerCase();
+              const displayStatus = item.archived ? "archived" : status;
               const isCurrentAction = busyAction?.id === item.id;
               const anyActionBusy = busyAction !== null;
 
               return (
-                <article key={item.id} style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 14, padding: 14, boxShadow: "0 1px 0 rgba(15,23,42,.03)" }}>
+                <article key={item.id} style={{ background: item.archived ? "#f8fafc" : "#fff", border: "1px solid #e2e8f0", borderRadius: 14, padding: 14, boxShadow: "0 1px 0 rgba(15,23,42,.03)", opacity: item.archived ? 0.82 : 1 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "flex-start", flexWrap: "wrap" }}>
                     <div style={{ minWidth: 260 }}>
                       <div style={{ fontWeight: 950, color: "#0f172a", fontSize: 18 }}>{item.name || "Unnamed requester"}</div>
                       <div style={{ marginTop: 6, color: "#64748b", fontSize: 13 }}>Company: <strong style={{ color: "#0f172a" }}>{item.company || "—"}</strong></div>
                       <div style={{ marginTop: 6, color: "#64748b", fontSize: 12 }}>{date ? date.toLocaleString("en-CA") : "—"}</div>
                     </div>
-                    <div style={statusStyle(status)}>{item.status || "new"}</div>
+                    <div style={statusStyle(displayStatus)}>{displayStatus}</div>
                   </div>
 
                   <div style={{ marginTop: 14, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 14 }}>
@@ -282,16 +345,21 @@ export default function AdminRegistrationRequestsPage() {
                   </div>
 
                   <div style={{ marginTop: 14, paddingTop: 14, borderTop: "1px solid #eef2f7", display: "flex", gap: 10, flexWrap: "wrap" }}>
-                    {status !== "approved" ? (
+                    {!item.archived && status !== "approved" ? (
                       <button type="button" onClick={() => handleApprove(item)} disabled={anyActionBusy} style={primaryButtonStyle(anyActionBusy && !isCurrentAction)}>
                         {isCurrentAction && busyAction?.type === "approve" ? "Approving…" : status === "disabled" ? "Approve / Enable User" : "Approve / Create User"}
                       </button>
                     ) : null}
-                    {status === "approved" ? (
+                    {!item.archived && status === "approved" ? (
                       <button type="button" onClick={() => handleDisable(item)} disabled={anyActionBusy} style={secondaryButtonStyle}>
                         {isCurrentAction && busyAction?.type === "disable" ? "Disabling…" : "Disable User"}
                       </button>
                     ) : null}
+                    <button type="button" onClick={() => handleArchive(item, !item.archived)} disabled={anyActionBusy} style={secondaryButtonStyle}>
+                      {isCurrentAction && (busyAction?.type === "archive" || busyAction?.type === "restore")
+                        ? item.archived ? "Restoring…" : "Archiving…"
+                        : item.archived ? "Restore Request" : "Archive Request"}
+                    </button>
                   </div>
                 </article>
               );
@@ -315,7 +383,8 @@ function primaryButtonStyle(dimmed: boolean) {
 
 function statusStyle(status: string) {
   const disabled = status === "disabled";
-  return { display: "inline-flex", alignItems: "center", justifyContent: "center", minWidth: 84, height: 32, padding: "0 12px", borderRadius: 999, background: disabled ? "rgba(15, 23, 42, 0.08)" : "rgba(185, 28, 28, 0.08)", color: disabled ? "#334155" : "#b91c1c", border: disabled ? "1px solid rgba(15, 23, 42, 0.16)" : "1px solid rgba(185, 28, 28, 0.18)", fontSize: 12, fontWeight: 900, textTransform: "uppercase" as const, letterSpacing: "0.04em" };
+  const archived = status === "archived";
+  return { display: "inline-flex", alignItems: "center", justifyContent: "center", minWidth: 84, height: 32, padding: "0 12px", borderRadius: 999, background: archived ? "rgba(15, 23, 42, 0.08)" : disabled ? "rgba(15, 23, 42, 0.08)" : "rgba(185, 28, 28, 0.08)", color: archived ? "#475569" : disabled ? "#334155" : "#b91c1c", border: archived ? "1px solid rgba(15, 23, 42, 0.16)" : disabled ? "1px solid rgba(15, 23, 42, 0.16)" : "1px solid rgba(185, 28, 28, 0.18)", fontSize: 12, fontWeight: 900, textTransform: "uppercase" as const, letterSpacing: "0.04em" };
 }
 
 function InfoRow({ label, value }: { label: string; value: ReactNode }) {
