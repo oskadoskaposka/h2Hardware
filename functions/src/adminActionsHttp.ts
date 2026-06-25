@@ -104,6 +104,10 @@ function getRequestId(req: any) {
   return cleanText(req.body?.requestId || req.body?.data?.requestId);
 }
 
+function getArchivedValue(req: any) {
+  return req.body?.archived === true || req.body?.data?.archived === true;
+}
+
 function assertPost(req: any) {
   if (req.method !== "POST") {
     throw new HttpsError("invalid-argument", "Only POST is supported.");
@@ -180,6 +184,7 @@ async function approveRegistrationRequestCore(requestId: string, admin: { uid: s
   await requestRef.set(
     {
       status: "approved",
+      archived: false,
       authUid: userRecord.uid,
       approvedAt: FieldValue.serverTimestamp(),
       approvedByUid: admin.uid,
@@ -254,6 +259,7 @@ async function disableRegistrationUserCore(requestId: string, admin: { uid: stri
   await requestRef.set(
     {
       status: "disabled",
+      archived: false,
       authUid: uid,
       disabledAt: FieldValue.serverTimestamp(),
       disabledByUid: admin.uid,
@@ -274,6 +280,53 @@ async function disableRegistrationUserCore(requestId: string, admin: { uid: stri
     ok: true,
     uid,
     email,
+  };
+}
+
+async function archiveRegistrationRequestCore(
+  requestId: string,
+  archived: boolean,
+  admin: { uid: string; email: string }
+) {
+  if (!requestId) {
+    throw new HttpsError("invalid-argument", "requestId is required.");
+  }
+
+  const requestRef = db.collection("registration_requests").doc(requestId);
+  const requestSnap = await requestRef.get();
+
+  if (!requestSnap.exists) {
+    throw new HttpsError("not-found", "Registration request not found.");
+  }
+
+  await requestRef.set(
+    {
+      archived,
+      updatedAt: FieldValue.serverTimestamp(),
+      ...(archived
+        ? {
+            archivedAt: FieldValue.serverTimestamp(),
+            archivedByUid: admin.uid,
+            archivedByEmail: admin.email,
+          }
+        : {
+            restoredAt: FieldValue.serverTimestamp(),
+            restoredByUid: admin.uid,
+            restoredByEmail: admin.email,
+          }),
+    },
+    { merge: true }
+  );
+
+  logger.info("Registration request archive flag changed", {
+    requestId,
+    archived,
+    changedBy: admin.email,
+  });
+
+  return {
+    ok: true,
+    archived,
   };
 }
 
@@ -308,6 +361,28 @@ export const disableRegistrationUserHttp = onRequest(
       res.status(200).json(result);
     } catch (error) {
       logger.error("disableRegistrationUserHttp failed", { error });
+      res.status(getStatus(error)).json({ error: getMessage(error) });
+    }
+  }
+);
+
+export const archiveRegistrationRequestHttp = onRequest(
+  {
+    region: REGION,
+    cors: false,
+  },
+  async (req, res) => {
+    try {
+      assertPost(req);
+      const admin = await assertAdminFromRequest(req);
+      const result = await archiveRegistrationRequestCore(
+        getRequestId(req),
+        getArchivedValue(req),
+        admin
+      );
+      res.status(200).json(result);
+    } catch (error) {
+      logger.error("archiveRegistrationRequestHttp failed", { error });
       res.status(getStatus(error)).json({ error: getMessage(error) });
     }
   }
