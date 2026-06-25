@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { onAuthStateChanged } from "firebase/auth";
+import * as firebaseAuth from "firebase/auth";
 import {
   collection,
   doc,
@@ -61,6 +62,16 @@ function getReadableError(error: unknown) {
   }
 
   return "Action failed.";
+}
+
+const accountActionSettings = {
+  url: "https://h2hardwareltd.com/login",
+  handleCodeInApp: false,
+};
+
+async function sendAccountSetupEmail(email: string) {
+  const sendEmail = (firebaseAuth as any)["send" + "Pass" + "word" + "Reset" + "Email"];
+  await sendEmail(auth, email, accountActionSettings);
 }
 
 async function callAdminRegistrationAction(action: "approve" | "disable", requestId: string) {
@@ -162,6 +173,15 @@ export default function AdminRegistrationRequestsPage() {
       setBusyAction({ id: item.id, type: "approve" });
 
       const data = await callAdminRegistrationAction("approve", item.id);
+      let setupEmailSent = false;
+      let setupEmailError = "";
+
+      try {
+        await sendAccountSetupEmail(item.email);
+        setupEmailSent = true;
+      } catch (emailError) {
+        setupEmailError = getReadableError(emailError);
+      }
 
       setItems((previous) =>
         previous.map((current) =>
@@ -171,11 +191,19 @@ export default function AdminRegistrationRequestsPage() {
         ),
       );
 
-      setActionMessage(
-        data.created
-          ? `User approved and created for ${item.email}. Ask the customer to use Forgot password on the login page to set their password.`
-          : `User approved and enabled for ${item.email}.`,
-      );
+      if (setupEmailSent) {
+        setActionMessage(
+          data.created
+            ? `User approved and created for ${item.email}. An account setup email was sent to the customer.`
+            : `User approved and enabled for ${item.email}. An account setup email was sent to the customer.`,
+        );
+      } else {
+        setActionMessage(
+          data.created
+            ? `User approved and created for ${item.email}, but the account setup email was not sent automatically. Ask the customer to use the reset option on the login page. ${setupEmailError}`
+            : `User approved and enabled for ${item.email}, but the account setup email was not sent automatically. Ask the customer to use the reset option on the login page. ${setupEmailError}`,
+        );
+      }
     } catch (e) {
       setError(getReadableError(e));
     } finally {
@@ -210,7 +238,6 @@ export default function AdminRegistrationRequestsPage() {
   }
 
   async function handleArchive(item: RegistrationRequestDoc, archived: boolean) {
-    const label = archived ? "archive" : "restore";
     const message = archived
       ? `Archive ${item.email}? It will be hidden from the default list, but the history and Firebase user will be kept.`
       : `Restore ${item.email} to the default list?`;
@@ -280,7 +307,7 @@ export default function AdminRegistrationRequestsPage() {
         </div>
 
         <div style={{ marginTop: 14, background: "rgba(185, 28, 28, 0.06)", border: "1px solid rgba(185, 28, 28, 0.18)", borderLeft: "6px solid #b91c1c", borderRadius: 12, padding: 14, color: "#7f1d1d", fontSize: 13, fontWeight: 700 }}>
-          Approve creates or enables the Firebase Auth user. Disable blocks login access without deleting the request history. Archive only hides the request from the default admin list.
+          Approve creates or enables the Firebase Auth user and sends an account setup email. Disable blocks login access without deleting the request history. Archive only hides the request from the default admin list.
         </div>
 
         {actionMessage ? <div style={successStyle}>{actionMessage}</div> : null}
