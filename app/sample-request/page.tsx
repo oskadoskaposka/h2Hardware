@@ -17,6 +17,11 @@ type FormState = {
 const THANK_YOU_TEXT =
   "Thanks, we will review your info and send you the sample.";
 
+const CONTACT_PHONE = "+1 (226) 788-1924";
+const CONTACT_PHONE_LINK = "tel:+12267881924";
+const CONTACT_EMAIL = "info@h2hardwareltd.com";
+const CONTACT_EMAIL_LINK = "mailto:info@h2hardwareltd.com";
+
 function isValidEmail(value: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
 }
@@ -217,42 +222,25 @@ export default function SampleRequestPage() {
           </section>
 
           <aside className="card sideCard">
-            <h2>Preview</h2>
+            <h2>Any questions?</h2>
             <p className="muted">
-              This is how the main information will be stored for the admin team.
+              Contact our team if you need help before submitting your sample
+              request. We will be happy to assist you.
             </p>
 
-            <div className="summary">
-              <div className="summaryItem">
-                <div className="summaryLabel">Company</div>
-                <div className="summaryValue">{form.companyName.trim() || "—"}</div>
+            <div className="contactBox">
+              <div className="contactItem">
+                <div className="contactLabel">Phone</div>
+                <a href={CONTACT_PHONE_LINK} className="contactValue">
+                  {CONTACT_PHONE}
+                </a>
               </div>
 
-              <div className="summaryItem">
-                <div className="summaryLabel">Contact Name</div>
-                <div className="summaryValue">{form.contactName.trim() || "—"}</div>
-              </div>
-
-              <div className="summaryItem">
-                <div className="summaryLabel">Website</div>
-                <div className="summaryValue">{form.website.trim() || "—"}</div>
-              </div>
-
-              <div className="summaryItem">
-                <div className="summaryLabel">Phone</div>
-                <div className="summaryValue">{form.phone.trim() || "—"}</div>
-              </div>
-
-              <div className="summaryItem">
-                <div className="summaryLabel">Email</div>
-                <div className="summaryValue">{form.email.trim() || "—"}</div>
-              </div>
-
-              <div className="summaryItem">
-                <div className="summaryLabel">Delivery Address</div>
-                <div className="summaryValue multiline">
-                  {form.deliveryAddress.trim() || "—"}
-                </div>
+              <div className="contactItem">
+                <div className="contactLabel">Email</div>
+                <a href={CONTACT_EMAIL_LINK} className="contactValue">
+                  {CONTACT_EMAIL}
+                </a>
               </div>
             </div>
           </aside>
@@ -443,32 +431,31 @@ export default function SampleRequestPage() {
           gap: 16px;
           align-content: start;
         }
-        .summary {
+        .contactBox {
           display: grid;
-          gap: 10px;
+          gap: 12px;
         }
-        .summaryItem {
+        .contactItem {
           border: 1px solid #eef2f7;
           border-radius: 12px;
-          padding: 12px;
+          padding: 14px;
           background: #fbfcfd;
         }
-        .summaryLabel {
+        .contactLabel {
           color: #64748b;
           font-size: 12px;
           font-weight: 800;
           text-transform: uppercase;
           letter-spacing: 0.04em;
-          margin-bottom: 4px;
+          margin-bottom: 5px;
         }
-        .summaryValue {
+        .contactValue {
           color: #0f172a;
-          font-size: 14px;
-          font-weight: 700;
+          font-size: 16px;
+          font-weight: 900;
           line-height: 1.45;
-        }
-        .multiline {
-          white-space: pre-wrap;
+          overflow-wrap: anywhere;
+          text-decoration: none;
         }
       `}</style>
     </main>
