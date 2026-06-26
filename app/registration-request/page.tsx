@@ -22,6 +22,11 @@ const EMPTY_FORM: FormState = {
   shippingAddress: "",
 };
 
+const CONTACT_PHONE = "+1 (226) 788-1924";
+const CONTACT_PHONE_LINK = "tel:+12267881924";
+const CONTACT_EMAIL = "info@h2hardwareltd.com";
+const CONTACT_EMAIL_LINK = "mailto:info@h2hardwareltd.com";
+
 function isValidEmail(value: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
 }
@@ -173,32 +178,26 @@ export default function RegistrationRequestPage() {
           </section>
 
           <aside className="starCard sideCard">
-            <div className="starCardHeader">REQUEST PREVIEW</div>
+            <div className="starCardHeader">CONTACT US</div>
             <div className="starCardBody">
               <p className="muted">
-                The admin team will only see this request listed for review.
-                Nothing is approved or created automatically.
+                Any questions before requesting access? Contact our team and we
+                will be happy to help.
               </p>
 
-              <div className="summary">
-                <div className="summaryItem">
-                  <div className="summaryLabel">Name</div>
-                  <div className="summaryValue">{form.name.trim() || "—"}</div>
+              <div className="contactBox">
+                <div className="contactItem">
+                  <div className="contactLabel">Phone</div>
+                  <a href={CONTACT_PHONE_LINK} className="contactValue">
+                    {CONTACT_PHONE}
+                  </a>
                 </div>
 
-                <div className="summaryItem">
-                  <div className="summaryLabel">Email</div>
-                  <div className="summaryValue">{form.email.trim() || "—"}</div>
-                </div>
-
-                <div className="summaryItem">
-                  <div className="summaryLabel">Company</div>
-                  <div className="summaryValue">{form.company.trim() || "—"}</div>
-                </div>
-
-                <div className="summaryItem">
-                  <div className="summaryLabel">Delivery address</div>
-                  <div className="summaryValue">{form.shippingAddress.trim() || "—"}</div>
+                <div className="contactItem">
+                  <div className="contactLabel">Email</div>
+                  <a href={CONTACT_EMAIL_LINK} className="contactValue">
+                    {CONTACT_EMAIL}
+                  </a>
                 </div>
               </div>
             </div>
@@ -235,10 +234,10 @@ export default function RegistrationRequestPage() {
         .submitBtn { height: 46px; border: none; border-radius: 12px; background: #b91c1c; color: #fff; font-weight: 900; font-size: 14px; cursor: pointer; }
         .submitBtn:disabled { opacity: 0.7; cursor: not-allowed; }
         .sideCard { align-content: start; }
-        .summary { display: grid; gap: 10px; }
-        .summaryItem { border: 1px solid #eef2f7; border-radius: 12px; padding: 12px; background: #fbfcfd; }
-        .summaryLabel { color: #64748b; font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 4px; }
-        .summaryValue { color: #0f172a; font-size: 14px; font-weight: 700; line-height: 1.45; overflow-wrap: anywhere; white-space: pre-wrap; }
+        .contactBox { display: grid; gap: 10px; }
+        .contactItem { border: 1px solid #eef2f7; border-radius: 12px; padding: 12px; background: #fbfcfd; }
+        .contactLabel { color: #64748b; font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 4px; }
+        .contactValue { color: #0f172a; font-size: 15px; font-weight: 900; line-height: 1.45; overflow-wrap: anywhere; text-decoration: none; }
       `}</style>
     </main>
   );
