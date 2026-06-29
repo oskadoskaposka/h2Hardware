@@ -12,6 +12,8 @@ if (!getApps().length) {
 const REGION = "us-central1";
 const SITE_LOGIN_URL = "https://h2hardwareltd.com/login";
 const MAIL_REPLY_TO = "info@h2hardwareltd.com";
+const CONTACT_EMAIL = "info@h2hardwareltd.com";
+const CONTACT_PHONE = "(266) 788-1924";
 const SMTP_USER = defineSecret("SMTP_USER");
 const SMTP_PASSWORD = defineSecret("SMTP_PASSWORD");
 
@@ -60,23 +62,71 @@ async function createSecureActionLink(email: string) {
   });
 }
 
-async function sendAccountEmail(params: { email: string; purpose: string }) {
-  const actionLink = await createSecureActionLink(params.email);
-  const user = SMTP_USER.value();
-  const transporter = createTransporter();
-  const isApproval = params.purpose === "approval" || params.purpose === "setup";
-  const subject = isApproval
-    ? "Your H2 Hardware account is ready"
-    : "Reset your H2 Hardware password";
-  const intro = isApproval
-    ? "Your H2 Hardware account has been approved."
-    : "We received a request to reset your H2 Hardware password.";
-  const buttonText = isApproval ? "Set password" : "Reset password";
+async function getCustomerName(email: string) {
+  try {
+    const user = await getAuth().getUserByEmail(email);
+    const displayName = cleanText(user.displayName);
+    return displayName || "Customer";
+  } catch {
+    return "Customer";
+  }
+}
 
+function buildApprovalEmail(params: { actionLink: string; customerName: string }) {
+  const subject = "Your H2 Hardware account has been verified and approved";
+
+  const text = [
+    `Hello ${params.customerName},`,
+    "",
+    "Great news! Your H2 Hardware account has been verified and approved.",
+    "To get started, simply click the link below to create your password:",
+    params.actionLink,
+    "",
+    "Once your password has been created, you'll get access to exclusive pricing and our full product catalog.",
+    "",
+    `If you have any questions or need assistance, feel free to contact us at ${CONTACT_EMAIL} or by phone at ${CONTACT_PHONE}.",
+    "",
+    "Thank you for choosing H2 Hardware Ltd.",
+  ].join("\n");
+
+  const html = `
+    <div style="font-family:Arial,sans-serif;color:#111;line-height:1.5;max-width:640px;margin:0 auto;">
+      <div style="border:1px solid #e5e7eb;border-radius:16px;overflow:hidden;background:#fff;">
+        <div style="background:#111;color:#fff;padding:18px 20px;border-bottom:4px solid #b91c1c;">
+          <div style="font-size:12px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;color:#fca5a5;">H2 Hardware</div>
+          <h1 style="margin:8px 0 0;font-size:24px;line-height:1.2;">Account verified and approved</h1>
+        </div>
+        <div style="padding:22px 20px;background:#fff;">
+          <p style="margin:0 0 12px;">Hello ${escapeHtml(params.customerName)},</p>
+          <p style="margin:0 0 12px;">Great news! Your H2 Hardware account has been verified and approved.</p>
+          <p style="margin:0 0 18px;">To get started, simply click the link below to create your password:</p>
+          <p style="margin:22px 0;">
+            <a href="${escapeHtml(params.actionLink)}" style="display:inline-block;background:#b91c1c;color:#fff;text-decoration:none;font-weight:900;padding:12px 18px;border-radius:10px;">
+              Create Your Password
+            </a>
+          </p>
+          <p style="margin:0 0 16px;">Once your password has been created, you'll get access to exclusive pricing and our full product catalog.</p>
+          <p style="margin:0 0 16px;">
+            If you have any questions or need assistance, feel free to contact us at
+            <a href="mailto:${escapeHtml(CONTACT_EMAIL)}" style="color:#0f766e;font-weight:700;">${escapeHtml(CONTACT_EMAIL)}</a>
+            or by phone at <strong>${escapeHtml(CONTACT_PHONE)}</strong>.
+          </p>
+          <p style="font-size:13px;color:#555;margin:20px 0 8px;">If the button does not work, copy and paste this link into your browser:</p>
+          <p style="font-size:12px;color:#555;word-break:break-all;margin:0 0 20px;">${escapeHtml(params.actionLink)}</p>
+          <p style="margin:0;">Thank you for choosing H2 Hardware Ltd.</p>
+        </div>
+      </div>
+    </div>`;
+
+  return { subject, text, html };
+}
+
+function buildResetEmail(actionLink: string) {
+  const subject = "Reset your H2 Hardware password";
   const text = [
     "Hello,",
     "",
-    intro,
+    "We received a request to reset your H2 Hardware password.",
     "",
     "Use the secure link below to choose your password:",
     actionLink,
@@ -92,15 +142,15 @@ async function sendAccountEmail(params: { email: string; purpose: string }) {
       <div style="border:1px solid #e5e7eb;border-radius:16px;overflow:hidden;">
         <div style="background:#111;color:#fff;padding:18px 20px;border-bottom:4px solid #b91c1c;">
           <div style="font-size:12px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;color:#fca5a5;">H2 Hardware</div>
-          <h1 style="margin:8px 0 0;font-size:24px;line-height:1.2;">${escapeHtml(subject)}</h1>
+          <h1 style="margin:8px 0 0;font-size:24px;line-height:1.2;">Reset your H2 Hardware password</h1>
         </div>
         <div style="padding:22px 20px;background:#fff;">
           <p style="margin:0 0 12px;">Hello,</p>
-          <p style="margin:0 0 18px;">${escapeHtml(intro)}</p>
+          <p style="margin:0 0 18px;">We received a request to reset your H2 Hardware password.</p>
           <p style="margin:0 0 20px;">Click the button below to choose your password.</p>
           <p style="margin:24px 0;">
             <a href="${escapeHtml(actionLink)}" style="display:inline-block;background:#b91c1c;color:#fff;text-decoration:none;font-weight:900;padding:12px 18px;border-radius:10px;">
-              ${escapeHtml(buttonText)}
+              Reset password
             </a>
           </p>
           <p style="font-size:13px;color:#555;margin:20px 0 8px;">If the button does not work, copy and paste this link into your browser:</p>
@@ -111,13 +161,28 @@ async function sendAccountEmail(params: { email: string; purpose: string }) {
       </div>
     </div>`;
 
+  return { subject, text, html };
+}
+
+async function sendAccountEmail(params: { email: string; purpose: string }) {
+  const actionLink = await createSecureActionLink(params.email);
+  const user = SMTP_USER.value();
+  const transporter = createTransporter();
+  const isApproval = params.purpose === "approval" || params.purpose === "setup";
+  const emailContent = isApproval
+    ? buildApprovalEmail({
+        actionLink,
+        customerName: await getCustomerName(params.email),
+      })
+    : buildResetEmail(actionLink);
+
   await transporter.sendMail({
     from: `H2 Hardware <${user}>`,
     to: params.email,
     replyTo: MAIL_REPLY_TO,
-    subject,
-    text,
-    html,
+    subject: emailContent.subject,
+    text: emailContent.text,
+    html: emailContent.html,
   });
 }
 
