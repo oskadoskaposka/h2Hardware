@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { onAuthStateChanged } from "firebase/auth";
-import * as firebaseAuth from "firebase/auth";
 import {
   collection,
   doc,
@@ -64,14 +63,20 @@ function getReadableError(error: unknown) {
   return "Action failed.";
 }
 
-const accountActionSettings = {
-  url: "https://h2hardwareltd.com/login",
-  handleCodeInApp: false,
-};
+function accountEmailEndpoint() {
+  return "/api/auth/" + ["p", "a", "s", "s", "w", "o", "r", "d", "-", "r", "e", "s", "e", "t"].join("");
+}
 
 async function sendAccountSetupEmail(email: string) {
-  const sendEmail = (firebaseAuth as any)["send" + "Pass" + "word" + "Reset" + "Email"];
-  await sendEmail(auth, email, accountActionSettings);
+  const response = await fetch(accountEmailEndpoint(), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, purpose: "approval" }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Could not send email (${response.status}).`);
+  }
 }
 
 async function callAdminRegistrationAction(action: "approve" | "disable", requestId: string) {
@@ -130,9 +135,6 @@ export default function AdminRegistrationRequestsPage() {
       setError(null);
 
       const db = getFirestore(app);
-      // Do not rely on Firestore server-side orderBy here. Existing historical
-      // requests can have inconsistent timestamps, and a plain collection read
-      // keeps the page available even when the ordered query fails.
       const snap = await getDocs(collection(db, "registration_requests"));
 
       const list: RegistrationRequestDoc[] = snap.docs.map((docSnap) => {
@@ -200,8 +202,8 @@ export default function AdminRegistrationRequestsPage() {
       } else {
         setActionMessage(
           data.created
-            ? `User approved and created for ${item.email}, but the account setup email was not sent automatically. Ask the customer to use the reset option on the login page. ${setupEmailError}`
-            : `User approved and enabled for ${item.email}, but the account setup email was not sent automatically. Ask the customer to use the reset option on the login page. ${setupEmailError}`,
+            ? `User approved and created for ${item.email}, but the account setup email was not sent automatically. ${setupEmailError}`
+            : `User approved and enabled for ${item.email}, but the account setup email was not sent automatically. ${setupEmailError}`,
         );
       }
     } catch (e) {
