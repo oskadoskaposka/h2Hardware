@@ -17,6 +17,13 @@
           "functionId": "disableRegistrationUserHttp",
           "region": "us-central1"
         }
+      },
+      {
+        "source": "/api/auth/password-reset",
+        "function": {
+          "functionId": "sendAccountAccessEmailHttp",
+          "region": "us-central1"
+        }
       }
     ]
   },
