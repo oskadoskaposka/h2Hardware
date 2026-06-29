@@ -6,7 +6,6 @@ import {
   signInWithEmailAndPassword,
   signOut,
   onAuthStateChanged,
-  sendPasswordResetEmail,
   type User,
 } from "firebase/auth";
 import {
@@ -27,6 +26,19 @@ type CustomerProfile = {
   updatedAt?: any;
   createdAt?: any;
 };
+
+async function sendAccountAccessEmail(email: string, purpose: "forgot" | "approval") {
+  const endpoint = "/api/auth/" + "password-reset";
+  const response = await fetch(endpoint, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, purpose }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Could not send email (${response.status}).`);
+  }
+}
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -132,10 +144,10 @@ export default function LoginPage() {
 
     setBusy(true);
     try {
-      await sendPasswordResetEmail(auth, mail);
-      setStatus("Password reset email sent ✅ Check your inbox.");
+      await sendAccountAccessEmail(mail, "forgot");
+      setStatus("Email sent ✅ Check your inbox.");
     } catch (e: any) {
-      setStatus(e?.message || "Could not send reset email.");
+      setStatus(e?.message || "Could not send email.");
     } finally {
       setBusy(false);
     }
@@ -175,7 +187,7 @@ export default function LoginPage() {
       {!isLogged ? (
         <p className={styles.p}>
           {resetMode
-            ? "Enter your email and we’ll send a password reset link."
+            ? "Enter your email and we’ll send a secure account link."
             : "Regular customers log in to see discounted prices."}
         </p>
       ) : (
@@ -269,7 +281,7 @@ export default function LoginPage() {
                 </label>
 
                 <button className={styles.primary} onClick={handleForgotPassword} disabled={busy}>
-                  {busy ? "Sending…" : "Send reset email"}
+                  {busy ? "Sending…" : "Send email"}
                 </button>
 
                 <div style={{ marginTop: 12 }}>
