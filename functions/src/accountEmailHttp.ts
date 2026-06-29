@@ -84,7 +84,7 @@ function buildApprovalEmail(params: { actionLink: string; customerName: string }
     "",
     "Once your password has been created, you'll get access to exclusive pricing and our full product catalog.",
     "",
-    `If you have any questions or need assistance, feel free to contact us at ${CONTACT_EMAIL} or by phone at ${CONTACT_PHONE}.",
+    `If you have any questions or need assistance, feel free to contact us at ${CONTACT_EMAIL} or by phone at ${CONTACT_PHONE}.`,
     "",
     "Thank you for choosing H2 Hardware Ltd.",
   ].join("\n");
