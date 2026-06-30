@@ -8,6 +8,7 @@ import { app } from "../../lib/firebaseClient";
 type FormState = {
   name: string;
   email: string;
+  phone: string;
   company: string;
   shippingAddress: string;
 };
@@ -18,6 +19,7 @@ const THANK_YOU_TEXT =
 const EMPTY_FORM: FormState = {
   name: "",
   email: "",
+  phone: "",
   company: "",
   shippingAddress: "",
 };
@@ -45,12 +47,14 @@ export default function RegistrationRequestPage() {
   function validate() {
     const name = form.name.trim();
     const email = form.email.trim();
+    const phone = form.phone.trim();
     const company = form.company.trim();
     const shippingAddress = form.shippingAddress.trim();
 
     if (!name) return "Name is required.";
     if (!email) return "Email is required.";
     if (!isValidEmail(email)) return "Please enter a valid email address.";
+    if (!phone) return "Phone number is required.";
     if (!company) return "Company is required.";
     if (!shippingAddress) return "Delivery address is required.";
 
@@ -75,6 +79,7 @@ export default function RegistrationRequestPage() {
       await addDoc(collection(db, "registration_requests"), {
         name: form.name.trim(),
         email: form.email.trim().toLowerCase(),
+        phone: form.phone.trim(),
         company: form.company.trim(),
         shippingAddress: form.shippingAddress.trim(),
         status: "new",
@@ -143,6 +148,16 @@ export default function RegistrationRequestPage() {
                     onChange={(e) => update("email", e.target.value)}
                     placeholder="email@company.com"
                     autoComplete="email"
+                  />
+                </div>
+
+                <div className="field">
+                  <label>Phone number *</label>
+                  <input
+                    value={form.phone}
+                    onChange={(e) => update("phone", e.target.value)}
+                    placeholder="+1 403 000 0000"
+                    autoComplete="tel"
                   />
                 </div>
 
