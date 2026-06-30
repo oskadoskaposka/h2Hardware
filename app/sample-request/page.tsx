@@ -59,8 +59,8 @@ export default function SampleRequestPage() {
       return "Contact name is required.";
     }
 
-    if (!phone && !email) {
-      return "Please provide a phone number or an email address.";
+    if (!phone) {
+      return "Phone number is required.";
     }
 
     if (email && !isValidEmail(email)) {
@@ -182,7 +182,7 @@ export default function SampleRequestPage() {
 
               <div className="fieldRow">
                 <div className="field">
-                  <label>Phone Number</label>
+                  <label>Phone Number *</label>
                   <input
                     value={form.phone}
                     onChange={(e) => update("phone", e.target.value)}
