@@ -129,6 +129,7 @@ async function approveRegistrationRequestCore(requestId: string, admin: { uid: s
   const registration = requestSnap.data() || {};
   const email = normalizeEmail(registration.email);
   const name = cleanText(registration.name);
+  const phone = cleanText(registration.phone);
   const company = cleanText(registration.company);
   const shippingAddress = cleanText(registration.shippingAddress || registration.deliveryAddress);
   const displayName = name || company || email;
@@ -173,6 +174,7 @@ async function approveRegistrationRequestCore(requestId: string, admin: { uid: s
       name,
       company,
       email,
+      phone,
       shippingAddress,
       disabled: false,
       updatedAt: FieldValue.serverTimestamp(),
