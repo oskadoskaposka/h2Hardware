@@ -14,12 +14,6 @@ import ProductPricing from "../../components/ProductPricing";
 import { getQtyInCart, onCartChanged } from "../../lib/cart";
 import { formatUnitWeightPair, type WeightUnit } from "../../lib/weight";
 
-const ADMIN_EMAILS = (process.env.NEXT_PUBLIC_ADMIN_EMAILS || "")
-  .split(",")
-  .map((e) => e.trim().toLowerCase())
-  .filter(Boolean);
-
-
 type Tier = {
   id?: string;
   minQty: number;
@@ -30,24 +24,17 @@ type Tier = {
 type Product = {
   slug: string;
   name: string;
-
-  series?: string; // Category principal
-  category?: string; // Subcategory
-
+  series?: string;
+  category?: string;
   model?: string;
   description?: string;
-
   images?: string[];
   features?: string[];
-
   publicPrice?: number;
   tiers?: Tier[];
-
   stock?: number;
   unitWeight?: number;
   weightUnit?: WeightUnit;
-
-  // legacy compat
   price?: number;
 };
 
@@ -65,7 +52,6 @@ function normalizeFeatures(features: any): string[] {
   return arr.map((x) => String(x)).filter(Boolean);
 }
 
-// public price: product.publicPrice else legacy product.price
 function getPublicUnitPrice(p: Product): number | null {
   const pub = Number(p.publicPrice ?? NaN);
   if (Number.isFinite(pub) && pub > 0) return pub;
@@ -88,13 +74,10 @@ function ProductPageInner() {
 
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
-
   const [qty, setQty] = useState(1);
   const [cartTick, setCartTick] = useState(0);
   const [isLogged, setIsLogged] = useState(false);
   const [availabilityNotice, setAvailabilityNotice] = useState<string | null>(null);
-
-  // media
   const [activeImgIdx, setActiveImgIdx] = useState(0);
 
   useEffect(() => {
@@ -109,12 +92,16 @@ function ProductPageInner() {
       return;
     }
 
+    let mounted = true;
+
     (async () => {
       setLoading(true);
       try {
         const db = getFirestore(app);
         const ref = doc(db, "products", slug);
         const snap = await getDoc(ref);
+
+        if (!mounted) return;
 
         if (!snap.exists()) {
           setProduct(null);
@@ -126,11 +113,15 @@ function ProductPageInner() {
         setActiveImgIdx(0);
       } catch (e) {
         console.error("Failed to load product", e);
-        setProduct(null);
+        if (mounted) setProduct(null);
       } finally {
-        setLoading(false);
+        if (mounted) setLoading(false);
       }
     })();
+
+    return () => {
+      mounted = false;
+    };
   }, [slug]);
 
   useEffect(() => {
@@ -158,55 +149,38 @@ function ProductPageInner() {
     return product ? getQtyInCart(product.slug) : 0;
   }, [product, cartTick]);
 
-  // pricing considers selected + in cart
   const pricingQty = safeQty + inCartQty;
 
   const tiersSorted = useMemo(() => {
-    const tiers = Array.isArray(product?.tiers)
-      ? [...(product!.tiers as Tier[])]
-      : [];
+    const tiers = Array.isArray(product?.tiers) ? [...(product!.tiers as Tier[])] : [];
     tiers.sort((a, b) => (a.minQty ?? 0) - (b.minQty ?? 0));
     return tiers;
   }, [product?.tiers]);
 
-  const images = useMemo(
-    () => normalizeImages(product?.images),
-    [product?.images]
-  );
-  const features = useMemo(
-    () => normalizeFeatures(product?.features),
-    [product?.features]
-  );
+  const images = useMemo(() => normalizeImages(product?.images), [product?.images]);
+  const features = useMemo(() => normalizeFeatures(product?.features), [product?.features]);
 
   const series = String(product?.series || "").trim();
   const subcategory = String(product?.category || "").trim();
   const model = String(product?.model || "").trim();
-
   const publicUnit = product ? getPublicUnitPrice(product) : null;
-  const unitWeightText = product
-    ? formatUnitWeightPair(product.unitWeight, product.weightUnit)
-    : "";
+  const unitWeightText = product ? formatUnitWeightPair(product.unitWeight, product.weightUnit) : "";
 
-  // ✅ FIX: when NOT logged in, strip tiers so ProductPricing cannot apply discounts or show tier applied
   const pricingProduct = useMemo(() => {
     if (!product) return null;
     if (isLogged) return product;
     return { ...product, tiers: [] as Tier[] };
   }, [product, isLogged]);
 
-  // --- 80% stock rule ---
   const THRESHOLD_RATIO = 0.8;
 
   const thresholdQty = useMemo(() => {
     if (!inStock) return 0;
-    // Use floor so we only "guarantee" up to an integer threshold
     return Math.floor(stock * THRESHOLD_RATIO);
   }, [inStock, stock]);
 
   const exceedsThreshold = useMemo(() => {
-    // "pedido" = selected + in cart
     if (!inStock) return true;
-    // if stock is tiny and threshold becomes 0, treat any request as "contact"
     if (thresholdQty <= 0) return pricingQty > 0;
     return pricingQty > thresholdQty;
   }, [inStock, thresholdQty, pricingQty]);
@@ -228,10 +202,13 @@ function ProductPageInner() {
     borderRadius: 14,
     border: "1px solid #e6e6e6",
     background: "#fff",
-    fontWeight: 900,
+    fontWeight: 800,
     textDecoration: "none",
     color: "#111",
     cursor: "pointer",
+    fontFamily: "inherit",
+    fontSize: 16,
+    lineHeight: 1,
   };
 
   function handleCheckStock() {
@@ -252,9 +229,7 @@ function ProductPageInner() {
     setCartTick((x) => x + 1);
 
     if (exceedsThreshold) {
-      setAvailabilityNotice(
-        "Added to cart. Our team will confirm availability for this quantity."
-      );
+      setAvailabilityNotice("Added to cart. Our team will confirm availability for this quantity.");
       return;
     }
 
@@ -275,8 +250,7 @@ function ProductPageInner() {
       <div className="container">
         <h1>Product</h1>
         <p style={{ opacity: 0.75 }}>
-          Missing slug. Open a product using{" "}
-          <code>/product?slug=YOUR_SLUG</code>.
+          Missing slug. Open a product using <code>/product?slug=YOUR_SLUG</code>.
         </p>
         <button onClick={() => router.push("/catalog")}>Go to catalog</button>
       </div>
@@ -325,8 +299,7 @@ function ProductPageInner() {
   const heroBox: React.CSSProperties = {
     width: "100%",
     aspectRatio: "4 / 3",
-    background:
-      "radial-gradient(1200px 420px at 20% 10%, rgba(185,28,28,0.18), transparent 55%), linear-gradient(180deg, #141414, #0a0a0a)",
+    background: "radial-gradient(1200px 420px at 20% 10%, rgba(185,28,28,0.18), transparent 55%), linear-gradient(180deg, #141414, #0a0a0a)",
     position: "relative",
     display: "flex",
     alignItems: "stretch",
@@ -358,7 +331,7 @@ function ProductPageInner() {
     padding: "6px 10px",
     borderRadius: 999,
     fontSize: 12,
-    fontWeight: 900,
+    fontWeight: 800,
     letterSpacing: "0.02em",
     whiteSpace: "nowrap",
     backdropFilter: "blur(6px)",
@@ -373,7 +346,7 @@ function ProductPageInner() {
   };
 
   const specKey: React.CSSProperties = {
-    fontWeight: 900,
+    fontWeight: 800,
     fontSize: 12,
     letterSpacing: "0.03em",
     textTransform: "uppercase",
@@ -382,39 +355,25 @@ function ProductPageInner() {
   };
 
   const specVal: React.CSSProperties = {
-    fontWeight: 800,
+    fontWeight: 750,
     color: "#111",
     fontSize: 14,
     wordBreak: "break-word",
   };
 
-  const activeSrc =
-    images[clamp(activeImgIdx, 0, Math.max(0, images.length - 1))] || "";
+  const activeSrc = images[clamp(activeImgIdx, 0, Math.max(0, images.length - 1))] || "";
 
   return (
     <div className="container" style={{ paddingBottom: 34 }}>
       <div className="pdpGrid">
-        {/* LEFT: media + features */}
         <div style={{ minWidth: 0 }}>
           <div style={mediaWrap}>
             <div style={heroBox}>
-              {activeSrc ? (
-                <img src={activeSrc} alt={product.name} style={heroImg} />
-              ) : null}
+              {activeSrc ? <img src={activeSrc} alt={product.name} style={heroImg} /> : null}
 
               <div style={heroOverlay}>
-                <div
-                  style={{ display: "flex", flexDirection: "column", gap: 8 }}
-                ></div>
-
-                <div
-                  style={{
-                    display: "flex",
-                    gap: 8,
-                    flexWrap: "wrap",
-                    justifyContent: "flex-end",
-                  }}
-                >
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}></div>
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
                   {series ? <span style={chip}>{series}</span> : null}
                   {subcategory ? <span style={chip}>{subcategory}</span> : null}
                 </div>
@@ -422,15 +381,7 @@ function ProductPageInner() {
             </div>
 
             {images.length > 0 ? (
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(4, 1fr)",
-                  gap: 10,
-                  padding: 12,
-                  borderTop: "1px solid #eee",
-                }}
-              >
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10, padding: 12, borderTop: "1px solid #eee" }}>
                 {images.slice(0, 8).map((src, i) => {
                   const isActive = i === activeImgIdx;
                   return (
@@ -439,9 +390,7 @@ function ProductPageInner() {
                       type="button"
                       onClick={() => setActiveImgIdx(i)}
                       style={{
-                        border: isActive
-                          ? "2px solid #b91c1c"
-                          : "1px solid #eee",
+                        border: isActive ? "2px solid #b91c1c" : "1px solid #eee",
                         borderRadius: 12,
                         overflow: "hidden",
                         background: "#fafafa",
@@ -451,31 +400,13 @@ function ProductPageInner() {
                       }}
                       title={src}
                     >
-                      <img
-                        src={src}
-                        alt={`${product.name} ${i + 1}`}
-                        style={{
-                          width: "100%",
-                          height: "100%",
-                          objectFit: "cover",
-                          display: "block",
-                        }}
-                      />
+                      <img src={src} alt={`${product.name} ${i + 1}`} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
                     </button>
                   );
                 })}
               </div>
             ) : (
-              <div
-                style={{
-                  padding: 12,
-                  borderTop: "1px solid #eee",
-                  color: "#666",
-                  fontWeight: 700,
-                }}
-              >
-                No images yet.
-              </div>
+              <div style={{ padding: 12, borderTop: "1px solid #eee", color: "#666", fontWeight: 700 }}>No images yet.</div>
             )}
           </div>
 
@@ -485,9 +416,7 @@ function ProductPageInner() {
               <div style={{ padding: 14 }}>
                 <ul style={{ margin: 0, paddingLeft: 18, lineHeight: 1.7 }}>
                   {features.map((f, i) => (
-                    <li key={i} style={{ fontWeight: 800, color: "#111" }}>
-                      {f}
-                    </li>
+                    <li key={i} style={{ fontWeight: 750, color: "#111" }}>{f}</li>
                   ))}
                 </ul>
               </div>
@@ -495,263 +424,73 @@ function ProductPageInner() {
           ) : null}
         </div>
 
-        {/* RIGHT: details */}
         <div style={{ minWidth: 0 }}>
           <div style={card}>
             <div style={cardHeader}>Product Details</div>
-
             <div style={{ padding: 16 }}>
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "baseline",
-                  justifyContent: "space-between",
-                  gap: 12,
-                  flexWrap: "wrap",
-                }}
-              >
-                <h1 style={{ margin: 0, fontSize: 28, fontWeight: 1000 }}>
-                  {product.name}
-                </h1>
-
+              <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+                <h1 style={{ margin: 0, fontSize: 28, fontWeight: 850 }}>{product.name}</h1>
                 {series ? (
-                  <span
-                    style={{
-                      background: "rgba(185,28,28,0.10)",
-                      border: "1px solid rgba(185,28,28,0.25)",
-                      color: "#b91c1c",
-                      fontWeight: 1000,
-                      padding: "6px 10px",
-                      borderRadius: 999,
-                      fontSize: 12,
-                      whiteSpace: "nowrap",
-                    }}
-                  >
+                  <span style={{ background: "rgba(185,28,28,0.10)", border: "1px solid rgba(185,28,28,0.25)", color: "#b91c1c", fontWeight: 800, padding: "6px 10px", borderRadius: 999, fontSize: 12, whiteSpace: "nowrap" }}>
                     {series}
                   </span>
                 ) : null}
               </div>
 
-              <div style={{ marginTop: 8, color: "#444", fontWeight: 750 }}>
+              <div style={{ marginTop: 8, color: "#444", fontWeight: 650 }}>
                 {model ? (
                   <>
-                    <span style={{ fontWeight: 900 }}>{model}</span>
+                    <span style={{ fontWeight: 800 }}>{model}</span>
                     <span style={{ margin: "0 8px", opacity: 0.6 }}>•</span>
                   </>
                 ) : null}
                 <span style={{ opacity: 0.85 }}>ID: {product.slug}</span>
               </div>
 
-              {product.description ? (
-                <p
-                  style={{
-                    marginTop: 12,
-                    marginBottom: 0,
-                    color: "#222",
-                    lineHeight: 1.6,
-                    fontWeight: 650,
-                  }}
-                >
-                  {product.description}
-                </p>
-              ) : null}
+              {product.description ? <p style={{ marginTop: 12, marginBottom: 0, color: "#222", lineHeight: 1.6, fontWeight: 500 }}>{product.description}</p> : null}
 
-              {/* Specs */}
-              <div
-                style={{
-                  marginTop: 16,
-                  border: "1px solid #eee",
-                  borderRadius: 14,
-                  padding: "0 14px",
-                }}
-              >
-                {series ? (
-                  <div style={specRow}>
-                    <div style={specKey}>Category</div>
-                    <div style={specVal}>{series}</div>
-                  </div>
-                ) : null}
-
-                {subcategory ? (
-                  <div style={specRow}>
-                    <div style={specKey}>Subcategory</div>
-                    <div style={specVal}>{subcategory}</div>
-                  </div>
-                ) : null}
-
-                {unitWeightText ? (
-                  <div style={specRow}>
-                    <div style={specKey}>Unit weight</div>
-                    <div style={specVal}>{unitWeightText}</div>
-                  </div>
-                ) : null}
-
+              <div style={{ marginTop: 16, border: "1px solid #eee", borderRadius: 14, padding: "0 14px" }}>
+                {series ? <div style={specRow}><div style={specKey}>Category</div><div style={specVal}>{series}</div></div> : null}
+                {subcategory ? <div style={specRow}><div style={specKey}>Subcategory</div><div style={specVal}>{subcategory}</div></div> : null}
+                {unitWeightText ? <div style={specRow}><div style={specKey}>Unit weight</div><div style={specVal}>{unitWeightText}</div></div> : null}
                 {model ? (
-                  <div style={{ ...specRow, borderBottom: "none" }}>
-                    <div style={specKey}>Model</div>
-                    <div style={specVal}>{model}</div>
-                  </div>
+                  <div style={{ ...specRow, borderBottom: "none" }}><div style={specKey}>Model</div><div style={specVal}>{model}</div></div>
                 ) : (
-                  <div style={{ ...specRow, borderBottom: "none" }}>
-                    <div style={specKey}>ID</div>
-                    <div style={specVal}>{product.slug}</div>
-                  </div>
+                  <div style={{ ...specRow, borderBottom: "none" }}><div style={specKey}>ID</div><div style={specVal}>{product.slug}</div></div>
                 )}
               </div>
 
-              {/* Pricing (keep behavior) */}
               <div style={{ marginTop: 16 }}>
-                {/* IMPORTANT: if not logged, do NOT apply tiers (pricingProduct strips tiers). */}
-                {pricingProduct ? (
-                  <ProductPricing
-                    product={pricingProduct as any}
-                    qty={isLogged ? pricingQty : 1}
-                  />
+                {pricingProduct ? <ProductPricing product={pricingProduct as any} qty={isLogged ? pricingQty : 1} isLogged={isLogged} /> : null}
+
+                {isLogged ? (
+                  <div style={{ marginTop: 8, opacity: 0.75, fontSize: 13, fontWeight: 700 }}>
+                    Taxes not included. Applicable GST/HST/PST may apply. Shipping fees may apply.
+                  </div>
                 ) : null}
 
-                {/* Only show this explanation when logged (since tiers logic matters there) */}
-                <div
-                  style={{
-                    marginTop: 8,
-                    opacity: 0.75,
-                    fontSize: 13,
-                    fontWeight: 700,
-                  }}
-                >
-                  Taxes not included. Applicable GST/HST/PST may apply. Shipping
-                  fees may apply.
-                </div>
-
-                {/* Pricing breakdown ONLY when logged */}
                 {isLogged ? (
-                  <div
-                    style={{
-                      marginTop: 10,
-                      border: "1px solid #eee",
-                      borderRadius: 14,
-                      overflow: "hidden",
-                      background: "#fff",
-                      boxShadow: "0 10px 26px rgba(0,0,0,0.06)",
-                    }}
-                  >
-                    <div
-                      style={{
-                        background: "linear-gradient(180deg, #f7f7f7, #ffffff)",
-                        borderBottom: "1px solid #eee",
-                        padding: "10px 12px",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        gap: 10,
-                      }}
-                    >
-                      <div
-                        style={{
-                          fontWeight: 1000,
-                          fontSize: 12,
-                          letterSpacing: "0.04em",
-                          textTransform: "uppercase",
-                          color: "#111",
-                        }}
-                      >
-                        Pricing
-                      </div>
+                  <div style={{ marginTop: 10, border: "1px solid #eee", borderRadius: 14, overflow: "hidden", background: "#fff", boxShadow: "0 10px 26px rgba(0,0,0,0.06)" }}>
+                    <div style={{ background: "linear-gradient(180deg, #f7f7f7, #ffffff)", borderBottom: "1px solid #eee", padding: "10px 12px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+                      <div style={{ fontWeight: 850, fontSize: 12, letterSpacing: "0.04em", textTransform: "uppercase", color: "#111" }}>Pricing</div>
                     </div>
-
                     <div style={{ padding: 12, display: "grid", gap: 10 }}>
-                      {/* Public price */}
-                      <div
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "space-between",
-                          gap: 12,
-                          padding: "10px 12px",
-                          border: "1px solid #eee",
-                          borderRadius: 12,
-                          background: "#fff",
-                        }}
-                      >
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: "10px 12px", border: "1px solid #eee", borderRadius: 12, background: "#fff" }}>
                         <div style={{ display: "grid", gap: 2 }}>
-                          <div
-                            style={{
-                              fontSize: 11,
-                              fontWeight: 1000,
-                              opacity: 0.75,
-                              textTransform: "uppercase",
-                            }}
-                          >
-                            Public price
-                          </div>
-                          <div
-                            style={{
-                              fontSize: 12,
-                              fontWeight: 900,
-                              opacity: 0.85,
-                            }}
-                          >
-                            Unit
-                          </div>
+                          <div style={{ fontSize: 11, fontWeight: 800, opacity: 0.75, textTransform: "uppercase" }}>Public price</div>
+                          <div style={{ fontSize: 12, fontWeight: 700, opacity: 0.85 }}>Unit</div>
                         </div>
-
-                        <div
-                          style={{
-                            fontSize: 14,
-                            fontWeight: 1000,
-                            color: "#111",
-                          }}
-                        >
-                          {formatMoney(publicUnit)}
-                        </div>
+                        <div style={{ fontSize: 14, fontWeight: 850, color: "#111" }}>{formatMoney(publicUnit)}</div>
                       </div>
 
-                      {/* Tier list */}
                       {tiersSorted.length > 0 ? (
                         <div style={{ display: "grid", gap: 8 }}>
-                          <div
-                            style={{
-                              fontSize: 11,
-                              fontWeight: 1000,
-                              opacity: 0.75,
-                              textTransform: "uppercase",
-                            }}
-                          >
-                            Tier prices (unit)
-                          </div>
-
+                          <div style={{ fontSize: 11, fontWeight: 800, opacity: 0.75, textTransform: "uppercase" }}>Tier prices (unit)</div>
                           <div style={{ display: "grid", gap: 6 }}>
                             {tiersSorted.map((t, i) => (
-                              <div
-                                key={i}
-                                style={{
-                                  display: "flex",
-                                  alignItems: "center",
-                                  justifyContent: "space-between",
-                                  gap: 12,
-                                  padding: "8px 12px",
-                                  border: "1px solid #eee",
-                                  borderRadius: 12,
-                                  background: "#fafafa",
-                                }}
-                              >
-                                <div
-                                  style={{
-                                    fontSize: 12,
-                                    fontWeight: 950,
-                                    color: "#111",
-                                  }}
-                                >
-                                  {t.maxQty ? `${t.minQty}–${t.maxQty}` : `${t.minQty} or more`}
-                                </div>
-                                <div
-                                  style={{
-                                    fontSize: 13,
-                                    fontWeight: 1000,
-                                    color: "#111",
-                                  }}
-                                >
-                                  {formatMoney(Number(t.price))}
-                                </div>
+                              <div key={i} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: "8px 12px", border: "1px solid #eee", borderRadius: 12, background: "#fafafa" }}>
+                                <div style={{ fontSize: 12, fontWeight: 750, color: "#111" }}>{t.maxQty ? `${t.minQty}–${t.maxQty}` : `${t.minQty} or more`}</div>
+                                <div style={{ fontSize: 13, fontWeight: 850, color: "#111" }}>{formatMoney(Number(t.price))}</div>
                               </div>
                             ))}
                           </div>
@@ -762,93 +501,23 @@ function ProductPageInner() {
                 ) : null}
               </div>
 
-              {/* Qty */}
-              <div
-                style={{
-                  display: "flex",
-                  gap: 10,
-                  marginTop: 14,
-                  alignItems: "center",
-                  flexWrap: "wrap",
-                }}
-              >
-                <span style={{ fontWeight: 900, color: "#111" }}>Qty</span>
-
-                <button
-                  type="button"
-                  onClick={() => setQty((q) => clamp(q - 1, 1, maxQty))}
-                >
-                  –
-                </button>
-
-                <input
-                  type="number"
-                  min={1}
-                  max={maxQty}
-                  value={safeQty}
-                  onChange={(e) =>
-                    setQty(clamp(Number(e.target.value || 1), 1, maxQty))
-                  }
-                  style={{
-                    width: 100,
-                    height: 40,
-                    borderRadius: 12,
-                    border: "1px solid #e5e5e5",
-                    padding: "0 10px",
-                  }}
-                />
-
-                <button
-                  type="button"
-                  onClick={() => setQty((q) => clamp(q + 1, 1, maxQty))}
-                >
-                  +
-                </button>
+              <div style={{ display: "flex", gap: 10, marginTop: 14, alignItems: "center", flexWrap: "wrap" }}>
+                <span style={{ fontWeight: 800, color: "#111" }}>Qty</span>
+                <button type="button" onClick={() => setQty((q) => clamp(q - 1, 1, maxQty))}>–</button>
+                <input type="number" min={1} max={maxQty} value={safeQty} onChange={(e) => setQty(clamp(Number(e.target.value || 1), 1, maxQty))} style={{ width: 100, height: 40, borderRadius: 12, border: "1px solid #e5e5e5", padding: "0 10px" }} />
+                <button type="button" onClick={() => setQty((q) => clamp(q + 1, 1, maxQty))}>+</button>
               </div>
 
-              {/* Actions */}
               <div style={actionsRow}>
-                <AddToCartButton
-                  slug={product.slug}
-                  qty={safeQty}
-                  className={styles.primary}
-                  onAdded={handleAddedToCart}
-                />
-
-                <button
-                  type="button"
-                  onClick={handleCheckStock}
-                  style={secondaryLink}
-                >
-                  Check stock
-                </button>
-
-                <a href="/cart" style={secondaryLink}>
-                  View cart
-                </a>
+                <AddToCartButton slug={product.slug} qty={safeQty} className={styles.primary} onAdded={handleAddedToCart} />
+                <button type="button" onClick={handleCheckStock} style={secondaryLink}>Check stock</button>
+                <a href="/cart" style={secondaryLink}>View cart</a>
               </div>
 
-              {availabilityNotice ? (
-                <div
-                  style={{
-                    marginTop: 10,
-                    fontSize: 12,
-                    fontWeight: 800,
-                    opacity: 0.75,
-                  }}
-                >
-                  {availabilityNotice}
-                </div>
-              ) : null}
+              {availabilityNotice ? <div style={{ marginTop: 10, fontSize: 12, fontWeight: 700, opacity: 0.75 }}>{availabilityNotice}</div> : null}
 
               <div style={{ marginTop: 18 }}>
-                <button
-                  type="button"
-                  onClick={handleBackToCatalog}
-                  style={{ ...secondaryLink, width: "100%" }}
-                >
-                  Back to catalog
-                </button>
+                <button type="button" onClick={handleBackToCatalog} style={{ ...secondaryLink, width: "100%" }}>Back to catalog</button>
               </div>
             </div>
           </div>
