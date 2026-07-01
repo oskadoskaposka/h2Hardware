@@ -7,7 +7,7 @@ import { onAuthStateChanged, signOut } from "firebase/auth";
 import { usePathname } from "next/navigation";
 import { auth } from "../lib/firebaseClient";
 import { isAdminEmail } from "../lib/admin";
-import { getCartItemCount, onCartChanged } from "../lib/cart";
+import { clearCart, getCartItemCount, onCartChanged } from "../lib/cart";
 import styles from "../styles/header.module.css";
 
 export default function Header() {
@@ -40,6 +40,7 @@ export default function Header() {
   async function handleLogout() {
     try {
       await signOut(auth);
+      clearCart();
     } catch {
       // keep simple
     }
