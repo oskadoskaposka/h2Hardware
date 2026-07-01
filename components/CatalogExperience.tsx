@@ -299,10 +299,6 @@ export default function CatalogExperience() {
       if (slug) router.push(`/product?slug=${encodeURIComponent(slug)}`);
       return;
     }
-    if (linkType === "url") {
-      const url = String(slide.url ?? "").trim();
-      if (url) window.location.href = url;
-    }
   }
 
   function getSlideHint(slide: CarouselSlide) {
@@ -332,6 +328,7 @@ export default function CatalogExperience() {
               const isActive = activeSeries === it.series;
               const isOpen = openSeries === it.series;
               const catList = categoryStatsBySeries.get(it.series) ?? [];
+              const totalInSeries = products.filter((p) => p.series === it.series).length;
 
               return (
                 <div key={it.series} className="seriesBlock">
@@ -342,6 +339,10 @@ export default function CatalogExperience() {
 
                   {isActive && isOpen ? (
                     <div className="accordion">
+                      <button className={`subpill ${activeCategory === "all" ? "subpillActive" : ""}`} onClick={() => setActiveCategory("all")} type="button">
+                        <span>All in {it.series}</span>
+                        <span className="subcount">{totalInSeries}</span>
+                      </button>
                       {catList.map((c) => (
                         <button key={`${it.series}::${c.category}`} className={`subpill ${activeCategory === c.category ? "subpillActive" : ""}`} onClick={() => setActiveCategory(c.category)} type="button">
                           <span>{c.category}</span>
@@ -385,16 +386,6 @@ export default function CatalogExperience() {
             {loading ? "Loading..." : `${filtered.length} product${filtered.length === 1 ? "" : "s"}${filtered.length > PAGE_SIZE ? ` - page ${currentPage} of ${totalPages}` : ""}`}
           </div>
 
-          {!isLogged ? (
-            <div className="loginBanner">
-              <div>
-                <strong>Log in to view pricing</strong>
-                <span> Approved customers can browse products now and view pricing after login.</span>
-              </div>
-              <Link href="/login" prefetch={false} className="loginBannerButton">Login</Link>
-            </div>
-          ) : null}
-
           {errorMsg ? (
             <div className="error"><strong>Firestore error:</strong> {errorMsg}</div>
           ) : loading ? (
@@ -423,11 +414,13 @@ export default function CatalogExperience() {
 
                       <div className="productBottom">
                         <div className="priceBlock">
-                          <div className="priceLabel">Unit price</div>
                           {isLogged ? (
-                            <div className="price">{unitPrice > 0 ? formatMoney(p.currency, unitPrice) : "Price on request"}</div>
+                            <>
+                              <div className="priceLabel">Unit price</div>
+                              <div className="price">{unitPrice > 0 ? formatMoney(p.currency, unitPrice) : "Price on request"}</div>
+                            </>
                           ) : (
-                            <div className="priceLocked">Log in to view pricing</div>
+                            <div className="priceLocked">Pricing available after sign in</div>
                           )}
                         </div>
                         <div className="cta">View</div>
@@ -482,9 +475,6 @@ export default function CatalogExperience() {
         .nav { position:absolute; top:50%; transform:translateY(-50%); z-index:2; width:42px; height:42px; border-radius:999px; border:none; background:rgba(0,0,0,.55); color:#fff; font-size:26px; font-weight:900; cursor:pointer; }
         .nav.prev { left:14px; } .nav.next { right:14px; }
         .subtitle { margin:8px 0 14px; color:#6b7280; font-size:14px; }
-        .loginBanner { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:14px; padding:12px 14px; border-radius:14px; border:1px solid rgba(185,28,28,.18); background:rgba(185,28,28,.06); color:#111827; font-size:13px; line-height:1.45; }
-        .loginBanner strong { color:#b91c1c; }
-        .loginBannerButton { display:inline-flex; align-items:center; justify-content:center; min-height:36px; padding:0 14px; border-radius:10px; background:#b91c1c; color:#fff; font-weight:900; text-decoration:none; }
         .grid { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:18px; }
         @media (max-width:1100px) { .grid { grid-template-columns:repeat(2, minmax(0, 1fr)); } }
         @media (max-width:640px) { .grid { grid-template-columns:1fr; } }
@@ -504,7 +494,7 @@ export default function CatalogExperience() {
         .priceBlock { display:grid; gap:2px; min-width:0; }
         .priceLabel { color:#6b7280; font-size:11px; font-weight:900; letter-spacing:.04em; text-transform:uppercase; }
         .price { font-weight:900; color:#111827; }
-        .priceLocked { display:inline-flex; width:fit-content; max-width:100%; padding:6px 9px; border-radius:999px; background:rgba(185,28,28,.08); color:#b91c1c; border:1px solid rgba(185,28,28,.18); font-size:12px; font-weight:900; line-height:1.2; }
+        .priceLocked { color:#64748b; font-size:13px; font-weight:700; line-height:1.3; }
         .cta { flex:0 0 auto; font-weight:900; color:#b91c1c; }
         .pagination { display:flex; align-items:center; justify-content:center; gap:12px; margin-top:22px; flex-wrap:wrap; }
         .pageButton { border:1px solid #d1d5db; background:#fff; color:#111827; border-radius:10px; padding:10px 14px; font-size:14px; font-weight:900; cursor:pointer; box-shadow:0 4px 12px rgba(0,0,0,.04); }
