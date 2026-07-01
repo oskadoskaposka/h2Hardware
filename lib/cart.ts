@@ -1,15 +1,8 @@
 import { resolveUnitPrice } from "./pricing";
 
-/**
- * Carrinho no localStorage. Ele guarda SOMENTE:
- * - slug
- * - qty
- *
- * O preço SEMPRE é calculado “ao vivo” usando o produto do Firestore (publicPrice + tiers).
- */
-
 const KEY = "starpro_cart_v1";
 const CART_CHANGED_EVENT = "starpro_cart_changed_v1";
+const CART_MAX_AGE_MS = 48 * 60 * 60 * 1000;
 
 function isBrowser() {
   return typeof window !== "undefined" && typeof localStorage !== "undefined";
@@ -31,19 +24,43 @@ export type CartLine<TProduct = any> = {
   product: TProduct;
 };
 
+function normalizeItems(value: unknown): CartItem[] {
+  if (!Array.isArray(value)) return [];
+
+  return value
+    .map((x: any) => ({
+      slug: String(x?.slug || "").trim(),
+      qty: Number(x?.qty || 0),
+    }))
+    .filter((x) => x.slug && Number.isFinite(x.qty) && x.qty > 0)
+    .map((x) => ({ slug: x.slug, qty: Math.max(1, Math.floor(x.qty)) }));
+}
+
+function isExpired(updatedAt: unknown) {
+  const value = Number(updatedAt || 0);
+  return Number.isFinite(value) && value > 0 && Date.now() - value > CART_MAX_AGE_MS;
+}
+
 function readCart(): CartItem[] {
   if (!isBrowser()) return [];
+
   try {
     const raw = localStorage.getItem(KEY);
     if (!raw) return [];
+
     const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
-    return parsed
-      .map((x: any) => ({
-        slug: String(x?.slug || "").trim(),
-        qty: Number(x?.qty || 0),
-      }))
-      .filter((x) => x.slug && Number.isFinite(x.qty) && x.qty > 0);
+
+    if (Array.isArray(parsed)) {
+      return normalizeItems(parsed);
+    }
+
+    if (isExpired(parsed?.updatedAt)) {
+      localStorage.removeItem(KEY);
+      emitCartChanged();
+      return [];
+    }
+
+    return normalizeItems(parsed?.items);
   } catch {
     return [];
   }
@@ -51,13 +68,18 @@ function readCart(): CartItem[] {
 
 function writeCart(items: CartItem[]) {
   if (!isBrowser()) return;
-  localStorage.setItem(KEY, JSON.stringify(items));
+
+  const cleanItems = normalizeItems(items);
+
+  if (cleanItems.length === 0) {
+    localStorage.removeItem(KEY);
+  } else {
+    localStorage.setItem(KEY, JSON.stringify({ items: cleanItems, updatedAt: Date.now() }));
+  }
+
   emitCartChanged();
 }
 
-/**
- * Adiciona um item no carrinho (se já existir, soma qty).
- */
 export function addToCart(slug: string, qty: number = 1) {
   const s = String(slug || "").trim();
   const q = Math.max(1, Math.floor(Number(qty || 1)));
@@ -71,10 +93,6 @@ export function addToCart(slug: string, qty: number = 1) {
   writeCart(items);
 }
 
-/**
- * Atualiza a quantidade de um item no carrinho.
- * Se qty <= 0, remove.
- */
 export function updateQty(slug: string, qty: number) {
   const s = String(slug || "").trim();
   const q = Math.floor(Number(qty || 0));
@@ -89,33 +107,20 @@ export function updateQty(slug: string, qty: number) {
   writeCart(items);
 }
 
-/**
- * Remove um item do carrinho.
- */
 export function removeFromCart(slug: string) {
   const s = String(slug || "").trim();
   const items = readCart().filter((x) => x.slug !== s);
   writeCart(items);
 }
 
-/**
- * Limpa o carrinho.
- */
 export function clearCart() {
   writeCart([]);
 }
 
-/**
- * Retorna os itens brutos (slug/qty).
- */
 export function getCartItems(): CartItem[] {
   return readCart();
 }
 
-/**
- * Retorna a soma de unidades no carrinho.
- * Ex: produto A qty 3 + produto B qty 2 = 5.
- */
 export function getCartItemCount(): number {
   return readCart().reduce((sum, item) => {
     const qty = Math.max(0, Math.floor(Number(item.qty || 0)));
@@ -123,12 +128,6 @@ export function getCartItemCount(): number {
   }, 0);
 }
 
-/**
- * Converte itens brutos em linhas “ricas”, associando o produto pelo slug.
- * Você passa a lista de produtos já carregada (ex: do Firestore).
- *
- * Importante: se um slug não existir nos produtos, ele é ignorado.
- */
 export function getCartLines<TProduct extends { slug?: string }>(
   products: TProduct[]
 ): CartLine<TProduct>[] {
@@ -151,9 +150,6 @@ export function getCartLines<TProduct extends { slug?: string }>(
   return lines;
 }
 
-/**
- * Permite páginas (Carrinho/Checkout) “escutarem” mudanças do carrinho.
- */
 export function onCartChanged(handler: () => void) {
   if (!isBrowser()) return () => {};
   const fn = () => handler();
@@ -161,33 +157,13 @@ export function onCartChanged(handler: () => void) {
   return () => window.removeEventListener(CART_CHANGED_EVENT, fn);
 }
 
-/* =========================================================================================
-   COMPAT: funções antigas de preço (agora adaptadas pro modelo A)
-   - Ideal: páginas novas NÃO devem depender disso.
-   - Mas mantém o build intacto se algum lugar ainda importar.
-========================================================================================= */
-
-/**
- * Tipos antigos (mantidos por compatibilidade)
- */
 export type CustomerType = "public" | "regular";
 
-/**
- * Calcula preço unitário pelo NOVO modelo.
- * - publicPrice sempre existe (ou fallback 0)
- * - tiers depende da qty
- *
- * OBS: assinatura antiga era (product, customerType). Agora aceitamos:
- * - unitPriceFor(product, qty)
- * - unitPriceFor(product, customerType)  -> assume qty=1 (compat)
- */
 export function unitPriceFor(
   product: {
     publicPrice?: number;
     tiers?: { id?: string; minQty: number; maxQty?: number | null; price: number }[];
     currency?: string;
-
-    // fallback legacy
     price?: number;
     discountTiers?: any[];
   },
@@ -212,10 +188,6 @@ export function unitPriceFor(
   return Number(r.unitPriceApplied ?? 0);
 }
 
-/**
- * Total do carrinho: soma(unitPriceApplied * qty)
- * Assinatura antiga era (lines, customerType). Agora ignoramos customerType e usamos qty.
- */
 export function getCartTotal(
   lines: Array<{ qty: number; product: any }>,
   _customerType?: CustomerType
