@@ -40,10 +40,8 @@ type OrderItem = {
   name?: string;
   model?: string;
   qty: number;
-
   unitPriceApplied: number;
   tierApplied: string | null;
-
   unitWeight?: number;
   weightUnit?: WeightUnit;
   unitWeightLb?: number;
@@ -70,17 +68,9 @@ function formatMoney(v: number) {
   }).format(safeNumber(v));
 }
 
-function getCheckoutPricing(product: any, qty: number, isLogged: boolean) {
+function getCheckoutPricing(product: any, qty: number) {
   const publicPrice = Number(product?.publicPrice ?? product?.price ?? 0);
   const currency = String(product?.currency ?? "CAD");
-
-  if (!isLogged) {
-    return {
-      currency,
-      unitPriceApplied: safeNumber(publicPrice),
-      tierApplied: null as string | null,
-    };
-  }
 
   const pricing = {
     publicPrice,
@@ -102,6 +92,7 @@ function getCheckoutPricing(product: any, qty: number, isLogged: boolean) {
 }
 
 export default function CheckoutPage() {
+  const [authReady, setAuthReady] = useState(false);
   const [isLogged, setIsLogged] = useState(false);
   const [userEmail, setUserEmail] = useState<string>("");
 
@@ -109,10 +100,7 @@ export default function CheckoutPage() {
   const [loadingProducts, setLoadingProducts] = useState(true);
 
   const [cartLines, setCartLines] = useState<CartLine[]>([]);
-  const cartLinesSafe = useMemo(
-    () => (Array.isArray(cartLines) ? cartLines : []),
-    [cartLines]
-  );
+  const cartLinesSafe = useMemo(() => (Array.isArray(cartLines) ? cartLines : []), [cartLines]);
 
   const [finalizing, setFinalizing] = useState(false);
   const [uiError, setUiError] = useState<string | null>(null);
@@ -129,6 +117,7 @@ export default function CheckoutPage() {
     const unsub = onAuthStateChanged(auth, (u) => {
       const logged = !!u;
       setIsLogged(logged);
+      setAuthReady(true);
 
       const em = u?.email ?? "";
       setUserEmail(em);
@@ -194,10 +183,10 @@ export default function CheckoutPage() {
   const total = useMemo(() => {
     return cartLinesSafe.reduce((sum, l) => {
       const p: any = l.product || {};
-      const pricing = getCheckoutPricing(p, l.qty, isLogged);
+      const pricing = getCheckoutPricing(p, l.qty);
       return sum + pricing.unitPriceApplied * safeNumber(l.qty);
     }, 0);
-  }, [cartLinesSafe, isLogged]);
+  }, [cartLinesSafe]);
 
   const totalWeight = useMemo(() => {
     return cartLinesSafe.reduce(
@@ -209,7 +198,7 @@ export default function CheckoutPage() {
           kg: sum.kg + weight.totalWeightKg,
         };
       },
-      { lb: 0, kg: 0 }
+      { lb: 0, kg: 0 },
     );
   }, [cartLinesSafe]);
 
@@ -221,18 +210,15 @@ export default function CheckoutPage() {
       email: (customerEmail || userEmail || "").trim(),
       phone: customerPhone.trim(),
     }),
-    [customerName, customerEmail, userEmail, customerPhone]
+    [customerName, customerEmail, userEmail, customerPhone],
   );
 
-  const customerType = useMemo(
-    () => (isLogged ? "tiered" : "avulso") as any,
-    [isLogged]
-  );
+  const customerType = useMemo(() => "tiered" as any, []);
 
   const items = useMemo(() => {
     return cartLinesSafe.map((l) => {
       const p: any = l.product || {};
-      const pricing = getCheckoutPricing(p, l.qty, isLogged);
+      const pricing = getCheckoutPricing(p, l.qty);
       const unit = safeNumber(pricing.unitPriceApplied);
       const subtotal = unit * safeNumber(l.qty);
       const weight = getWeightPair(p?.unitWeight, p?.weightUnit, l.qty);
@@ -244,7 +230,9 @@ export default function CheckoutPage() {
         model: p?.model ?? "",
         qty: l.qty,
         unit,
+        unitPrice: unit,
         subtotal,
+        price: unit,
         tierApplied: pricing.tierApplied ?? null,
         unitWeight: safeNumber(p?.unitWeight),
         weightUnit: weight.sourceUnit,
@@ -254,11 +242,9 @@ export default function CheckoutPage() {
         totalWeightKg: weight.totalWeightKg,
       } as any;
     });
-  }, [cartLinesSafe, isLogged]);
+  }, [cartLinesSafe]);
 
-  async function decrementStockForOrder(
-    orderItems: { slug: string; qty: number }[]
-  ) {
+  async function decrementStockForOrder(orderItems: { slug: string; qty: number }[]) {
     const db = getFirestore(app);
 
     for (const it of orderItems) {
@@ -273,7 +259,6 @@ export default function CheckoutPage() {
 
         const data: any = snap.data() || {};
         const current = Number(data.stock ?? 0);
-
         if (!Number.isFinite(current)) return;
 
         const next = Math.max(0, Math.floor(current) - qty);
@@ -306,7 +291,7 @@ export default function CheckoutPage() {
 
       const orderItems: OrderItem[] = cartLinesSafe.map((l) => {
         const p: any = l.product || {};
-        const pricing = getCheckoutPricing(p, l.qty, true);
+        const pricing = getCheckoutPricing(p, l.qty);
         const weight = getWeightPair(p?.unitWeight, p?.weightUnit, l.qty);
 
         return {
@@ -343,9 +328,7 @@ export default function CheckoutPage() {
         items: orderItems,
       });
 
-      await decrementStockForOrder(
-        orderItems.map((x) => ({ slug: x.slug, qty: x.qty }))
-      );
+      await decrementStockForOrder(orderItems.map((x) => ({ slug: x.slug, qty: x.qty })));
 
       clearCart();
       setCartLines([]);
@@ -359,25 +342,56 @@ export default function CheckoutPage() {
 
   const canFinalize = isLogged && !isEmpty && !finalizing;
 
+  if (!authReady) {
+    return (
+      <main className={styles.page}>
+        <section className={styles.card}>
+          <h1 className={styles.title} style={{ margin: 0 }}>Loading checkout…</h1>
+        </section>
+      </main>
+    );
+  }
+
+  if (!isLogged) {
+    return (
+      <main className={styles.page}>
+        <section className={styles.card}>
+          <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
+            <img src="/h2-logo.svg" alt="H2 Hardware" style={{ height: 48 }} />
+            <h1 className={styles.title} style={{ margin: 0 }}>Login required</h1>
+          </div>
+
+          <p className={styles.subtitle} style={{ marginTop: 18, fontSize: 16 }}>
+            Please log in to view pricing, generate a quote PDF, and check out your order.
+          </p>
+
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 18 }}>
+            <a href="/login" className={styles.secondaryCta} style={{ background: "var(--brand)", borderColor: "var(--brand)", color: "#fff" }}>
+              Login
+            </a>
+            <a href="/cart" className={styles.secondaryCta}>
+              Back to cart
+            </a>
+          </div>
+        </section>
+      </main>
+    );
+  }
+
   if (orderComplete) {
     return (
       <main className={styles.page}>
         <section className={styles.card}>
           <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
             <img src="/h2-logo.svg" alt="H2 Hardware" style={{ height: 48 }} />
-            <h1 className={styles.title} style={{ margin: 0 }}>
-              Order received
-            </h1>
+            <h1 className={styles.title} style={{ margin: 0 }}>Order received</h1>
           </div>
 
           <p className={styles.subtitle} style={{ marginTop: 18, fontSize: 16 }}>
-            Thank you for your order. Our team will contact you shortly to review
-            and finalize your order.
+            Thank you for your order. Our team will contact you shortly to review and finalize your order.
           </p>
 
-          <a href="/orders" className={styles.secondaryCta}>
-            View my orders
-          </a>
+          <a href="/orders" className={styles.secondaryCta}>View my orders</a>
         </section>
       </main>
     );
@@ -386,77 +400,28 @@ export default function CheckoutPage() {
   return (
     <main className={styles.page}>
       <h1 className={styles.title}>Checkout</h1>
-      <p className={styles.subtitle}>
-        Review your quote and place your order. Our team will follow up to
-        complete your request.
-      </p>
+      <p className={styles.subtitle}>Review your quote and place your order. Our team will follow up to complete your request.</p>
 
       <div className={styles.grid}>
         <section className={styles.card}>
           <h2 className={styles.cardTitle}>Customer details</h2>
 
           <label className={styles.label}>Name</label>
-          <input
-            className={styles.input}
-            value={customerName}
-            disabled
-            style={{ opacity: 0.7, cursor: "not-allowed" }}
-            placeholder="Your full name"
-            onChange={() => {}}
-          />
+          <input className={styles.input} value={customerName} disabled style={{ opacity: 0.7, cursor: "not-allowed" }} placeholder="Your full name" onChange={() => {}} />
 
           <label className={styles.label}>Phone</label>
-          <input
-            className={styles.input}
-            value={customerPhone}
-            disabled
-            style={{ opacity: 0.7, cursor: "not-allowed" }}
-            placeholder="(XXX) XXX-XXXX"
-            onChange={() => {}}
-          />
+          <input className={styles.input} value={customerPhone} disabled style={{ opacity: 0.7, cursor: "not-allowed" }} placeholder="(XXX) XXX-XXXX" onChange={() => {}} />
 
           <label className={styles.label}>Email</label>
-          <input
-            className={styles.input}
-            value={customerEmail}
-            disabled
-            style={{ opacity: 0.7, cursor: "not-allowed" }}
-            placeholder="you@email.com"
-            onChange={() => {}}
-          />
+          <input className={styles.input} value={customerEmail} disabled style={{ opacity: 0.7, cursor: "not-allowed" }} placeholder="you@email.com" onChange={() => {}} />
 
           <label className={styles.label}>Delivery address</label>
-          <textarea
-            className={styles.input}
-            value={shippingAddress}
-            placeholder="Street, city, province, postal code"
-            rows={4}
-            onChange={(e) => setShippingAddress(e.target.value)}
-            style={{ resize: "vertical", minHeight: 90 }}
-          />
+          <textarea className={styles.input} value={shippingAddress} placeholder="Street, city, province, postal code" rows={4} onChange={(e) => setShippingAddress(e.target.value)} style={{ resize: "vertical", minHeight: 90 }} />
 
-          {!isLogged ? (
-            <div className={styles.badge}>
-              Login required to check out. {" "}
-              <a href="/login" style={{ color: "inherit", fontWeight: 800 }}>
-                Go to Login
-              </a>
-            </div>
-          ) : loadingProfile ? (
+          {loadingProfile ? (
             <div className={styles.badge}>Loading your details…</div>
           ) : (
-            <a
-              href="/login"
-              className={styles.badge}
-              style={{
-                display: "inline-flex",
-                gap: 8,
-                alignItems: "center",
-                textDecoration: "none",
-                cursor: "pointer",
-              }}
-              aria-label="Edit details in login"
-            >
+            <a href="/login" className={styles.badge} style={{ display: "inline-flex", gap: 8, alignItems: "center", textDecoration: "none", cursor: "pointer" }} aria-label="Edit details in login">
               Edit details in Login
             </a>
           )}
@@ -469,33 +434,11 @@ export default function CheckoutPage() {
               2) Check out your order and our team will take care of the next steps.
             </p>
 
-            {uiError ? (
-              <p style={{ color: "#b10000", fontWeight: 800 }}>{uiError}</p>
-            ) : null}
+            {uiError ? <p style={{ color: "#b10000", fontWeight: 800 }}>{uiError}</p> : null}
 
             <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-              <div>
-                <GenerateQuotePdfButton
-                  items={items}
-                  customer={customer}
-                  customerType={customerType}
-                  shippingAddress={shippingAddress}
-                />
-              </div>
+              <GenerateQuotePdfButton items={items} customer={customer} customerType={customerType} shippingAddress={shippingAddress} />
             </div>
-
-            {!isLogged ? (
-              <p style={{ marginTop: 10 }}>
-                Want to check out? Please {" "}
-                <a
-                  href="/login"
-                  style={{ fontWeight: 800, color: "var(--brand)" }}
-                >
-                  login
-                </a>
-                .
-              </p>
-            ) : null}
           </div>
         </section>
 
@@ -508,25 +451,12 @@ export default function CheckoutPage() {
           <div className={styles.previewBody}>
             <div className={styles.previewInfo}>
               <div>
-                <div className={styles.infoRow}>
-                  <span className={styles.infoLabel}>Customer:</span> {" "}
-                  {customerName || "—"}
-                </div>
-                <div className={styles.infoRow}>
-                  <span className={styles.infoLabel}>Phone:</span> {" "}
-                  {customerPhone || "—"}
-                </div>
+                <div className={styles.infoRow}><span className={styles.infoLabel}>Customer:</span> {customerName || "—"}</div>
+                <div className={styles.infoRow}><span className={styles.infoLabel}>Phone:</span> {customerPhone || "—"}</div>
               </div>
-
               <div>
-                <div className={styles.infoRow}>
-                  <span className={styles.infoLabel}>Email:</span> {" "}
-                  {customerEmail || userEmail || "—"}
-                </div>
-                <div className={styles.infoRow}>
-                  <span className={styles.infoLabel}>Delivery:</span> {" "}
-                  {shippingAddress || "—"}
-                </div>
+                <div className={styles.infoRow}><span className={styles.infoLabel}>Email:</span> {customerEmail || userEmail || "—"}</div>
+                <div className={styles.infoRow}><span className={styles.infoLabel}>Delivery:</span> {shippingAddress || "—"}</div>
               </div>
             </div>
 
@@ -544,7 +474,7 @@ export default function CheckoutPage() {
               <>
                 {cartLinesSafe.map((l) => {
                   const p: any = l.product || {};
-                  const pricing = getCheckoutPricing(p, l.qty, isLogged);
+                  const pricing = getCheckoutPricing(p, l.qty);
                   const unit = safeNumber(pricing.unitPriceApplied);
                   const sub = unit * safeNumber(l.qty);
                   const unitWeightText = formatUnitWeightPair(p?.unitWeight, p?.weightUnit);
@@ -556,21 +486,9 @@ export default function CheckoutPage() {
                         <div className={styles.prodName}>{p?.name ?? l.slug}</div>
                         <div className={styles.prodModel}>
                           {p?.model ?? ""}
-                          {isLogged && pricing.tierApplied ? (
-                            <span style={{ marginLeft: 8, opacity: 0.7 }}>
-                              (tier: {pricing.tierApplied})
-                            </span>
-                          ) : null}
-                          {unitWeightText ? (
-                            <span style={{ display: "block", marginTop: 3 }}>
-                              Unit weight: {unitWeightText}
-                            </span>
-                          ) : null}
-                          {totalWeightText ? (
-                            <span style={{ display: "block", marginTop: 2 }}>
-                              Total weight: {totalWeightText}
-                            </span>
-                          ) : null}
+                          {pricing.tierApplied ? <span style={{ marginLeft: 8, opacity: 0.7 }}>(tier: {pricing.tierApplied})</span> : null}
+                          {unitWeightText ? <span style={{ display: "block", marginTop: 3 }}>Unit weight: {unitWeightText}</span> : null}
+                          {totalWeightText ? <span style={{ display: "block", marginTop: 2 }}>Total weight: {totalWeightText}</span> : null}
                         </div>
                       </div>
                       <div className={styles.productCode}>{l.slug}</div>
@@ -590,47 +508,21 @@ export default function CheckoutPage() {
                 </div>
 
                 {totalWeight.lb > 0 || totalWeight.kg > 0 ? (
-                  <div
-                    className={styles.previewNote}
-                    style={{ marginTop: 8, fontSize: 12, lineHeight: 1.35, textAlign: "right" }}
-                  >
+                  <div className={styles.previewNote} style={{ marginTop: 8, fontSize: 12, lineHeight: 1.35, textAlign: "right" }}>
                     Total weight: {formatWeightPair(totalWeight.lb, "lb", 1)}
                   </div>
                 ) : null}
 
-                <div
-                  className={styles.previewNote}
-                  style={{ marginTop: 6, fontSize: 12, lineHeight: 1.35 }}
-                >
-                  Taxes not included. Applicable GST/HST/PST may apply. Shipping
-                  fees may apply.
+                <div className={styles.previewNote} style={{ marginTop: 6, fontSize: 12, lineHeight: 1.35 }}>
+                  Taxes not included. Applicable GST/HST/PST may apply. Shipping fees may apply.
                 </div>
 
-                <div className={styles.previewNote}>
-                  Secure login required. Our team will follow up to complete
-                  your request.
-                </div>
+                <div className={styles.previewNote}>Secure login required. Our team will follow up to complete your request.</div>
               </>
             )}
 
-            <div
-              style={{
-                marginTop: 14,
-                display: "flex",
-                justifyContent: "flex-end",
-              }}
-            >
-              <button
-                type="button"
-                className={styles.secondaryCta}
-                onClick={handleFinalizeOrder}
-                disabled={!canFinalize}
-                style={{
-                  background: "var(--brand)",
-                  borderColor: "var(--brand)",
-                  color: "#fff",
-                }}
-              >
+            <div style={{ marginTop: 14, display: "flex", justifyContent: "flex-end" }}>
+              <button type="button" className={styles.secondaryCta} onClick={handleFinalizeOrder} disabled={!canFinalize} style={{ background: "var(--brand)", borderColor: "var(--brand)", color: "#fff" }}>
                 {finalizing ? "Checking out..." : "Check out order"}
               </button>
             </div>
