@@ -54,11 +54,10 @@ function getPillLabel(button: HTMLButtonElement) {
   const pillLeft = button.querySelector<HTMLElement>(".pillLeft");
   if (!pillLeft) return "";
 
-  const labelNode = Array.from(pillLeft.children).find(
-    (child) => !child.classList.contains("chev"),
-  );
+  const clone = pillLeft.cloneNode(true) as HTMLElement;
+  clone.querySelectorAll(".chev").forEach((node) => node.remove());
 
-  return String(labelNode?.textContent || "").trim();
+  return String(clone.textContent || "").trim();
 }
 
 function applyCatalogMenuAdjustments(highlightedCategories: string[]) {
@@ -120,8 +119,6 @@ export default function CatalogMenuAdjustments() {
       subtree: true,
     });
 
-    // Catalog buttons are created after Firestore finishes loading products.
-    // Retry briefly as a safeguard instead of relying only on mutation timing.
     const retryTimer = window.setInterval(apply, 300);
     const stopRetryTimer = window.setTimeout(() => window.clearInterval(retryTimer), 10000);
 
