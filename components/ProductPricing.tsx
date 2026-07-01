@@ -1,10 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { onAuthStateChanged } from "firebase/auth";
 import styles from "../styles/product.module.css";
 import { resolveUnitPrice } from "../lib/pricing";
-import { auth } from "../lib/firebaseClient";
 
 type Tier = {
   id?: string;
@@ -22,17 +19,13 @@ type ProductLike = {
 export default function ProductPricing({
   product,
   qty = 1,
+  isLogged = false,
 }: {
   product: ProductLike;
   qty?: number;
+  isLogged?: boolean;
 }) {
-  const [isLogged, setIsLogged] = useState(false);
   const currency = product.currency || "CAD";
-
-  useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (user) => setIsLogged(!!user));
-    return () => unsub();
-  }, []);
 
   if (!isLogged) {
     return (
@@ -43,31 +36,28 @@ export default function ProductPricing({
             Available after sign in
           </div>
           <div style={{ marginTop: 6, color: "#64748b", fontSize: 13, fontWeight: 500, lineHeight: 1.45 }}>
-            Approved customers can view pricing and place orders.
+            Customer pricing is shown after account access.
           </div>
         </div>
       </div>
     );
   }
 
-  const { unitPriceApplied } = resolveUnitPrice(
+  const result = resolveUnitPrice(
     {
       publicPrice: product.publicPrice,
       currency,
       tiers: product.tiers || [],
     },
-    qty
+    qty,
   );
 
   return (
     <div className={styles.priceBox}>
       <div>
-        <div className={styles.label}>
-          Price {qty > 1 ? `(qty ${qty})` : ""}
-        </div>
-
+        <div className={styles.label}>Price {qty > 1 ? `(qty ${qty})` : ""}</div>
         <div className={styles.price}>
-          {unitPriceApplied.toLocaleString("en-CA", {
+          {result.unitPriceApplied.toLocaleString("en-CA", {
             style: "currency",
             currency,
           })}
