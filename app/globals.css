@@ -48,10 +48,12 @@ a.productCard:hover * {
 .productCard {
   overflow: hidden !important;
   border-color: #dfe5ec !important;
-  border-radius: 12px !important;
+  border-radius: 14px !important;
   padding: 12px !important;
-  gap: 10px !important;
+  gap: 11px !important;
   background: #fff !important;
+  display: grid !important;
+  grid-template-rows: auto 1fr auto !important;
   box-shadow:
     0 1px 2px rgba(17, 24, 39, 0.04),
     0 8px 18px rgba(17, 24, 39, 0.06) !important;
@@ -77,6 +79,7 @@ a.productCard:hover * {
 }
 
 .productCard .productInfo {
+  align-content: start !important;
   gap: 8px !important;
 }
 
@@ -99,11 +102,19 @@ a.productCard:hover * {
 }
 
 .productCard .productBottom {
-  min-height: 60px;
+  display: grid !important;
+  gap: 10px !important;
+  min-height: 96px;
   margin: auto -12px -12px !important;
-  padding: 11px 12px !important;
+  padding: 12px !important;
   background: #fbfcfd !important;
   border-top: 1px solid #edf1f5 !important;
+}
+
+.productCard .priceBlock {
+  min-height: 34px;
+  display: grid !important;
+  align-content: center !important;
 }
 
 .productCard .priceLabel {
@@ -111,11 +122,34 @@ a.productCard:hover * {
   color: #64748b !important;
 }
 
-.productCard .price {
+.productCard .price,
+.productCard .priceLocked {
   color: #0f172a !important;
 }
 
+.productCard .priceLocked {
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  line-height: 1.3 !important;
+}
+
 .productCard .cta {
-  color: #b91c1c !important;
-  padding-left: 10px;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-height: 38px !important;
+  width: 100% !important;
+  border-radius: 12px !important;
+  background: #b91c1c !important;
+  border: 1px solid #b91c1c !important;
+  color: #fff !important;
+  padding: 0 12px !important;
+  font-size: 14px !important;
+  font-weight: 900 !important;
+  text-align: center !important;
+}
+
+.productCard:hover .cta {
+  background: #991b1b !important;
+  border-color: #991b1b !important;
 }
