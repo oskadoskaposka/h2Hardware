@@ -45,6 +45,24 @@ Important note:
 
 This is a storefront display behavior. For stronger protection in a future phase, pricing can be moved behind authenticated reads or a server-side pricing flow.
 
+## Catalog PDF download behavior
+
+The catalog page includes a customer-facing `Download Catalog PDF` button.
+
+Current behavior:
+
+- The PDF is generated in the browser from active product records.
+- The PDF includes the H2 Hardware logo, contact information, generation date, product categories, product names, item codes, descriptions/features, and product images when available.
+- The PDF does not include public prices.
+- The PDF shows the message `Pricing available after sign in`.
+- The generated filename uses the current date, for example `h2-hardware-catalog-2026-07-01.pdf`.
+
+Design notes:
+
+- The button sits near the top of the catalog page in a small catalog download card.
+- The card is responsive and stacks cleanly on mobile.
+- The PDF is intended as a commercial product catalog, not as a quote or price sheet.
+
 ## Registration request behavior
 
 The public account access form now collects a phone number.
