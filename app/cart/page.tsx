@@ -73,26 +73,16 @@ function formatMoney(value: number, currency = "CAD") {
   return value.toLocaleString("en-CA", { style: "currency", currency });
 }
 
-function LockedPrice({ compact = false }: { compact?: boolean }) {
+function SignedOutPriceNote() {
   return (
-    <span
-      style={{
-        display: "inline-flex",
-        width: "fit-content",
-        maxWidth: "100%",
-        padding: compact ? "5px 8px" : "7px 10px",
-        borderRadius: 999,
-        background: "rgba(185, 28, 28, 0.08)",
-        border: "1px solid rgba(185, 28, 28, 0.18)",
-        color: "#b91c1c",
-        fontSize: compact ? 12 : 13,
-        fontWeight: 900,
-        lineHeight: 1.2,
-        textAlign: "center",
-      }}
-    >
-      Log in to view pricing
-    </span>
+    <div style={{ display: "grid", gap: 4 }}>
+      <div style={{ color: "#111827", fontSize: 18, fontWeight: 800 }}>
+        Pricing available after sign in
+      </div>
+      <div style={{ color: "#64748b", fontSize: 13, lineHeight: 1.4 }}>
+        Approved customers can view prices and continue to checkout.
+      </div>
+    </div>
   );
 }
 
@@ -185,46 +175,6 @@ export default function CartPage() {
         No payment on the site — here you organize your order and send it to our team.
       </p>
 
-      {!signedIn ? (
-        <div
-          style={{
-            margin: "14px 0",
-            padding: "14px 16px",
-            borderRadius: 14,
-            border: "1px solid rgba(185, 28, 28, 0.18)",
-            background: "rgba(185, 28, 28, 0.06)",
-            color: "#111827",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            gap: 12,
-            flexWrap: "wrap",
-          }}
-        >
-          <div style={{ fontSize: 13, lineHeight: 1.45 }}>
-            <strong style={{ color: "#b91c1c" }}>Log in to view pricing.</strong>{" "}
-            You can keep browsing and reviewing items in your cart.
-          </div>
-          <a
-            href="/login"
-            style={{
-              minHeight: 36,
-              display: "inline-flex",
-              alignItems: "center",
-              justifyContent: "center",
-              padding: "0 14px",
-              borderRadius: 10,
-              background: "#b91c1c",
-              color: "#fff",
-              fontWeight: 900,
-              textDecoration: "none",
-            }}
-          >
-            Login
-          </a>
-        </div>
-      ) : null}
-
       <div className={styles.toolbar}>
         <button className={styles.ghost} onClick={() => clearCart()}>
           Clear cart
@@ -259,11 +209,12 @@ export default function CartPage() {
                 <div key={line.slug} className={styles.row}>
                   <div className={styles.left}>
                     <strong>{p.name}</strong>
-                    <span className={styles.muted}>{p.model}</span>
-
-                    <span className={styles.muted}>
-                      Unit: {signedIn ? formatMoney(unit, pricing.currency) : <LockedPrice compact />}
-                    </span>
+                    {p.model ? <span className={styles.muted}>{p.model}</span> : null}
+                    {!signedIn ? (
+                      <span className={styles.muted}>Pricing available after sign in.</span>
+                    ) : (
+                      <span className={styles.muted}>Unit: {formatMoney(unit, pricing.currency)}</span>
+                    )}
                   </div>
 
                   <div className={styles.right}>
@@ -275,9 +226,7 @@ export default function CartPage() {
                       onChange={(e) => updateQty(line.slug, Number(e.target.value || 1))}
                     />
 
-                    <div className={styles.sub}>
-                      {signedIn ? formatMoney(sub, pricing.currency) : <LockedPrice compact />}
-                    </div>
+                    {signedIn ? <div className={styles.sub}>{formatMoney(sub, pricing.currency)}</div> : null}
 
                     <button className={styles.remove} onClick={() => removeFromCart(line.slug)}>
                       Remove
@@ -291,17 +240,20 @@ export default function CartPage() {
           <div className={styles.summary}>
             <div>
               <div className={styles.muted}>Total</div>
-              <div className={styles.total}>{signedIn ? formatMoney(total, "CAD") : <LockedPrice />}</div>
-
               {signedIn ? (
-                <div className={styles.muted} style={{ marginTop: 6, fontSize: 12, lineHeight: 1.35 }}>
-                  Taxes not included. Applicable GST/HST/PST may apply. Shipping fees may apply.
-                </div>
-              ) : null}
+                <>
+                  <div className={styles.total}>{formatMoney(total, "CAD")}</div>
+                  <div className={styles.muted} style={{ marginTop: 6, fontSize: 12, lineHeight: 1.35 }}>
+                    Taxes not included. Applicable GST/HST/PST may apply. Shipping fees may apply.
+                  </div>
+                </>
+              ) : (
+                <SignedOutPriceNote />
+              )}
             </div>
 
             <a className={styles.primary} href={signedIn ? "/checkout" : "/login"}>
-              {signedIn ? "Checkout" : "Login to checkout"}
+              {signedIn ? "Checkout" : "Sign in to continue"}
             </a>
           </div>
         </>
