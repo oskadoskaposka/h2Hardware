@@ -11,7 +11,6 @@
 .media{
   height: 320px;
   border-radius: 16px;
-  /* StarPro themed gradient and dark border */
   background: linear-gradient(135deg, rgba(177,0,0,.25), rgba(0,0,0,.05));
   border: 1px solid rgba(0,0,0,.08);
   display:flex;
@@ -52,17 +51,14 @@
 }
 .dot{ color: rgba(0,0,0,.45); }
 .muted{
-  /* Use dark muted text on light surfaces */
   color: rgba(21,23,26,.65);
 }
 .mutedSmall{
-  /* Smaller muted text should also be dark for readability */
   color: rgba(21,23,26,.65);
   font-size: 12px;
 }
 
 .desc{
-  /* Description text should be dark and legible */
   color: rgba(21,23,26,.80);
   line-height: 1.55;
   margin-bottom: 16px;
@@ -70,7 +66,7 @@
 
 .priceBox{
   display:grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(260px, 0.7fr);
   gap: 12px;
   margin: 14px 0 18px;
 }
@@ -78,22 +74,21 @@
   .priceBox{ grid-template-columns: 1fr; }
 }
 .priceBox > div{
-  padding: 12px;
+  padding: 14px 16px;
   border-radius: 16px;
-  /* Light card background with subtle dark border for price options */
   background: #fafafa;
   border: 1px solid rgba(0,0,0,.08);
 }
 .label{
-  /* Labels should use a muted dark color */
   color: rgba(21,23,26,.65);
   font-size: 12px;
+  font-weight: 650;
 }
 .price{
   font-size: 20px;
   margin-top: 6px;
-  /* Ensure price uses dark text to stand out */
   color: #15171a;
+  font-weight: 750;
 }
 
 .actions{
@@ -102,28 +97,35 @@
   flex-wrap: wrap;
 }
 .primary{
-  padding: 12px 16px;
+  min-height: 44px;
+  padding: 0 18px;
   border-radius: 14px;
-  /* Solid StarPro red button with white text */
   border: 1px solid #b00000;
   background: #b00000;
   color: #ffffff;
   cursor: pointer;
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 800;
+  line-height: 1;
 }
 .secondary{
-  padding: 12px 16px;
+  min-height: 44px;
+  padding: 0 18px;
   border-radius: 14px;
-  /* Secondary actions use a white surface with dark border and text */
   border: 1px solid rgba(0,0,0,.10);
   background: #ffffff;
   color: #15171a;
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 800;
+  line-height: 1;
 }
 
 .contact{
   margin-top: 26px;
   padding: 18px;
   border-radius: 16px;
-  /* Light card styling for contact section */
   background: #fafafa;
   border: 1px solid rgba(0,0,0,.08);
 }
@@ -138,7 +140,6 @@
   min-width: 220px;
   padding: 12px 12px;
   border-radius: 14px;
-  /* Inputs use a clean white background with dark text */
   border: 1px solid rgba(0,0,0,.10);
   background: #ffffff;
   color: #15171a;
@@ -146,17 +147,17 @@
 .formRow button{
   padding: 12px 16px;
   border-radius: 14px;
-  /* Primary submit button uses solid red */
   border: 1px solid #b00000;
   background: #b00000;
   color: #ffffff;
   cursor:pointer;
+  font-family: inherit;
+  font-weight: 800;
 }
 
 .priceMuted{
   font-size: 18px;
   margin-top: 6px;
-  /* Strike-through prices should be muted dark for readability */
   color: rgba(21,23,26,.55);
   text-decoration: line-through;
 }
@@ -241,7 +242,10 @@
   height: 44px;
   padding: 0 16px;
   border-radius: 14px;
+  font-family: inherit;
+  font-size: 16px;
   font-weight: 800;
+  line-height: 1;
   text-decoration: none;
 }
 
