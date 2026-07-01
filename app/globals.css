@@ -103,8 +103,7 @@ a.productCard:hover * {
 
 .productCard .productBottom {
   display: grid !important;
-  gap: 10px !important;
-  min-height: 96px;
+  min-height: 54px;
   margin: auto -12px -12px !important;
   padding: 12px !important;
   background: #fbfcfd !important;
@@ -112,7 +111,7 @@ a.productCard:hover * {
 }
 
 .productCard .priceBlock {
-  min-height: 34px;
+  min-height: 30px;
   display: grid !important;
   align-content: center !important;
 }
@@ -134,22 +133,5 @@ a.productCard:hover * {
 }
 
 .productCard .cta {
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  min-height: 38px !important;
-  width: 100% !important;
-  border-radius: 12px !important;
-  background: #b91c1c !important;
-  border: 1px solid #b91c1c !important;
-  color: #fff !important;
-  padding: 0 12px !important;
-  font-size: 14px !important;
-  font-weight: 900 !important;
-  text-align: center !important;
-}
-
-.productCard:hover .cta {
-  background: #991b1b !important;
-  border-color: #991b1b !important;
+  display: none !important;
 }
