@@ -6,8 +6,8 @@ export default function CatalogPage() {
   return (
     <>
       <CatalogMenuAdjustments />
-      <CatalogPdfDownloadCard />
       <CatalogExperience />
+      <CatalogPdfDownloadCard />
     </>
   );
 }
