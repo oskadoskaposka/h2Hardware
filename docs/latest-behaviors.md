@@ -21,24 +21,25 @@ Public prices are hidden from visitors who are not logged in.
 
 Current behavior:
 
-- Catalog product cards show `Log in to view pricing` instead of a price for signed-out users.
-- Product detail pages show a styled pricing box asking the visitor to log in.
-- Cart rows and cart total show `Log in to view pricing` for signed-out users.
+- Catalog product cards show a subtle `Pricing available after sign in` message instead of a price for signed-out users.
+- Product detail pages show a simple pricing card for signed-out users, without repeating login buttons inside the pricing area.
+- Cart rows avoid repeated price warnings. The main signed-out pricing message appears in the cart summary area.
 - Checkout requires login before quote pricing or the quote PDF can be viewed.
 - Logged-in users continue to see pricing normally, including tier pricing when applicable.
 
 Customer-facing message:
 
 ```txt
-Log in to view pricing
+Pricing available after sign in
 ```
 
 Design notes:
 
 - The price area should never be left empty.
-- The message should remain readable on mobile and desktop.
+- The message should be calm and readable, not styled like an error.
+- Avoid repeating the word login in every row/card.
 - The catalog and product pages should remain usable for browsing.
-- Customers can browse products before login, then log in when ready to view pricing or check out.
+- Customers can browse products before login, then sign in when ready to view pricing or check out.
 
 Important note:
 
