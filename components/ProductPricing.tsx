@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import { onAuthStateChanged } from "firebase/auth";
 import styles from "../styles/product.module.css";
 import { resolveUnitPrice } from "../lib/pricing";
@@ -40,33 +39,11 @@ export default function ProductPricing({
       <div className={styles.priceBox}>
         <div>
           <div className={styles.label}>Pricing</div>
-          <div style={{ display: "grid", gap: 8 }}>
-            <div style={{ fontWeight: 1000, color: "#111", fontSize: 18 }}>
-              Log in to view pricing
-            </div>
-            <div style={{ color: "#64748b", fontSize: 13, fontWeight: 700, lineHeight: 1.4 }}>
-              Approved customers can view pricing and submit orders after login.
-            </div>
-            <Link
-              href="/login"
-              prefetch={false}
-              style={{
-                width: "fit-content",
-                display: "inline-flex",
-                alignItems: "center",
-                justifyContent: "center",
-                minHeight: 36,
-                padding: "0 12px",
-                borderRadius: 10,
-                background: "#b91c1c",
-                color: "#fff",
-                fontSize: 13,
-                fontWeight: 900,
-                textDecoration: "none",
-              }}
-            >
-              Login
-            </Link>
+          <div style={{ marginTop: 6, fontSize: 18, fontWeight: 700, color: "#111827", lineHeight: 1.25 }}>
+            Available after sign in
+          </div>
+          <div style={{ marginTop: 6, color: "#64748b", fontSize: 13, fontWeight: 500, lineHeight: 1.45 }}>
+            Approved customers can view pricing and place orders.
           </div>
         </div>
       </div>
