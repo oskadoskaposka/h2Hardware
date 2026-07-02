@@ -79,8 +79,7 @@ function buildApprovalEmail(params: { actionLink: string; customerName: string }
     `Hello ${params.customerName},`,
     "",
     "Great news! Your H2 Hardware account has been verified and approved.",
-    "To get started, simply click the link below to create your password:",
-    params.actionLink,
+    "To get started, click the secure button in this email to create your password.",
     "",
     "Once your password has been created, you'll get access to exclusive pricing and our full product catalog.",
     "",
@@ -99,7 +98,7 @@ function buildApprovalEmail(params: { actionLink: string; customerName: string }
         <div style="padding:22px 20px;background:#fff;">
           <p style="margin:0 0 12px;">Hello ${escapeHtml(params.customerName)},</p>
           <p style="margin:0 0 12px;">Great news! Your H2 Hardware account has been verified and approved.</p>
-          <p style="margin:0 0 18px;">To get started, simply click the link below to create your password:</p>
+          <p style="margin:0 0 18px;">To get started, simply click the button below to create your password:</p>
           <p style="margin:22px 0;">
             <a href="${escapeHtml(params.actionLink)}" style="display:inline-block;background:#b91c1c;color:#fff;text-decoration:none;font-weight:900;padding:12px 18px;border-radius:10px;">
               Create Your Password
@@ -111,8 +110,6 @@ function buildApprovalEmail(params: { actionLink: string; customerName: string }
             <a href="mailto:${escapeHtml(CONTACT_EMAIL)}" style="color:#0f766e;font-weight:700;">${escapeHtml(CONTACT_EMAIL)}</a>
             or by phone at <strong>${escapeHtml(CONTACT_PHONE)}</strong>.
           </p>
-          <p style="font-size:13px;color:#555;margin:20px 0 8px;">If the button does not work, copy and paste this link into your browser:</p>
-          <p style="font-size:12px;color:#555;word-break:break-all;margin:0 0 20px;">${escapeHtml(params.actionLink)}</p>
           <p style="margin:0;">Thank you for choosing H2 Hardware Ltd.</p>
         </div>
       </div>
@@ -128,8 +125,7 @@ function buildResetEmail(actionLink: string) {
     "",
     "We received a request to reset your H2 Hardware password.",
     "",
-    "Use the secure link below to choose your password:",
-    actionLink,
+    "Use the secure button in this email to choose your password.",
     "",
     "If you did not request this, you can safely ignore this email.",
     "",
@@ -153,8 +149,6 @@ function buildResetEmail(actionLink: string) {
               Reset password
             </a>
           </p>
-          <p style="font-size:13px;color:#555;margin:20px 0 8px;">If the button does not work, copy and paste this link into your browser:</p>
-          <p style="font-size:12px;color:#555;word-break:break-all;margin:0 0 20px;">${escapeHtml(actionLink)}</p>
           <p style="margin:0 0 18px;">If you did not request this, you can safely ignore this email.</p>
           <p style="margin:0;">Thanks,<br/>H2 Hardware team</p>
         </div>
