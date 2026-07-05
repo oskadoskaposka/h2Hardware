@@ -52,36 +52,6 @@ function createTransporter() {
   });
 }
 
-function buildHtml(params: { contactName: string; companyName: string }) {
-  const name = params.contactName || "there";
-  const companyLine = params.companyName
-    ? `<p style="margin:0 0 14px;color:#475569;">Company: <strong>${escapeHtml(params.companyName)}</strong></p>`
-    : "";
-
-  return `
-    <div style="font-family:Arial,sans-serif;color:#111;line-height:1.5;max-width:640px;margin:0 auto;">
-      <div style="border:1px solid #e5e7eb;border-radius:16px;overflow:hidden;background:#fff;">
-        <div style="background:#111;color:#fff;padding:18px 20px;border-bottom:4px solid #b91c1c;">
-          <div style="font-size:12px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;color:#fca5a5;">H2 Hardware</div>
-          <h1 style="margin:8px 0 0;font-size:24px;line-height:1.2;">Sample request received</h1>
-        </div>
-        <div style="padding:22px 20px;background:#fff;">
-          <p style="margin:0 0 12px;">Hello ${escapeHtml(name)},</p>
-          <p style="margin:0 0 14px;">Thank you for submitting your free sample request.</p>
-          <p style="margin:0 0 14px;">We received your information and our team will organize everything to send your sample as soon as possible.</p>
-          ${companyLine}
-          <p style="margin:0 0 16px;color:#475569;">If we need any additional information, we will contact you using the details provided in the form.</p>
-          <p style="margin:0 0 16px;">
-            If you have any questions, contact us at
-            <a href="mailto:${escapeHtml(CONTACT_EMAIL)}" style="color:#0f766e;font-weight:700;">${escapeHtml(CONTACT_EMAIL)}</a>
-            or by phone at <strong>${escapeHtml(CONTACT_PHONE)}</strong>.
-          </p>
-          <p style="margin:0;">Thank you,<br/>H2 Hardware team</p>
-        </div>
-      </div>
-    </div>`;
-}
-
 export const sendSampleRequestConfirmation = onDocumentCreated(
   {
     document: "sample_requests/{requestId}",
@@ -98,12 +68,12 @@ export const sendSampleRequestConfirmation = onDocumentCreated(
       return;
     }
 
-    const contactName = cleanText(data.contactName);
+    const contactName = cleanText(data.contactName) || "there";
     const companyName = cleanText(data.companyName);
     const subject = "We received your H2 Hardware sample request";
 
     const text = [
-      `Hello ${contactName || "there"},`,
+      `Hello ${contactName},`,
       "",
       "Thank you for submitting your free sample request.",
       "We received your information and our team will organize everything to send your sample as soon as possible.",
@@ -117,7 +87,25 @@ export const sendSampleRequestConfirmation = onDocumentCreated(
       "H2 Hardware team",
     ].filter(Boolean).join("\n");
 
-    const html = buildHtml({ contactName, companyName });
+    const html = `
+      <div style="font-family:Arial,sans-serif;color:#111;line-height:1.5;max-width:640px;margin:0 auto;">
+        <div style="border:1px solid #e5e7eb;border-radius:16px;overflow:hidden;background:#fff;">
+          <div style="background:#111;color:#fff;padding:18px 20px;border-bottom:4px solid #b91c1c;">
+            <div style="font-size:12px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;color:#fca5a5;">H2 Hardware</div>
+            <h1 style="margin:8px 0 0;font-size:24px;line-height:1.2;">Sample request received</h1>
+          </div>
+          <div style="padding:22px 20px;background:#fff;">
+            <p style="margin:0 0 12px;">Hello ${escapeHtml(contactName)},</p>
+            <p style="margin:0 0 14px;">Thank you for submitting your free sample request.</p>
+            <p style="margin:0 0 14px;">We received your information and our team will organize everything to send your sample as soon as possible.</p>
+            ${companyName ? `<p style="margin:0 0 14px;color:#475569;">Company: <strong>${escapeHtml(companyName)}</strong></p>` : ""}
+            <p style="margin:0 0 16px;color:#475569;">If we need any additional information, we will contact you using the details provided in the form.</p>
+            <p style="margin:0 0 16px;">If you have any questions, contact us at ${escapeHtml(CONTACT_EMAIL)} or ${escapeHtml(CONTACT_PHONE)}.</p>
+            <p style="margin:0;">Thank you,<br/>H2 Hardware team</p>
+          </div>
+        </div>
+      </div>`;
+
     const user = SMTP_USER.value();
     const transporter = createTransporter();
 
