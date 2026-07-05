@@ -15,7 +15,7 @@ type FormState = {
 };
 
 const THANK_YOU_TEXT =
-  "Thanks, we will review your info and send you the sample.";
+  "Thank you. We received your sample request and will organize everything to send your sample as soon as possible.";
 
 const CONTACT_PHONE = "+1 (226) 788-1924";
 const CONTACT_PHONE_LINK = "tel:+12267881924";
