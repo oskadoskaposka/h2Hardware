@@ -81,7 +81,7 @@ export const sendSampleRequestConfirmation = onDocumentCreated(
       "",
       "If we need any additional information, we will contact you using the details provided in the form.",
       "",
-      `Questions? Contact us at ${CONTACT_EMAIL} or ${CONTACT_PHONE}.",
+      "Questions? Contact us at " + CONTACT_EMAIL + " or " + CONTACT_PHONE + ".",
       "",
       "Thank you,",
       "H2 Hardware team",
