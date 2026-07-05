@@ -63,7 +63,11 @@ export default function SampleRequestPage() {
       return "Phone number is required.";
     }
 
-    if (email && !isValidEmail(email)) {
+    if (!email) {
+      return "Email address is required.";
+    }
+
+    if (!isValidEmail(email)) {
       return "Please enter a valid email address.";
     }
 
@@ -191,8 +195,9 @@ export default function SampleRequestPage() {
                 </div>
 
                 <div className="field">
-                  <label>Email Address</label>
+                  <label>Email Address *</label>
                   <input
+                    type="email"
                     value={form.email}
                     onChange={(e) => update("email", e.target.value)}
                     placeholder="name@company.com"
