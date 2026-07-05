@@ -59,7 +59,7 @@ Current behavior:
 
 Design notes:
 
-- The button sits near the top of the catalog page in a small catalog download card.
+- The button sits near the bottom of the catalog experience in a small catalog download card.
 - The card is responsive and stacks cleanly on mobile.
 - The PDF is intended as a commercial product catalog, not as a quote or price sheet.
 
@@ -84,29 +84,29 @@ When an admin approves a registration request:
 
 ## Sample request behavior
 
-The sample request form now requires a phone number.
+The sample request form requires phone number and email address.
 
 Current required fields:
 
 - Company name
 - Contact name
 - Phone number
+- Email address
 - Sample delivery address
 
 Optional fields:
 
 - Website
-- Email address
 
 The form no longer requires a website or name card image URL before submitting.
 
 ## Firestore rules reminder
 
-The Firestore rules must allow the `phone` field in `registration_requests` and `sample_requests`.
+The Firestore rules must allow the `phone` and `email` fields in `registration_requests` and `sample_requests`.
 
 The current public create rules should validate:
 
 - `registration_requests.phone` as a required string with a reasonable max length.
 - `sample_requests.phone` as a required string with a reasonable max length.
+- `sample_requests.email` as a required valid email string with a reasonable max length.
 - `sample_requests.website` as optional.
-- `sample_requests.email` as optional.
