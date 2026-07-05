@@ -222,27 +222,43 @@ export default function SampleRequestPage() {
           </section>
 
           <aside className="card sideCard">
-            <h2>Any questions?</h2>
-            <p className="muted">
-              Contact our team if you need help before submitting your sample
-              request. We will be happy to assist you.
-            </p>
+            <section className="rulesBox">
+              <div className="sideEyebrow">Free sample</div>
+              <h2>How to Request a Free Sample</h2>
+              <p className="muted">
+                To qualify for a free sample, please complete the following steps:
+              </p>
 
-            <div className="contactBox">
-              <div className="contactItem">
-                <div className="contactLabel">Phone</div>
-                <a href={CONTACT_PHONE_LINK} className="contactValue">
-                  {CONTACT_PHONE}
-                </a>
-              </div>
+              <ol className="rulesList">
+                <li>Register for an account on the H2 Hardware website.</li>
+                <li>Follow our Facebook page.</li>
+                <li>Complete and submit the Free Sample Request Form.</li>
+              </ol>
+            </section>
 
-              <div className="contactItem">
-                <div className="contactLabel">Email</div>
-                <a href={CONTACT_EMAIL_LINK} className="contactValue">
-                  {CONTACT_EMAIL}
-                </a>
+            <section className="contactSection">
+              <h3>Any questions?</h3>
+              <p className="muted">
+                Contact our team if you need help before submitting your sample
+                request. We will be happy to assist you.
+              </p>
+
+              <div className="contactBox">
+                <div className="contactItem">
+                  <div className="contactLabel">Phone</div>
+                  <a href={CONTACT_PHONE_LINK} className="contactValue">
+                    {CONTACT_PHONE}
+                  </a>
+                </div>
+
+                <div className="contactItem">
+                  <div className="contactLabel">Email</div>
+                  <a href={CONTACT_EMAIL_LINK} className="contactValue">
+                    {CONTACT_EMAIL}
+                  </a>
+                </div>
               </div>
-            </div>
+            </section>
           </aside>
         </div>
       </div>
@@ -327,6 +343,12 @@ export default function SampleRequestPage() {
           margin: 0;
           color: #0f172a;
           font-size: 22px;
+          font-weight: 900;
+        }
+        h3 {
+          margin: 0;
+          color: #0f172a;
+          font-size: 18px;
           font-weight: 900;
         }
         .muted {
@@ -428,8 +450,36 @@ export default function SampleRequestPage() {
         }
         .sideCard {
           display: grid;
-          gap: 16px;
+          gap: 18px;
           align-content: start;
+        }
+        .rulesBox {
+          border: 1px solid rgba(185, 28, 28, 0.18);
+          border-radius: 14px;
+          background: rgba(185, 28, 28, 0.04);
+          padding: 16px;
+        }
+        .sideEyebrow {
+          color: #b91c1c;
+          font-size: 11px;
+          font-weight: 900;
+          letter-spacing: 0.08em;
+          text-transform: uppercase;
+          margin-bottom: 6px;
+        }
+        .rulesList {
+          margin: 14px 0 0;
+          padding-left: 20px;
+          color: #0f172a;
+          display: grid;
+          gap: 10px;
+          font-size: 14px;
+          line-height: 1.45;
+          font-weight: 700;
+        }
+        .contactSection {
+          display: grid;
+          gap: 14px;
         }
         .contactBox {
           display: grid;
