@@ -215,8 +215,6 @@ export default function SampleRequestPage() {
                 />
               </div>
 
-              <div className="thanksBox">{THANK_YOU_TEXT}</div>
-
               {errorMsg ? <div className="error">{errorMsg}</div> : null}
               {successMsg ? <div className="success">{successMsg}</div> : null}
 
@@ -409,15 +407,6 @@ export default function SampleRequestPage() {
           font-size: 12px;
           color: #64748b;
           line-height: 1.35;
-        }
-        .thanksBox {
-          background: rgba(185, 28, 28, 0.06);
-          border: 1px solid rgba(185, 28, 28, 0.18);
-          color: #991b1b;
-          border-radius: 12px;
-          padding: 12px 14px;
-          font-size: 13px;
-          font-weight: 700;
         }
         .error {
           background: #fff;
