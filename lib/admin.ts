@@ -1,4 +1,9 @@
-const DEFAULT_ADMIN_EMAILS = ["maia@h2hardwareltd.com"];
+const DEFAULT_ADMIN_EMAILS = [
+  "maia@h2hardwareltd.com",
+  "admin@starpro.com",
+  "admin@h2hardware.com",
+  "admin@h2hardwareltd.com",
+];
 
 export const ADMIN_EMAILS = Array.from(
   new Set(
