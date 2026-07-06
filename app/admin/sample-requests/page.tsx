@@ -6,7 +6,7 @@ import { onAuthStateChanged } from "firebase/auth";
 import { collection, getDocs, getFirestore, orderBy, query } from "firebase/firestore";
 
 import { auth, app } from "../../../lib/firebaseClient";
-import { isAdminEmail } from "../../../lib/admin";
+import { isAdminUser } from "../../../lib/admin";
 
 type SampleRequestDoc = {
   id: string;
@@ -44,8 +44,8 @@ export default function AdminSampleRequestsPage() {
   const [search, setSearch] = useState("");
 
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (u) => {
-      setIsAdmin(isAdminEmail(u?.email));
+    const unsub = onAuthStateChanged(auth, async (u) => {
+      setIsAdmin(await isAdminUser(u));
     });
     return () => unsub();
   }, []);
@@ -134,30 +134,10 @@ export default function AdminSampleRequestsPage() {
           </div>
 
           <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-            <Link
-              href="/sample-request"
-              style={{ fontWeight: 800, color: "#b91c1c", textDecoration: "none" }}
-            >
-              Sample request form
-            </Link>
-            <Link
-              href="/admin/orders"
-              style={{ fontWeight: 800, color: "#b91c1c", textDecoration: "none" }}
-            >
-              Orders
-            </Link>
-            <Link
-              href="/admin/products"
-              style={{ fontWeight: 800, color: "#b91c1c", textDecoration: "none" }}
-            >
-              Manage products
-            </Link>
-            <Link
-              href="/catalog"
-              style={{ fontWeight: 800, color: "#b91c1c", textDecoration: "none" }}
-            >
-              Catalog
-            </Link>
+            <Link href="/sample-request" style={{ fontWeight: 800, color: "#b91c1c", textDecoration: "none" }}>Sample request form</Link>
+            <Link href="/admin/orders" style={{ fontWeight: 800, color: "#b91c1c", textDecoration: "none" }}>Orders</Link>
+            <Link href="/admin/products" style={{ fontWeight: 800, color: "#b91c1c", textDecoration: "none" }}>Manage products</Link>
+            <Link href="/catalog" style={{ fontWeight: 800, color: "#b91c1c", textDecoration: "none" }}>Catalog</Link>
           </div>
         </div>
 
@@ -179,170 +159,45 @@ export default function AdminSampleRequestsPage() {
         </div>
 
         {error ? (
-          <div
-            style={{
-              marginTop: 16,
-              background: "#fff",
-              border: "1px solid rgba(185,28,28,.25)",
-              borderLeft: "6px solid #b91c1c",
-              borderRadius: 12,
-              padding: 14,
-            }}
-          >
+          <div style={{ marginTop: 16, background: "#fff", border: "1px solid rgba(185,28,28,.25)", borderLeft: "6px solid #b91c1c", borderRadius: 12, padding: 14 }}>
             <strong>Firestore error:</strong> {error}
           </div>
         ) : loading ? (
           <div style={{ marginTop: 16, color: "#64748b" }}>Loading…</div>
         ) : filtered.length === 0 ? (
-          <div
-            style={{
-              marginTop: 16,
-              background: "#fff",
-              border: "1px solid #e2e8f0",
-              borderRadius: 12,
-              padding: 14,
-            }}
-          >
+          <div style={{ marginTop: 16, background: "#fff", border: "1px solid #e2e8f0", borderRadius: 12, padding: 14 }}>
             <div style={{ fontWeight: 900, color: "#0f172a" }}>No sample requests found</div>
-            <div style={{ marginTop: 6, color: "#64748b", fontSize: 13 }}>
-              Try a different search.
-            </div>
+            <div style={{ marginTop: 6, color: "#64748b", fontSize: 13 }}>Try a different search.</div>
           </div>
         ) : (
           <div style={{ marginTop: 14, display: "grid", gap: 12 }}>
             {filtered.map((item) => {
-              const dt =
-                item.createdAt?.toDate?.() instanceof Date ? item.createdAt.toDate() : null;
+              const dt = item.createdAt?.toDate?.() instanceof Date ? item.createdAt.toDate() : null;
 
               return (
-                <div
-                  key={item.id}
-                  style={{
-                    background: "#fff",
-                    border: "1px solid #e2e8f0",
-                    borderRadius: 14,
-                    padding: 14,
-                    boxShadow: "0 1px 0 rgba(15,23,42,.03)",
-                  }}
-                >
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      gap: 12,
-                      alignItems: "flex-start",
-                      flexWrap: "wrap",
-                    }}
-                  >
+                <div key={item.id} style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 14, padding: 14, boxShadow: "0 1px 0 rgba(15,23,42,.03)" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "flex-start", flexWrap: "wrap" }}>
                     <div style={{ minWidth: 260 }}>
-                      <div
-                        style={{
-                          fontWeight: 950 as any,
-                          color: "#0f172a",
-                          fontSize: 18,
-                          letterSpacing: 0.1,
-                        }}
-                      >
-                        {item.companyName || "Unnamed company"}
-                      </div>
-
-                      <div style={{ marginTop: 6, color: "#64748b", fontSize: 13 }}>
-                        Contact:{" "}
-                        <strong style={{ color: "#0f172a" }}>
-                          {item.contactName || "—"}
-                        </strong>
-                      </div>
-
-                      <div style={{ marginTop: 6, color: "#64748b", fontSize: 12 }}>
-                        ID:{" "}
-                        <span
-                          style={{
-                            fontFamily:
-                              "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
-                          }}
-                        >
-                          {item.id}
-                        </span>
-                      </div>
-
-                      <div style={{ marginTop: 6, color: "#64748b", fontSize: 12 }}>
-                        {dt ? dt.toLocaleString("en-CA") : "—"}
-                      </div>
+                      <div style={{ fontWeight: 950 as any, color: "#0f172a", fontSize: 18, letterSpacing: 0.1 }}>{item.companyName || "Unnamed company"}</div>
+                      <div style={{ marginTop: 6, color: "#64748b", fontSize: 13 }}>Contact: <strong style={{ color: "#0f172a" }}>{item.contactName || "—"}</strong></div>
+                      <div style={{ marginTop: 6, color: "#64748b", fontSize: 12 }}>ID: <span style={{ fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" }}>{item.id}</span></div>
+                      <div style={{ marginTop: 6, color: "#64748b", fontSize: 12 }}>{dt ? dt.toLocaleString("en-CA") : "—"}</div>
                     </div>
 
-                    <div
-                      style={{
-                        display: "inline-flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        minWidth: 84,
-                        height: 32,
-                        padding: "0 12px",
-                        borderRadius: 999,
-                        background: "rgba(185, 28, 28, 0.08)",
-                        color: "#b91c1c",
-                        border: "1px solid rgba(185, 28, 28, 0.18)",
-                        fontSize: 12,
-                        fontWeight: 900,
-                        textTransform: "uppercase",
-                        letterSpacing: "0.04em",
-                      }}
-                    >
+                    <div style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", minWidth: 84, height: 32, padding: "0 12px", borderRadius: 999, background: "rgba(185, 28, 28, 0.08)", color: "#b91c1c", border: "1px solid rgba(185, 28, 28, 0.18)", fontSize: 12, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.04em" }}>
                       {item.status || "new"}
                     </div>
                   </div>
 
-                  <div
-                    style={{
-                      marginTop: 14,
-                      display: "grid",
-                      gridTemplateColumns: "1fr 1fr",
-                      gap: 14,
-                    }}
-                  >
+                  <div style={{ marginTop: 14, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
                     <div style={{ display: "grid", gap: 10 }}>
                       <InfoRow label="Contact Name" value={item.contactName || "—"} />
-                      <InfoRow
-                        label="Website"
-                        value={
-                          item.website ? (
-                            <span style={{ color: "#0f172a", fontWeight: 700 }}>
-                              {item.website}
-                            </span>
-                          ) : (
-                            "—"
-                          )
-                        }
-                      />
+                      <InfoRow label="Website" value={item.website ? <span style={{ color: "#0f172a", fontWeight: 700 }}>{item.website}</span> : "—"} />
                       <InfoRow label="Phone" value={item.phone || "—"} />
                     </div>
-
                     <div style={{ display: "grid", gap: 10 }}>
-                      <InfoRow
-                        label="Email"
-                        value={
-                          item.email ? (
-                            <a
-                              href={`mailto:${item.email}`}
-                              style={{ color: "#b91c1c", fontWeight: 800 }}
-                            >
-                              {item.email}
-                            </a>
-                          ) : (
-                            "—"
-                          )
-                        }
-                      />
-
-                      <InfoRow
-                        label="Sample Delivery Address"
-                        value={
-                          <div style={{ whiteSpace: "pre-wrap", lineHeight: 1.45 }}>
-                            {item.deliveryAddress || "—"}
-                          </div>
-                        }
-                      />
-
+                      <InfoRow label="Email" value={item.email ? <a href={`mailto:${item.email}`} style={{ color: "#b91c1c", fontWeight: 800 }}>{item.email}</a> : "—"} />
+                      <InfoRow label="Sample Delivery Address" value={<div style={{ whiteSpace: "pre-wrap", lineHeight: 1.45 }}>{item.deliveryAddress || "—"}</div>} />
                       <InfoRow label="Thank You Text" value={item.thankYouText || "—"} />
                     </div>
                   </div>
@@ -356,34 +211,10 @@ export default function AdminSampleRequestsPage() {
   );
 }
 
-function InfoRow({
-  label,
-  value,
-}: {
-  label: string;
-  value: React.ReactNode;
-}) {
+function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
-    <div
-      style={{
-        border: "1px solid #eef2f7",
-        borderRadius: 12,
-        padding: 12,
-        background: "#fbfcfd",
-      }}
-    >
-      <div
-        style={{
-          color: "#64748b",
-          fontSize: 12,
-          fontWeight: 800,
-          textTransform: "uppercase",
-          letterSpacing: "0.04em",
-          marginBottom: 4,
-        }}
-      >
-        {label}
-      </div>
+    <div style={{ border: "1px solid #eef2f7", borderRadius: 12, padding: 12, background: "#fbfcfd" }}>
+      <div style={{ color: "#64748b", fontSize: 12, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 4 }}>{label}</div>
       <div style={{ color: "#0f172a", fontSize: 14, fontWeight: 700 }}>{value}</div>
     </div>
   );
