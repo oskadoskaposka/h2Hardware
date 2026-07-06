@@ -15,6 +15,7 @@ const DEFAULT_ADMIN_EMAILS = [
   "maia@h2hardwareltd.com",
   "admin@starpro.com",
   "admin@h2hardware.com",
+  "admin@h2hardwareltd.com",
 ];
 
 function configuredAdminEmails() {
@@ -90,13 +91,17 @@ async function assertAdminFromRequest(req: any) {
     throw new HttpsError("unauthenticated", "Admin login is required.");
   }
 
-  if (!configuredAdminEmails().has(adminEmail)) {
+  const isDefaultAdmin = configuredAdminEmails().has(adminEmail);
+  const isClaimAdmin = decoded.admin === true;
+
+  if (!isDefaultAdmin && !isClaimAdmin) {
     throw new HttpsError("permission-denied", "Only admins can perform this action.");
   }
 
   return {
     uid: decoded.uid,
     email: adminEmail,
+    isDefaultAdmin,
   };
 }
 
@@ -106,6 +111,10 @@ function getRequestId(req: any) {
 
 function getArchivedValue(req: any) {
   return req.body?.archived === true || req.body?.data?.archived === true;
+}
+
+function getAdminValue(req: any) {
+  return req.body?.admin === true || req.body?.data?.admin === true;
 }
 
 function assertPost(req: any) {
@@ -285,6 +294,95 @@ async function disableRegistrationUserCore(requestId: string, admin: { uid: stri
   };
 }
 
+async function setRegistrationUserAdminCore(
+  requestId: string,
+  makeAdmin: boolean,
+  admin: { uid: string; email: string; isDefaultAdmin?: boolean }
+) {
+  if (!requestId) {
+    throw new HttpsError("invalid-argument", "requestId is required.");
+  }
+
+  const requestRef = db.collection("registration_requests").doc(requestId);
+  const requestSnap = await requestRef.get();
+
+  if (!requestSnap.exists) {
+    throw new HttpsError("not-found", "Registration request not found.");
+  }
+
+  const registration = requestSnap.data() || {};
+  const email = normalizeEmail(registration.email);
+  let uid = cleanText(registration.authUid);
+
+  if (!uid && email) {
+    try {
+      const userByEmail = await getAuth().getUserByEmail(email);
+      uid = userByEmail.uid;
+    } catch (error) {
+      if (errorCode(error) === "auth/user-not-found") {
+        throw new HttpsError("failed-precondition", "Approve or create this user before changing admin access.");
+      }
+
+      logger.error("Failed to find user by email", { requestId, email, error });
+      throw new HttpsError("internal", "Failed to find Firebase user.");
+    }
+  }
+
+  if (!uid || !email) {
+    throw new HttpsError("failed-precondition", "Request has no Firebase user to update.");
+  }
+
+  if (!makeAdmin && email === admin.email && !admin.isDefaultAdmin) {
+    throw new HttpsError("permission-denied", "You cannot remove your own admin access.");
+  }
+
+  const userRecord = await getAuth().getUser(uid);
+  const customClaims = { ...(userRecord.customClaims || {}) } as Record<string, unknown>;
+
+  if (makeAdmin) {
+    customClaims.admin = true;
+  } else {
+    delete customClaims.admin;
+  }
+
+  await getAuth().setCustomUserClaims(uid, customClaims);
+
+  await db.collection("customers").doc(uid).set(
+    {
+      admin: makeAdmin,
+      updatedAt: FieldValue.serverTimestamp(),
+    },
+    { merge: true }
+  );
+
+  await requestRef.set(
+    {
+      admin: makeAdmin,
+      authUid: uid,
+      adminUpdatedAt: FieldValue.serverTimestamp(),
+      adminUpdatedByUid: admin.uid,
+      adminUpdatedByEmail: admin.email,
+      updatedAt: FieldValue.serverTimestamp(),
+    },
+    { merge: true }
+  );
+
+  logger.info("Registration user admin role changed", {
+    requestId,
+    email,
+    uid,
+    makeAdmin,
+    changedBy: admin.email,
+  });
+
+  return {
+    ok: true,
+    uid,
+    email,
+    admin: makeAdmin,
+  };
+}
+
 async function archiveRegistrationRequestCore(
   requestId: string,
   archived: boolean,
@@ -363,6 +461,24 @@ export const disableRegistrationUserHttp = onRequest(
       res.status(200).json(result);
     } catch (error) {
       logger.error("disableRegistrationUserHttp failed", { error });
+      res.status(getStatus(error)).json({ error: getMessage(error) });
+    }
+  }
+);
+
+export const setRegistrationUserAdminHttp = onRequest(
+  {
+    region: REGION,
+    cors: false,
+  },
+  async (req, res) => {
+    try {
+      assertPost(req);
+      const admin = await assertAdminFromRequest(req);
+      const result = await setRegistrationUserAdminCore(getRequestId(req), getAdminValue(req), admin);
+      res.status(200).json(result);
+    } catch (error) {
+      logger.error("setRegistrationUserAdminHttp failed", { error });
       res.status(getStatus(error)).json({ error: getMessage(error) });
     }
   }
