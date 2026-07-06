@@ -5,14 +5,14 @@ import Link from "next/link";
 import { onAuthStateChanged } from "firebase/auth";
 import {
   collection,
+  deleteDoc,
+  doc,
   getDocs,
   getFirestore,
-  doc,
-  deleteDoc,
   updateDoc,
 } from "firebase/firestore";
 import { auth, app } from "../../../lib/firebaseClient";
-import { isAdminEmail } from "../../../lib/admin";
+import { isAdminUser } from "../../../lib/admin";
 import { formatUnitWeightPair, normalizeWeightUnit, type WeightUnit } from "../../../lib/weight";
 
 function toNumberOr(value: any, fallback: number) {
@@ -26,23 +26,18 @@ type ProductRow = {
   name?: string;
   active?: boolean;
   sortOrder?: number;
-
-  // New pricing model (Form A)
   publicPrice?: number;
   currency?: string;
   stock?: number;
-
   unitWeight?: number;
   weightUnit?: WeightUnit;
-
-  // Compatibility (old)
   price?: number;
 };
 
 type DraftById = Record<
   string,
   {
-    publicPrice: string; // keep as string for inputs
+    publicPrice: string;
     stock: string;
     active: boolean;
     unitWeight: string;
@@ -58,31 +53,23 @@ type SaveStateById = Record<
 export default function AdminProductsPage() {
   const [loadingUser, setLoadingUser] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
-
   const [products, setProducts] = useState<ProductRow[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  // Quick Edit state
   const [draft, setDraft] = useState<DraftById>({});
   const [saveState, setSaveState] = useState<SaveStateById>({});
-
   const [query, setQuery] = useState("");
-
-  // ✅ Pagination (client-side)
   const PAGE_SIZE = 40;
   const [page, setPage] = useState(1);
 
-  // Auth gate
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setIsAdmin(isAdminEmail(user?.email));
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      setIsAdmin(await isAdminUser(user));
       setLoadingUser(false);
     });
     return () => unsubscribe();
   }, []);
 
-  // Load products
   useEffect(() => {
     if (!isAdmin) return;
 
@@ -98,10 +85,9 @@ export default function AdminProductsPage() {
         list.sort((a, b) => (a.sortOrder ?? 9999) - (b.sortOrder ?? 9999));
         setProducts(list);
 
-        // Initialize draft from DB values
         const initial: DraftById = {};
         for (const p of list) {
-          const publicPrice = p.publicPrice ?? p.price ?? 0; // compat
+          const publicPrice = p.publicPrice ?? p.price ?? 0;
           const stock = p.stock ?? 0;
           const active = p.active ?? true;
           const unitWeight = p.unitWeight ?? 0;
@@ -135,51 +121,32 @@ export default function AdminProductsPage() {
     });
   }, [products, query]);
 
-  // ✅ Reset to page 1 when filter changes (prevents blank pages)
   useEffect(() => {
     setPage(1);
   }, [query]);
 
-  const totalPages = useMemo(() => {
-    return Math.max(1, Math.ceil(filteredProducts.length / PAGE_SIZE));
-  }, [filteredProducts.length]);
-
+  const totalPages = useMemo(() => Math.max(1, Math.ceil(filteredProducts.length / PAGE_SIZE)), [filteredProducts.length]);
   const pageSafe = Math.min(Math.max(page, 1), totalPages);
-
   const pagedProducts = useMemo(() => {
     const start = (pageSafe - 1) * PAGE_SIZE;
-    const end = start + PAGE_SIZE;
-    return filteredProducts.slice(start, end);
+    return filteredProducts.slice(start, start + PAGE_SIZE);
   }, [filteredProducts, pageSafe]);
 
   function setRowDraft(id: string, patch: Partial<DraftById[string]>) {
-    setDraft((prev) => ({
-      ...prev,
-      [id]: { ...prev[id], ...patch },
-    }));
-    // Clear "saved" badge on change
-    setSaveState((prev) => ({
-      ...prev,
-      [id]: { ...prev[id], saved: false, error: null },
-    }));
+    setDraft((prev) => ({ ...prev, [id]: { ...prev[id], ...patch } }));
+    setSaveState((prev) => ({ ...prev, [id]: { ...prev[id], saved: false, error: null } }));
   }
 
   function isRowDirty(p: ProductRow) {
     const d = draft[p.id];
     if (!d) return false;
 
-    const dbPublicPrice = String(p.publicPrice ?? p.price ?? 0);
-    const dbStock = String(p.stock ?? 0);
-    const dbActive = String(!!(p.active ?? true));
-    const dbUnitWeight = String(p.unitWeight ?? 0);
-    const dbWeightUnit = normalizeWeightUnit(p.weightUnit);
-
     return (
-      d.publicPrice !== dbPublicPrice ||
-      d.stock !== dbStock ||
-      String(d.active) !== dbActive ||
-      d.unitWeight !== dbUnitWeight ||
-      d.weightUnit !== dbWeightUnit
+      d.publicPrice !== String(p.publicPrice ?? p.price ?? 0) ||
+      d.stock !== String(p.stock ?? 0) ||
+      String(d.active) !== String(!!(p.active ?? true)) ||
+      d.unitWeight !== String(p.unitWeight ?? 0) ||
+      d.weightUnit !== normalizeWeightUnit(p.weightUnit)
     );
   }
 
@@ -198,41 +165,17 @@ export default function AdminProductsPage() {
       const weightUnit = normalizeWeightUnit(d.weightUnit);
 
       const db = getFirestore(app);
-      await updateDoc(doc(db, "products", id), {
-        publicPrice,
-        stock,
-        active,
-        unitWeight,
-        weightUnit,
-      });
+      await updateDoc(doc(db, "products", id), { publicPrice, stock, active, unitWeight, weightUnit });
 
-      // Update local products list to reflect saved values
       setProducts((prev) =>
         prev.map((x) =>
-          x.id === id
-            ? {
-                ...x,
-                publicPrice,
-                stock,
-                active,
-                unitWeight,
-                weightUnit,
-              }
-            : x
-        )
+          x.id === id ? { ...x, publicPrice, stock, active, unitWeight, weightUnit } : x,
+        ),
       );
 
-      // Keep input strings consistent after save
       setDraft((prev) => ({
         ...prev,
-        [id]: {
-          ...prev[id],
-          publicPrice: String(publicPrice),
-          stock: String(stock),
-          active,
-          unitWeight: String(unitWeight),
-          weightUnit,
-        },
+        [id]: { ...prev[id], publicPrice: String(publicPrice), stock: String(stock), active, unitWeight: String(unitWeight), weightUnit },
       }));
 
       setSaveState((prev) => ({ ...prev, [id]: { saving: false, saved: true, error: null } }));
@@ -258,17 +201,9 @@ export default function AdminProductsPage() {
         delete copy[id];
         return copy;
       });
-    } catch (e) {
+    } catch {
       alert("Failed to delete.");
     }
-  }
-
-  function goPrev() {
-    setPage((p) => Math.max(1, p - 1));
-  }
-
-  function goNext() {
-    setPage((p) => Math.min(totalPages, p + 1));
   }
 
   if (loadingUser) return <p style={{ padding: 24 }}>Loading user…</p>;
@@ -278,45 +213,22 @@ export default function AdminProductsPage() {
     <main style={{ padding: 24, maxWidth: 1300, margin: "0 auto" }}>
       <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center" }}>
         <h1 style={{ margin: 0 }}>Manage Products</h1>
-
-        {/* ✅ FIX: New must use querystring */}
         <Link href="/admin/products/edit?slug=new">+ New product</Link>
       </div>
 
       <div style={{ display: "flex", gap: 12, marginTop: 12, alignItems: "center" }}>
-        <input
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search by slug or name…"
-          style={{ flex: 1, padding: 8 }}
-        />
-
+        <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search by slug or name…" style={{ flex: 1, padding: 8 }} />
         <div style={{ color: "#666", fontSize: 14, whiteSpace: "nowrap" }}>
-          Showing <strong>{pagedProducts.length}</strong> on page{" "}
-          <strong>{pageSafe}</strong> / {totalPages}{" "}
-          <span style={{ marginLeft: 8 }}>
-            ({filteredProducts.length} filtered / {products.length} total)
-          </span>
+          Showing <strong>{pagedProducts.length}</strong> on page <strong>{pageSafe}</strong> / {totalPages}
+          <span style={{ marginLeft: 8 }}>({filteredProducts.length} filtered / {products.length} total)</span>
         </div>
       </div>
 
-      {/* ✅ Pagination controls */}
       <div style={{ display: "flex", gap: 10, alignItems: "center", marginTop: 10, flexWrap: "wrap" }}>
-        <button type="button" onClick={goPrev} disabled={pageSafe <= 1}>
-          Prev
-        </button>
-
-        <span style={{ color: "#444", fontSize: 14 }}>
-          Page <strong>{pageSafe}</strong> of <strong>{totalPages}</strong>
-        </span>
-
-        <button type="button" onClick={goNext} disabled={pageSafe >= totalPages}>
-          Next
-        </button>
-
-        <span style={{ marginLeft: 6, color: "#888", fontSize: 13 }}>
-          {PAGE_SIZE} per page
-        </span>
+        <button type="button" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={pageSafe <= 1}>Prev</button>
+        <span style={{ color: "#444", fontSize: 14 }}>Page <strong>{pageSafe}</strong> of <strong>{totalPages}</strong></span>
+        <button type="button" onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={pageSafe >= totalPages}>Next</button>
+        <span style={{ marginLeft: 6, color: "#888", fontSize: 13 }}>{PAGE_SIZE} per page</span>
       </div>
 
       {loadingProducts ? (
@@ -328,19 +240,18 @@ export default function AdminProductsPage() {
           <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 1120 }}>
             <thead>
               <tr>
-                <th style={{ borderBottom: "1px solid #ddd", textAlign: "left", padding: 8 }}>Slug</th>
-                <th style={{ borderBottom: "1px solid #ddd", textAlign: "left", padding: 8 }}>Name</th>
-                <th style={{ borderBottom: "1px solid #ddd", textAlign: "left", padding: 8 }}>Currency</th>
-                <th style={{ borderBottom: "1px solid #ddd", textAlign: "left", padding: 8 }}>Public price</th>
-                <th style={{ borderBottom: "1px solid #ddd", textAlign: "left", padding: 8 }}>Stock</th>
-                <th style={{ borderBottom: "1px solid #ddd", textAlign: "left", padding: 8 }}>Unit weight</th>
-                <th style={{ borderBottom: "1px solid #ddd", textAlign: "left", padding: 8 }}>Unit</th>
-                <th style={{ borderBottom: "1px solid #ddd", textAlign: "left", padding: 8 }}>Both units</th>
-                <th style={{ borderBottom: "1px solid #ddd", textAlign: "left", padding: 8 }}>Active</th>
-                <th style={{ borderBottom: "1px solid #ddd", textAlign: "left", padding: 8 }}>Actions</th>
+                <th style={th}>Slug</th>
+                <th style={th}>Name</th>
+                <th style={th}>Currency</th>
+                <th style={th}>Public price</th>
+                <th style={th}>Stock</th>
+                <th style={th}>Unit weight</th>
+                <th style={th}>Unit</th>
+                <th style={th}>Both units</th>
+                <th style={th}>Active</th>
+                <th style={th}>Actions</th>
               </tr>
             </thead>
-
             <tbody>
               {pagedProducts.map((p) => {
                 const d = draft[p.id] || {
@@ -350,105 +261,33 @@ export default function AdminProductsPage() {
                   unitWeight: String(p.unitWeight ?? 0),
                   weightUnit: normalizeWeightUnit(p.weightUnit),
                 };
-
                 const rowState = saveState[p.id] || {};
                 const dirty = isRowDirty(p);
                 const weightPreview = formatUnitWeightPair(d.unitWeight, d.weightUnit);
 
                 return (
                   <tr key={p.id}>
-                    <td style={{ borderBottom: "1px solid #f2f2f2", padding: 8 }}>
-                      {p.slug || p.id}
-                    </td>
-
-                    <td style={{ borderBottom: "1px solid #f2f2f2", padding: 8 }}>
-                      {p.name || ""}
-                    </td>
-
-                    <td style={{ borderBottom: "1px solid #f2f2f2", padding: 8 }}>
-                      {p.currency || "CAD"}
-                    </td>
-
-                    <td style={{ borderBottom: "1px solid #f2f2f2", padding: 8 }}>
-                      <input
-                        type="number"
-                        step="0.01"
-                        value={d.publicPrice}
-                        onChange={(e) => setRowDraft(p.id, { publicPrice: e.target.value })}
-                        style={{ width: 120, padding: 6 }}
-                      />
-                    </td>
-
-                    <td style={{ borderBottom: "1px solid #f2f2f2", padding: 8 }}>
-                      <input
-                        type="number"
-                        value={d.stock}
-                        onChange={(e) => setRowDraft(p.id, { stock: e.target.value })}
-                        style={{ width: 95, padding: 6 }}
-                      />
-                    </td>
-
-                    <td style={{ borderBottom: "1px solid #f2f2f2", padding: 8 }}>
-                      <input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        value={d.unitWeight}
-                        onChange={(e) => setRowDraft(p.id, { unitWeight: e.target.value })}
-                        style={{ width: 110, padding: 6 }}
-                      />
-                    </td>
-
-                    <td style={{ borderBottom: "1px solid #f2f2f2", padding: 8 }}>
-                      <select
-                        value={d.weightUnit}
-                        onChange={(e) => setRowDraft(p.id, { weightUnit: normalizeWeightUnit(e.target.value) })}
-                        style={{ width: 76, padding: 6 }}
-                      >
+                    <td style={td}>{p.slug || p.id}</td>
+                    <td style={td}>{p.name || ""}</td>
+                    <td style={td}>{p.currency || "CAD"}</td>
+                    <td style={td}><input type="number" step="0.01" value={d.publicPrice} onChange={(e) => setRowDraft(p.id, { publicPrice: e.target.value })} style={{ width: 120, padding: 6 }} /></td>
+                    <td style={td}><input type="number" value={d.stock} onChange={(e) => setRowDraft(p.id, { stock: e.target.value })} style={{ width: 95, padding: 6 }} /></td>
+                    <td style={td}><input type="number" step="0.01" min="0" value={d.unitWeight} onChange={(e) => setRowDraft(p.id, { unitWeight: e.target.value })} style={{ width: 110, padding: 6 }} /></td>
+                    <td style={td}>
+                      <select value={d.weightUnit} onChange={(e) => setRowDraft(p.id, { weightUnit: normalizeWeightUnit(e.target.value) })} style={{ width: 76, padding: 6 }}>
                         <option value="lb">lb</option>
                         <option value="kg">kg</option>
                       </select>
                     </td>
-
-                    <td style={{ borderBottom: "1px solid #f2f2f2", padding: 8, color: "#64748b", fontSize: 12, whiteSpace: "nowrap" }}>
-                      {weightPreview || "—"}
-                    </td>
-
-                    <td style={{ borderBottom: "1px solid #f2f2f2", padding: 8 }}>
-                      <input
-                        type="checkbox"
-                        checked={!!d.active}
-                        onChange={(e) => setRowDraft(p.id, { active: e.target.checked })}
-                      />
-                    </td>
-
-                    <td style={{ borderBottom: "1px solid #f2f2f2", padding: 8 }}>
+                    <td style={{ ...td, color: "#64748b", fontSize: 12, whiteSpace: "nowrap" }}>{weightPreview || "—"}</td>
+                    <td style={td}><input type="checkbox" checked={!!d.active} onChange={(e) => setRowDraft(p.id, { active: e.target.checked })} /></td>
+                    <td style={td}>
                       <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
-                        {/* ✅ FIX: Edit must use querystring */}
-                        <Link href={`/admin/products/edit?slug=${encodeURIComponent(p.id)}`}>
-                          Edit
-                        </Link>
-
-                        <button
-                          type="button"
-                          onClick={() => saveRow(p)}
-                          disabled={rowState.saving || !dirty}
-                          style={{ padding: "6px 10px" }}
-                        >
-                          {rowState.saving ? "Saving…" : "Save"}
-                        </button>
-
-                        {rowState.saved ? (
-                          <span style={{ color: "green", fontSize: 13 }}>Saved</span>
-                        ) : null}
-
-                        {rowState.error ? (
-                          <span style={{ color: "red", fontSize: 13 }}>{rowState.error}</span>
-                        ) : null}
-
-                        <button type="button" onClick={() => handleDelete(p.id)}>
-                          Delete
-                        </button>
+                        <Link href={`/admin/products/edit?slug=${encodeURIComponent(p.id)}`}>Edit</Link>
+                        <button type="button" onClick={() => saveRow(p)} disabled={rowState.saving || !dirty} style={{ padding: "6px 10px" }}>{rowState.saving ? "Saving…" : "Save"}</button>
+                        {rowState.saved ? <span style={{ color: "green", fontSize: 13 }}>Saved</span> : null}
+                        {rowState.error ? <span style={{ color: "red", fontSize: 13 }}>{rowState.error}</span> : null}
+                        <button type="button" onClick={() => handleDelete(p.id)}>Delete</button>
                       </div>
                     </td>
                   </tr>
@@ -458,11 +297,13 @@ export default function AdminProductsPage() {
           </table>
 
           <p style={{ color: "#666", marginTop: 10, fontSize: 13 }}>
-            Tip: use <strong>Save</strong> to quickly update Public price, Stock, Unit weight, Weight unit, and Active without opening the product.
-            Use <strong>Edit</strong> for tiers, images, and details. Weight preview always shows both lb and kg.
+            Tip: use <strong>Save</strong> to quickly update Public price, Stock, Unit weight, Weight unit, and Active without opening the product. Use <strong>Edit</strong> for tiers, images, and details. Weight preview always shows both lb and kg.
           </p>
         </div>
       )}
     </main>
   );
 }
+
+const th = { borderBottom: "1px solid #ddd", textAlign: "left" as const, padding: 8 };
+const td = { borderBottom: "1px solid #f2f2f2", padding: 8 };
