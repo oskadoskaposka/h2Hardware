@@ -299,6 +299,10 @@ async function setRegistrationUserAdminCore(
   makeAdmin: boolean,
   admin: { uid: string; email: string; isDefaultAdmin?: boolean }
 ) {
+  if (!admin.isDefaultAdmin) {
+    throw new HttpsError("permission-denied", "Only super admins can change admin access.");
+  }
+
   if (!requestId) {
     throw new HttpsError("invalid-argument", "requestId is required.");
   }
@@ -332,7 +336,7 @@ async function setRegistrationUserAdminCore(
     throw new HttpsError("failed-precondition", "Request has no Firebase user to update.");
   }
 
-  if (!makeAdmin && email === admin.email && !admin.isDefaultAdmin) {
+  if (!makeAdmin && email === admin.email) {
     throw new HttpsError("permission-denied", "You cannot remove your own admin access.");
   }
 
