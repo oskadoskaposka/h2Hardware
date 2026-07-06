@@ -14,7 +14,7 @@ import {
 } from "firebase/firestore";
 
 import { auth, app } from "../../../lib/firebaseClient";
-import { isAdminEmail } from "../../../lib/admin";
+import { isAdminUser } from "../../../lib/admin";
 
 const CONFIG_COLLECTION = "site_config";
 const CONFIG_DOC = "catalog_menu";
@@ -52,8 +52,8 @@ export default function AdminCategoryHighlightsPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setIsAdmin(isAdminEmail(user?.email));
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      setIsAdmin(await isAdminUser(user));
       setLoadingUser(false);
     });
 
