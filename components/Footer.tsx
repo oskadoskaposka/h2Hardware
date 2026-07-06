@@ -30,7 +30,7 @@ export default function Footer() {
         <div className={styles.column}>
           <h4 className={styles.title}>Follow</h4>
           <a
-            href="https://www.facebook.com"
+            href="https://www.facebook.com/profile.php?id=61574305463970"
             className={styles.link}
             target="_blank"
             rel="noopener noreferrer"
