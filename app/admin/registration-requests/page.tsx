@@ -25,6 +25,7 @@ type RegistrationRequestDoc = {
   status?: string;
   authUid?: string;
   archived?: boolean;
+  admin?: boolean;
   createdAt?: any;
 };
 
@@ -33,6 +34,7 @@ type UserActionResult = {
   created?: boolean;
   uid?: string;
   email?: string;
+  admin?: boolean;
 };
 
 function toSearchText(item: RegistrationRequestDoc) {
@@ -45,6 +47,7 @@ function toSearchText(item: RegistrationRequestDoc) {
     item.shippingAddress || "",
     item.status || "",
     item.archived ? "archived" : "active",
+    item.admin ? "admin" : "customer",
     item.authUid || "",
   ]
     .join(" ")
@@ -81,14 +84,18 @@ async function sendAccountSetupEmail(email: string) {
   }
 }
 
-async function callAdminRegistrationAction(action: "approve" | "disable", requestId: string) {
+async function getAdminToken() {
   const user = auth.currentUser;
 
   if (!user) {
     throw new Error("Admin login is required.");
   }
 
-  const token = await user.getIdToken();
+  return user.getIdToken();
+}
+
+async function callAdminRegistrationAction(action: "approve" | "disable", requestId: string) {
+  const token = await getAdminToken();
   const response = await fetch(`/api/admin/registration-requests/${action}`, {
     method: "POST",
     headers: {
@@ -107,13 +114,33 @@ async function callAdminRegistrationAction(action: "approve" | "disable", reques
   return data as UserActionResult;
 }
 
+async function callAdminRoleAction(requestId: string, admin: boolean) {
+  const token = await getAdminToken();
+  const response = await fetch("/api/admin/registration-requests/set-admin", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ requestId, admin }),
+  });
+
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    throw new Error(String(data?.error || `Action failed (${response.status}).`));
+  }
+
+  return data as UserActionResult;
+}
+
 export default function AdminRegistrationRequestsPage() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
   const [items, setItems] = useState<RegistrationRequestDoc[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [actionMessage, setActionMessage] = useState<string | null>(null);
-  const [busyAction, setBusyAction] = useState<{ id: string; type: "approve" | "disable" | "archive" | "restore" } | null>(null);
+  const [busyAction, setBusyAction] = useState<{ id: string; type: "approve" | "disable" | "archive" | "restore" | "admin" } | null>(null);
   const [search, setSearch] = useState("");
   const [showArchived, setShowArchived] = useState(false);
 
@@ -151,6 +178,7 @@ export default function AdminRegistrationRequestsPage() {
           status: String(data.status ?? "new").trim(),
           authUid: String(data.authUid ?? "").trim(),
           archived: data.archived === true,
+          admin: data.admin === true,
           createdAt: data.createdAt,
         };
       });
@@ -242,6 +270,40 @@ export default function AdminRegistrationRequestsPage() {
     }
   }
 
+  async function handleAdminRole(item: RegistrationRequestDoc, makeAdmin: boolean) {
+    const message = makeAdmin
+      ? `Give admin access to ${item.email}? This user will be able to access admin pages and approve/disable users.`
+      : `Remove admin access from ${item.email}?`;
+
+    if (!window.confirm(message)) return;
+
+    try {
+      setError(null);
+      setActionMessage(null);
+      setBusyAction({ id: item.id, type: "admin" });
+
+      const data = await callAdminRoleAction(item.id, makeAdmin);
+
+      setItems((previous) =>
+        previous.map((current) =>
+          current.id === item.id
+            ? { ...current, admin: data.admin === true, authUid: data.uid || current.authUid }
+            : current,
+        ),
+      );
+
+      setActionMessage(
+        makeAdmin
+          ? `Admin access granted to ${item.email}. Ask the user to log out and log in again to refresh access.`
+          : `Admin access removed from ${item.email}.`,
+      );
+    } catch (e) {
+      setError(getReadableError(e));
+    } finally {
+      setBusyAction(null);
+    }
+  }
+
   async function handleArchive(item: RegistrationRequestDoc, archived: boolean) {
     const message = archived
       ? `Archive ${item.email}? It will be hidden from the default list, but the history and Firebase user will be kept.`
@@ -312,7 +374,7 @@ export default function AdminRegistrationRequestsPage() {
         </div>
 
         <div style={{ marginTop: 14, background: "rgba(185, 28, 28, 0.06)", border: "1px solid rgba(185, 28, 28, 0.18)", borderLeft: "6px solid #b91c1c", borderRadius: 12, padding: 14, color: "#7f1d1d", fontSize: 13, fontWeight: 700 }}>
-          Approve creates or enables the Firebase Auth user and sends an account setup email. Disable blocks login access without deleting the request history. Archive only hides the request from the default admin list.
+          Approve creates or enables the Firebase Auth user and sends an account setup email. Disable blocks login access without deleting the request history. Admin access lets an approved user access admin pages and perform admin actions.
         </div>
 
         {actionMessage ? <div style={successStyle}>{actionMessage}</div> : null}
@@ -353,9 +415,10 @@ export default function AdminRegistrationRequestsPage() {
             {filtered.map((item) => {
               const date = item.createdAt?.toDate?.() instanceof Date ? item.createdAt.toDate() : null;
               const status = (item.status || "new").toLowerCase();
-              const displayStatus = item.archived ? "archived" : status;
+              const displayStatus = item.archived ? "archived" : item.admin ? "admin" : status;
               const isCurrentAction = busyAction?.id === item.id;
               const anyActionBusy = busyAction !== null;
+              const canManageAdmin = !item.archived && status === "approved";
 
               return (
                 <article key={item.id} style={{ background: item.archived ? "#f8fafc" : "#fff", border: "1px solid #e2e8f0", borderRadius: 14, padding: 14, boxShadow: "0 1px 0 rgba(15,23,42,.03)", opacity: item.archived ? 0.82 : 1 }}>
@@ -374,6 +437,7 @@ export default function AdminRegistrationRequestsPage() {
                     <InfoRow label="Phone" value={item.phone ? <a href={`tel:${item.phone.replace(/[^+\d]/g, "")}`} style={linkStyle}>{item.phone}</a> : "—"} />
                     <InfoRow label="Company" value={item.company || "—"} />
                     <InfoRow label="Delivery address" value={item.shippingAddress || "—"} />
+                    <InfoRow label="Admin access" value={item.admin ? "Yes" : "No"} />
                     {item.authUid ? <InfoRow label="Firebase UID" value={item.authUid} /> : null}
                   </div>
 
@@ -386,6 +450,11 @@ export default function AdminRegistrationRequestsPage() {
                     {!item.archived && status === "approved" ? (
                       <button type="button" onClick={() => handleDisable(item)} disabled={anyActionBusy} style={secondaryButtonStyle}>
                         {isCurrentAction && busyAction?.type === "disable" ? "Disabling…" : "Disable User"}
+                      </button>
+                    ) : null}
+                    {canManageAdmin ? (
+                      <button type="button" onClick={() => handleAdminRole(item, !item.admin)} disabled={anyActionBusy} style={item.admin ? dangerButtonStyle : secondaryButtonStyle}>
+                        {isCurrentAction && busyAction?.type === "admin" ? "Updating admin…" : item.admin ? "Remove Admin" : "Make Admin"}
                       </button>
                     ) : null}
                     <button type="button" onClick={() => handleArchive(item, !item.archived)} disabled={anyActionBusy} style={secondaryButtonStyle}>
@@ -409,6 +478,7 @@ const successStyle = { marginTop: 14, background: "rgba(16, 185, 129, 0.08)", bo
 const errorStyle = { marginTop: 16, background: "#fff", border: "1px solid rgba(185,28,28,.25)", borderLeft: "6px solid #b91c1c", borderRadius: 12, padding: 14 };
 const emptyStyle = { marginTop: 16, background: "#fff", border: "1px solid #e2e8f0", borderRadius: 12, padding: 14 };
 const secondaryButtonStyle = { minHeight: 42, padding: "0 14px", borderRadius: 10, border: "1px solid #cbd5e1", background: "#fff", color: "#0f172a", cursor: "pointer", fontWeight: 900 };
+const dangerButtonStyle = { minHeight: 42, padding: "0 14px", borderRadius: 10, border: "1px solid rgba(185,28,28,.35)", background: "rgba(185,28,28,.06)", color: "#991b1b", cursor: "pointer", fontWeight: 900 };
 
 function primaryButtonStyle(dimmed: boolean) {
   return { minHeight: 38, padding: "0 14px", borderRadius: 10, border: "none", background: "#b91c1c", color: "#fff", cursor: dimmed ? "not-allowed" : "pointer", fontWeight: 900, opacity: dimmed ? 0.55 : 1 };
@@ -417,7 +487,8 @@ function primaryButtonStyle(dimmed: boolean) {
 function statusStyle(status: string) {
   const disabled = status === "disabled";
   const archived = status === "archived";
-  return { display: "inline-flex", alignItems: "center", justifyContent: "center", minWidth: 84, height: 32, padding: "0 12px", borderRadius: 999, background: archived ? "rgba(15, 23, 42, 0.08)" : disabled ? "rgba(15, 23, 42, 0.08)" : "rgba(185, 28, 28, 0.08)", color: archived ? "#475569" : disabled ? "#334155" : "#b91c1c", border: archived ? "1px solid rgba(15, 23, 42, 0.16)" : disabled ? "1px solid rgba(15, 23, 42, 0.16)" : "1px solid rgba(185, 28, 28, 0.18)", fontSize: 12, fontWeight: 900, textTransform: "uppercase" as const, letterSpacing: "0.04em" };
+  const admin = status === "admin";
+  return { display: "inline-flex", alignItems: "center", justifyContent: "center", minWidth: 84, height: 32, padding: "0 12px", borderRadius: 999, background: archived ? "rgba(15, 23, 42, 0.08)" : disabled ? "rgba(15, 23, 42, 0.08)" : admin ? "rgba(16, 185, 129, 0.10)" : "rgba(185, 28, 28, 0.08)", color: archived ? "#475569" : disabled ? "#334155" : admin ? "#047857" : "#b91c1c", border: archived ? "1px solid rgba(15, 23, 42, 0.16)" : disabled ? "1px solid rgba(15, 23, 42, 0.16)" : admin ? "1px solid rgba(16, 185, 129, 0.22)" : "1px solid rgba(185, 28, 28, 0.18)", fontSize: 12, fontWeight: 900, textTransform: "uppercase" as const, letterSpacing: "0.04em" };
 }
 
 function InfoRow({ label, value }: { label: string; value: ReactNode }) {
