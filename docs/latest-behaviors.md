@@ -82,6 +82,60 @@ When an admin approves a registration request:
 - The customer profile includes name, company, email, phone, and delivery address when available.
 - The account setup email is sent using the custom H2 Hardware email flow.
 
+## Admin and super admin behavior
+
+Admin access has two levels.
+
+Super admins:
+
+- Are fixed fallback admins in code and Firestore Rules.
+- Can access admin pages.
+- Can approve or re-enable users from Registration Requests.
+- Can disable users from Registration Requests.
+- Can grant admin access using `Make Admin`.
+- Can remove admin access using `Remove Admin`.
+- Keep admin access even if dynamic admin claims are changed.
+
+Current super admin emails:
+
+```txt
+admin@starpro.com
+admin@h2hardware.com
+admin@h2hardwareltd.com
+maia@h2hardwareltd.com
+```
+
+Operational admins:
+
+- Are approved users who received the Firebase Auth custom claim `admin: true`.
+- Can access admin pages after logging out and logging in again.
+- Can perform admin operations allowed by Firestore Rules and server Functions.
+- Cannot grant or remove admin access for other users.
+
+Important behavior:
+
+- The `Make Admin` button sets a Firebase Auth custom claim: `admin: true`.
+- The `Remove Admin` button removes that custom claim.
+- Only super admins can use `Make Admin` and `Remove Admin`.
+- A user promoted to admin must log out and log in again so the Firebase token refreshes with the new claim.
+- Firestore Rules must include `request.auth.token.admin == true` inside `isAdmin()` so operational admins can read admin data.
+
+Recommended Firestore Rules helper:
+
+```js
+function isAdmin() {
+  return isSignedIn() && (
+    request.auth.token.admin == true
+    || request.auth.token.email in [
+      "admin@starpro.com",
+      "admin@h2hardware.com",
+      "admin@h2hardwareltd.com",
+      "maia@h2hardwareltd.com"
+    ]
+  );
+}
+```
+
 ## Sample request behavior
 
 The sample request form requires phone number and email address.
@@ -100,6 +154,12 @@ Optional fields:
 
 The form no longer requires a website or name card image URL before submitting.
 
+After submitting a sample request:
+
+- The customer sees a confirmation message on the page.
+- H2 Hardware receives the internal sample request notification.
+- The customer receives an automatic confirmation email saying the request was received and the team will organize the sample shipment as soon as possible.
+
 ## Firestore rules reminder
 
 The Firestore rules must allow the `phone` and `email` fields in `registration_requests` and `sample_requests`.
@@ -110,3 +170,4 @@ The current public create rules should validate:
 - `sample_requests.phone` as a required string with a reasonable max length.
 - `sample_requests.email` as a required valid email string with a reasonable max length.
 - `sample_requests.website` as optional.
+- `isAdmin()` as either a super admin email or `request.auth.token.admin == true`.
