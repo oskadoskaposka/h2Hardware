@@ -8,7 +8,11 @@ import * as logger from "firebase-functions/logger";
 import nodemailer from "nodemailer";
 import { randomBytes } from "crypto";
 
-export { approveRegistrationRequestHttp, disableRegistrationUserHttp } from "./adminActionsHttp";
+export {
+  approveRegistrationRequestHttp,
+  disableRegistrationUserHttp,
+  setRegistrationUserAdminHttp,
+} from "./adminActionsHttp";
 
 if (!getApps().length) {
   initializeApp();
@@ -26,6 +30,7 @@ const DEFAULT_ADMIN_EMAILS = [
   "maia@h2hardwareltd.com",
   "admin@starpro.com",
   "admin@h2hardware.com",
+  "admin@h2hardwareltd.com",
 ];
 
 function escapeHtml(value: unknown) {
@@ -114,14 +119,17 @@ function configuredAdminEmails() {
   );
 }
 
-async function assertAdmin(authData: { uid?: string; token?: { email?: string } } | undefined) {
+async function assertAdmin(authData: { uid?: string; token?: { email?: string; admin?: unknown } } | undefined) {
   const adminEmail = String(authData?.token?.email || "").trim().toLowerCase();
 
   if (!authData?.uid || !adminEmail) {
     throw new HttpsError("unauthenticated", "Admin login is required.");
   }
 
-  if (!configuredAdminEmails().has(adminEmail)) {
+  const isDefaultAdmin = configuredAdminEmails().has(adminEmail);
+  const isClaimAdmin = authData.token?.admin === true;
+
+  if (!isDefaultAdmin && !isClaimAdmin) {
     throw new HttpsError("permission-denied", "Only admins can perform this action.");
   }
 
