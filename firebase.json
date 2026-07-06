@@ -111,6 +111,13 @@
         }
       },
       {
+        "source": "/api/admin/registration-requests/set-admin",
+        "function": {
+          "functionId": "setRegistrationUserAdminHttp",
+          "region": "us-central1"
+        }
+      },
+      {
         "source": "/api/auth/password-reset",
         "function": {
           "functionId": "sendAccountAccessEmailHttp",
