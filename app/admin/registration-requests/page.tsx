@@ -13,7 +13,7 @@ import {
 } from "firebase/firestore";
 
 import { auth, app } from "../../../lib/firebaseClient";
-import { isAdminEmail } from "../../../lib/admin";
+import { isAdminUser } from "../../../lib/admin";
 
 type RegistrationRequestDoc = {
   id: string;
@@ -145,8 +145,8 @@ export default function AdminRegistrationRequestsPage() {
   const [showArchived, setShowArchived] = useState(false);
 
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (user) => {
-      setIsAdmin(isAdminEmail(user?.email));
+    const unsub = onAuthStateChanged(auth, async (user) => {
+      setIsAdmin(await isAdminUser(user));
     });
 
     return () => unsub();
