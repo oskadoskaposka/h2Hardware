@@ -20,3 +20,15 @@ export const ADMIN_EMAILS = Array.from(
 export function isAdminEmail(email: string | null | undefined) {
   return !!email && ADMIN_EMAILS.includes(email.trim().toLowerCase());
 }
+
+export async function isAdminUser(user: any) {
+  if (!user) return false;
+  if (isAdminEmail(user.email)) return true;
+
+  try {
+    const token = await user.getIdTokenResult();
+    return token.claims?.admin === true;
+  } catch {
+    return false;
+  }
+}
