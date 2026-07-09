@@ -1,44 +1,109 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useState } from "react";
-import { addDoc, collection, getFirestore, serverTimestamp } from "firebase/firestore";
-import { app } from "../../lib/firebaseClient";
+import { FormEvent, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { onAuthStateChanged } from "firebase/auth";
+import {
+  addDoc,
+  collection,
+  doc,
+  getDoc,
+  getFirestore,
+  serverTimestamp,
+} from "firebase/firestore";
+import { auth, app } from "../../lib/firebaseClient";
 
 type FormState = {
   companyName: string;
   contactName: string;
-  website: string;
   phone: string;
   email: string;
   deliveryAddress: string;
 };
 
+type CustomerProfile = {
+  company?: string;
+  companyName?: string;
+  name?: string;
+  contactName?: string;
+  phone?: string;
+  email?: string;
+  shippingAddress?: string;
+  deliveryAddress?: string;
+};
+
 const THANK_YOU_TEXT =
   "Thank you. We received your sample request and will organize everything to send your sample as soon as possible.";
+
+const EMPTY_FORM: FormState = {
+  companyName: "",
+  contactName: "",
+  phone: "",
+  email: "",
+  deliveryAddress: "",
+};
 
 const CONTACT_PHONE = "+1 (226) 788-1924";
 const CONTACT_PHONE_LINK = "tel:+12267881924";
 const CONTACT_EMAIL = "info@h2hardwareltd.com";
 const CONTACT_EMAIL_LINK = "mailto:info@h2hardwareltd.com";
+const CONTACT_ADDRESS = "4510 10 St NE, Calgary, AB T2E 6K3";
 
 function isValidEmail(value: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
 }
 
 export default function SampleRequestPage() {
-  const [form, setForm] = useState<FormState>({
-    companyName: "",
-    contactName: "",
-    website: "",
-    phone: "",
-    email: "",
-    deliveryAddress: "",
-  });
+  const router = useRouter();
+  const [form, setForm] = useState<FormState>(EMPTY_FORM);
 
+  const [authReady, setAuthReady] = useState(false);
+  const [loadingProfile, setLoadingProfile] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string>("");
   const [successMsg, setSuccessMsg] = useState<string>("");
+
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, async (user) => {
+      setSuccessMsg("");
+      setErrorMsg("");
+
+      if (!user) {
+        setAuthReady(true);
+        setForm(EMPTY_FORM);
+        router.replace("/registration-request");
+        return;
+      }
+
+      setAuthReady(true);
+      setLoadingProfile(true);
+
+      try {
+        const db = getFirestore(app);
+        const snap = await getDoc(doc(db, "customers", user.uid));
+        const data = snap.exists() ? (snap.data() as CustomerProfile) : {};
+
+        setForm({
+          companyName: String(data.company ?? data.companyName ?? "").trim(),
+          contactName: String(data.name ?? data.contactName ?? user.displayName ?? "").trim(),
+          phone: String(data.phone ?? "").trim(),
+          email: String(data.email ?? user.email ?? "").trim(),
+          deliveryAddress: String(data.shippingAddress ?? data.deliveryAddress ?? "").trim(),
+        });
+      } catch (e: any) {
+        setForm((current) => ({
+          ...current,
+          email: String(user.email ?? "").trim(),
+        }));
+        setErrorMsg(e?.message ?? "Could not load your account details.");
+      } finally {
+        setLoadingProfile(false);
+      }
+    });
+
+    return () => unsub();
+  }, [router]);
 
   function update<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -83,6 +148,12 @@ export default function SampleRequestPage() {
     setErrorMsg("");
     setSuccessMsg("");
 
+    const user = auth.currentUser;
+    if (!user) {
+      router.replace("/registration-request");
+      return;
+    }
+
     const validation = validate();
     if (validation) {
       setErrorMsg(validation);
@@ -95,9 +166,10 @@ export default function SampleRequestPage() {
       const db = getFirestore(app);
 
       await addDoc(collection(db, "sample_requests"), {
+        uid: user.uid,
+        userEmail: user.email ?? "",
         companyName: form.companyName.trim(),
         contactName: form.contactName.trim(),
-        website: form.website.trim(),
         phone: form.phone.trim(),
         email: form.email.trim(),
         deliveryAddress: form.deliveryAddress.trim(),
@@ -107,19 +179,32 @@ export default function SampleRequestPage() {
       });
 
       setSuccessMsg(THANK_YOU_TEXT);
-      setForm({
-        companyName: "",
-        contactName: "",
-        website: "",
-        phone: "",
-        email: "",
-        deliveryAddress: "",
-      });
     } catch (e: any) {
       setErrorMsg(e?.message ?? "Failed to submit the request.");
     } finally {
       setSubmitting(false);
     }
+  }
+
+  if (!authReady || loadingProfile) {
+    return (
+      <main className="page">
+        <div className="wrap">
+          <section className="card loadingCard">
+            <h1>Loading sample request…</h1>
+            <p className="muted">We are loading your account details.</p>
+          </section>
+        </div>
+        <style jsx>{`
+          .page { min-height: 100vh; background: #f4f6f8; padding: 24px 0 60px; }
+          .wrap { max-width: 1180px; margin: 0 auto; padding: 0 18px; }
+          .card { background: #fff; border: 1px solid #e2e8f0; border-radius: 16px; padding: 18px; box-shadow: 0 6px 18px rgba(0, 0, 0, 0.05); }
+          .loadingCard { max-width: 640px; margin: 0 auto; }
+          h1 { margin: 0; font-size: 28px; line-height: 1.1; font-weight: 950; color: #0f172a; }
+          .muted { margin: 8px 0 0; color: #64748b; font-size: 13px; line-height: 1.45; }
+        `}</style>
+      </main>
+    );
   }
 
   return (
@@ -130,8 +215,8 @@ export default function SampleRequestPage() {
             <div className="eyebrow">H2 Hardware</div>
             <h1>Sample Request</h1>
             <p>
-              Please fill in the information below. We will review your request
-              and contact you about the sample.
+              This form is available for logged-in customers only. Your account
+              details are loaded automatically below.
             </p>
           </div>
 
@@ -139,8 +224,8 @@ export default function SampleRequestPage() {
             <Link href="/catalog" className="ghostBtn">
               Back to catalog
             </Link>
-            <Link href="/" className="ghostBtn">
-              Home
+            <Link href="/login" className="ghostBtn">
+              My account
             </Link>
           </div>
         </div>
@@ -149,8 +234,8 @@ export default function SampleRequestPage() {
           <section className="card">
             <h2>Request form</h2>
             <p className="muted">
-              Please provide the company information, the contact person who will
-              receive the sample, and the delivery address.
+              Please review your account information and confirm the delivery
+              address for the sample.
             </p>
 
             <form onSubmit={handleSubmit} className="form">
@@ -161,6 +246,7 @@ export default function SampleRequestPage() {
                     value={form.companyName}
                     onChange={(e) => update("companyName", e.target.value)}
                     placeholder="e.g. ABC Garage Doors Ltd."
+                    autoComplete="organization"
                   />
                 </div>
 
@@ -170,18 +256,9 @@ export default function SampleRequestPage() {
                     value={form.contactName}
                     onChange={(e) => update("contactName", e.target.value)}
                     placeholder="e.g. John Smith"
+                    autoComplete="name"
                   />
                 </div>
-              </div>
-
-              <div className="field">
-                <label>Website</label>
-                <input
-                  value={form.website}
-                  onChange={(e) => update("website", e.target.value)}
-                  placeholder="Company website"
-                />
-                <div className="help">Optional.</div>
               </div>
 
               <div className="fieldRow">
@@ -191,6 +268,7 @@ export default function SampleRequestPage() {
                     value={form.phone}
                     onChange={(e) => update("phone", e.target.value)}
                     placeholder="+1 403 000 0000"
+                    autoComplete="tel"
                   />
                 </div>
 
@@ -201,6 +279,7 @@ export default function SampleRequestPage() {
                     value={form.email}
                     onChange={(e) => update("email", e.target.value)}
                     placeholder="name@company.com"
+                    autoComplete="email"
                   />
                 </div>
               </div>
@@ -211,8 +290,13 @@ export default function SampleRequestPage() {
                   value={form.deliveryAddress}
                   onChange={(e) => update("deliveryAddress", e.target.value)}
                   placeholder="Street, city, province, postal code"
+                  autoComplete="street-address"
                   rows={5}
                 />
+              </div>
+
+              <div className="help">
+                If any information is missing or outdated, adjust it here before submitting.
               </div>
 
               {errorMsg ? <div className="error">{errorMsg}</div> : null}
@@ -259,6 +343,11 @@ export default function SampleRequestPage() {
                   <a href={CONTACT_EMAIL_LINK} className="contactValue">
                     {CONTACT_EMAIL}
                   </a>
+                </div>
+
+                <div className="contactItem">
+                  <div className="contactLabel">Address</div>
+                  <div className="contactValue">{CONTACT_ADDRESS}</div>
                 </div>
               </div>
             </section>
