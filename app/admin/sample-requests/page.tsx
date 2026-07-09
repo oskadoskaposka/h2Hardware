@@ -12,7 +12,6 @@ type SampleRequestDoc = {
   id: string;
   companyName: string;
   contactName?: string;
-  website?: string;
   phone?: string;
   email?: string;
   deliveryAddress: string;
@@ -26,7 +25,6 @@ function toSearchText(item: SampleRequestDoc) {
     item.id,
     item.companyName,
     item.contactName || "",
-    item.website || "",
     item.phone || "",
     item.email || "",
     item.deliveryAddress || "",
@@ -73,7 +71,6 @@ export default function AdminSampleRequestsPage() {
             id: d.id,
             companyName: String(data.companyName ?? "").trim(),
             contactName: String(data.contactName ?? "").trim(),
-            website: String(data.website ?? "").trim(),
             phone: String(data.phone ?? "").trim(),
             email: String(data.email ?? "").trim(),
             deliveryAddress: String(data.deliveryAddress ?? "").trim(),
@@ -145,7 +142,7 @@ export default function AdminSampleRequestsPage() {
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search: company, contact name, website, phone, email, address..."
+            placeholder="Search: company, contact name, phone, email, address..."
             style={{
               width: "100%",
               minHeight: 42,
@@ -192,7 +189,6 @@ export default function AdminSampleRequestsPage() {
                   <div style={{ marginTop: 14, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
                     <div style={{ display: "grid", gap: 10 }}>
                       <InfoRow label="Contact Name" value={item.contactName || "—"} />
-                      <InfoRow label="Website" value={item.website ? <span style={{ color: "#0f172a", fontWeight: 700 }}>{item.website}</span> : "—"} />
                       <InfoRow label="Phone" value={item.phone || "—"} />
                     </div>
                     <div style={{ display: "grid", gap: 10 }}>
