@@ -88,18 +88,31 @@ function createTransporter() {
   });
 }
 
-async function sendNotification(subject: string, text: string, html: string) {
+function isLikelyEmail(value: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
+}
+
+async function sendMail(to: string, subject: string, text: string, html: string, replyTo = MAIL_REPLY_TO) {
   const user = SMTP_USER.value();
   const transporter = createTransporter();
 
   await transporter.sendMail({
     from: `H2 Hardware Notifications <${user}>`,
-    to: MAIL_TO,
-    replyTo: MAIL_REPLY_TO,
+    to,
+    replyTo,
     subject,
     text,
     html,
   });
+}
+
+async function sendNotification(subject: string, text: string, html: string) {
+  await sendMail(MAIL_TO, subject, text, html);
+}
+
+async function sendCustomerNotification(to: string, subject: string, text: string, html: string) {
+  if (!isLikelyEmail(to)) return;
+  await sendMail(to, subject, text, html);
 }
 
 function configuredAdminEmails() {
@@ -182,7 +195,9 @@ export const approveRegistrationRequest = onCall(
     const registration = requestSnap.data() || {};
     const email = normalizeEmail(registration.email);
     const name = cleanText(registration.name);
+    const phone = cleanText(registration.phone);
     const company = cleanText(registration.company);
+    const website = cleanText(registration.website);
     const shippingAddress = cleanText(registration.shippingAddress || registration.deliveryAddress);
     const displayName = name || company || email;
 
@@ -225,7 +240,9 @@ export const approveRegistrationRequest = onCall(
       {
         name,
         company,
+        website,
         email,
+        phone,
         shippingAddress,
         disabled: false,
         updatedAt: FieldValue.serverTimestamp(),
@@ -355,6 +372,7 @@ export const notifyNewOrder = onDocumentCreated(
     const data = event.data?.data() || {};
     const customer = (data.customer || {}) as Record<string, unknown>;
     const items = Array.isArray(data.items) ? data.items : [];
+    const customerEmail = normalizeEmail(customer.email || data.userEmail);
 
     const itemLines = items
       .map((item: any) => {
@@ -396,6 +414,47 @@ export const notifyNewOrder = onDocumentCreated(
     ].join("\n");
 
     await sendNotification("[H2 Hardware] New order received", text, html);
+
+    if (customerEmail) {
+      const customerRows =
+        field("Order ID", orderId) +
+        field("Customer", customer.name) +
+        field("Email", customerEmail) +
+        field("Phone", customer.phone) +
+        field("Total", money(data.total)) +
+        field("Delivery address", data.shippingAddress);
+
+      const customerHtml = emailFrame(
+        "Order received",
+        customerRows,
+        `<p style="margin:16px 0 0;">Thank you for your order. Our team received it and will contact you shortly to review and finalize the details.</p><h3 style="margin:18px 0 8px;">Items</h3><ul>${itemLines || "<li>—</li>"}</ul>`
+      );
+
+      const customerText = [
+        "Order received",
+        `Order ID: ${orderId}`,
+        `Customer: ${customer.name || "—"}`,
+        `Email: ${customerEmail}`,
+        `Phone: ${customer.phone || "—"}`,
+        `Total: ${money(data.total)}`,
+        `Delivery address: ${data.shippingAddress || "—"}`,
+        "",
+        "Thank you for your order. Our team received it and will contact you shortly to review and finalize the details.",
+        "",
+        "Items:",
+        items
+          .map((item: any) => `- ${item?.name || item?.slug || "Item"} | Qty: ${item?.qty || "—"} | Unit: ${money(item?.unitPriceApplied ?? item?.unit ?? 0)}`)
+          .join("\n") || "—",
+      ].join("\n");
+
+      try {
+        await sendCustomerNotification(customerEmail, "[H2 Hardware] Order received", customerText, customerHtml);
+        logger.info("Order customer notification sent", { orderId, customerEmail });
+      } catch (error) {
+        logger.warn("Order customer notification failed", { orderId, customerEmail, error });
+      }
+    }
+
     logger.info("Order notification sent", { orderId });
   }
 );
@@ -415,7 +474,9 @@ export const notifyNewRegistrationRequest = onDocumentCreated(
       field("Request ID", requestId) +
       field("Name", data.name) +
       field("Email", data.email) +
+      field("Phone", data.phone) +
       field("Company", data.company) +
+      field("Website", data.website) +
       field("Delivery address", shippingAddress) +
       field("Status", data.status || "new");
 
@@ -425,7 +486,9 @@ export const notifyNewRegistrationRequest = onDocumentCreated(
       `Request ID: ${requestId}`,
       `Name: ${data.name || "—"}`,
       `Email: ${data.email || "—"}`,
+      `Phone: ${data.phone || "—"}`,
       `Company: ${data.company || "—"}`,
+      `Website: ${data.website || "—"}`,
       `Delivery address: ${shippingAddress || "—"}`,
       `Status: ${data.status || "new"}`,
     ].join("\n");
@@ -449,7 +512,6 @@ export const notifyNewSampleRequest = onDocumentCreated(
       field("Request ID", requestId) +
       field("Company", data.companyName) +
       field("Contact", data.contactName) +
-      field("Website", data.website) +
       field("Phone", data.phone) +
       field("Email", data.email) +
       field("Delivery address", data.deliveryAddress) +
@@ -461,7 +523,6 @@ export const notifyNewSampleRequest = onDocumentCreated(
       `Request ID: ${requestId}`,
       `Company: ${data.companyName || "—"}`,
       `Contact: ${data.contactName || "—"}`,
-      `Website: ${data.website || "—"}`,
       `Phone: ${data.phone || "—"}`,
       `Email: ${data.email || "—"}`,
       `Delivery address: ${data.deliveryAddress || "—"}`,
