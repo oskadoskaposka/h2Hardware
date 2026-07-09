@@ -80,11 +80,8 @@ export default function ContactPage() {
     border: "1px solid rgba(255,255,255,0.18)",
   };
 
-  const sectionGrid: React.CSSProperties = {
+  const sectionWrap: React.CSSProperties = {
     marginTop: 24,
-    display: "grid",
-    gridTemplateColumns: "minmax(0, 1.2fr) minmax(320px, 0.8fr)",
-    gap: 18,
   };
 
   const cardStyle: React.CSSProperties = {
@@ -114,6 +111,7 @@ export default function ContactPage() {
   const infoGrid: React.CSSProperties = {
     marginTop: 18,
     display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
     gap: 14,
   };
 
@@ -145,37 +143,6 @@ export default function ContactPage() {
     textDecoration: "none",
   };
 
-  const sideTitle: React.CSSProperties = {
-    margin: 0,
-    fontSize: 18,
-    fontWeight: 900,
-    color: "#111827",
-  };
-
-  const noteStyle: React.CSSProperties = {
-    marginTop: 12,
-    color: "#6b7280",
-    fontSize: 14,
-    lineHeight: 1.6,
-  };
-
-  const miniCard: React.CSSProperties = {
-    marginTop: 14,
-    padding: 14,
-    borderRadius: 14,
-    background: "#111111",
-    color: "#fff",
-  };
-
-  const miniCardTitle: React.CSSProperties = {
-    fontSize: 12,
-    fontWeight: 900,
-    letterSpacing: "0.08em",
-    textTransform: "uppercase",
-    color: "#fca5a5",
-    marginBottom: 6,
-  };
-
   return (
     <div className="container" style={pageWrap}>
       <section style={heroStyle}>
@@ -199,7 +166,7 @@ export default function ContactPage() {
         </div>
       </section>
 
-      <section style={sectionGrid}>
+      <section style={sectionWrap}>
         <div style={cardStyle}>
           <h2 style={sectionTitle}>Get in touch</h2>
           <p style={sectionText}>
@@ -228,24 +195,10 @@ export default function ContactPage() {
                 </a>
               </div>
             </div>
-          </div>
-        </div>
 
-        <div style={cardStyle}>
-          <h2 style={sideTitle}>Before you contact us</h2>
-
-          <p style={noteStyle}>
-            To help the team answer faster, include your name, the product or
-            model you are asking about, and any quantity or quote details you
-            already have.
-          </p>
-
-          <div style={miniCard}>
-            <div style={miniCardTitle}>Best for quick requests</div>
-            <div style={{ fontSize: 15, lineHeight: 1.6 }}>
-              Phone is ideal for urgent questions.
-              <br />
-              Email is best for quotes, details, and follow-ups.
+            <div style={infoBlock}>
+              <div style={labelStyle}>Address</div>
+              <div style={valueStyle}>4510 10 St NE, Calgary, AB T2E 6K3</div>
             </div>
           </div>
         </div>
