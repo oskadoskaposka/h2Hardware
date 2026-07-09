@@ -10,6 +10,7 @@ type FormState = {
   email: string;
   phone: string;
   company: string;
+  website: string;
   shippingAddress: string;
 };
 
@@ -21,6 +22,7 @@ const EMPTY_FORM: FormState = {
   email: "",
   phone: "",
   company: "",
+  website: "",
   shippingAddress: "",
 };
 
@@ -28,6 +30,7 @@ const CONTACT_PHONE = "+1 (226) 788-1924";
 const CONTACT_PHONE_LINK = "tel:+12267881924";
 const CONTACT_EMAIL = "info@h2hardwareltd.com";
 const CONTACT_EMAIL_LINK = "mailto:info@h2hardwareltd.com";
+const CONTACT_ADDRESS = "4510 10 St NE, Calgary, AB T2E 6K3";
 
 function isValidEmail(value: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
@@ -81,6 +84,7 @@ export default function RegistrationRequestPage() {
         email: form.email.trim().toLowerCase(),
         phone: form.phone.trim(),
         company: form.company.trim(),
+        website: form.website.trim(),
         shippingAddress: form.shippingAddress.trim(),
         status: "new",
         createdAt: serverTimestamp(),
@@ -172,6 +176,17 @@ export default function RegistrationRequestPage() {
                 </div>
 
                 <div className="field">
+                  <label>Website</label>
+                  <input
+                    value={form.website}
+                    onChange={(e) => update("website", e.target.value)}
+                    placeholder="Company website"
+                    autoComplete="url"
+                  />
+                  <div className="help">Optional.</div>
+                </div>
+
+                <div className="field">
                   <label>Delivery address *</label>
                   <textarea
                     value={form.shippingAddress}
@@ -214,6 +229,11 @@ export default function RegistrationRequestPage() {
                     {CONTACT_EMAIL}
                   </a>
                 </div>
+
+                <div className="contactItem">
+                  <div className="contactLabel">Address</div>
+                  <div className="contactValue">{CONTACT_ADDRESS}</div>
+                </div>
               </div>
             </div>
           </aside>
@@ -244,6 +264,7 @@ export default function RegistrationRequestPage() {
         .field input, .field textarea { width: 100%; border: 1px solid #d1d5db; border-radius: 12px; padding: 12px 14px; font-size: 14px; outline: none; background: #fff; font-family: inherit; }
         .field textarea { resize: vertical; min-height: 90px; }
         .field input:focus, .field textarea:focus { border-color: #94a3b8; }
+        .help { font-size: 12px; color: #64748b; line-height: 1.35; }
         .error { background: #fff; border: 1px solid rgba(185, 28, 28, 0.24); border-left: 6px solid #b91c1c; border-radius: 12px; padding: 14px; color: #7f1d1d; font-size: 13px; font-weight: 700; }
         .success { background: rgba(16, 185, 129, 0.07); border: 1px solid rgba(16, 185, 129, 0.22); border-left: 6px solid #10b981; border-radius: 12px; padding: 14px; color: #065f46; font-size: 13px; font-weight: 700; }
         .submitBtn { height: 46px; border: none; border-radius: 12px; background: #b91c1c; color: #fff; font-weight: 900; font-size: 14px; cursor: pointer; }
