@@ -140,6 +140,7 @@ async function approveRegistrationRequestCore(requestId: string, admin: { uid: s
   const name = cleanText(registration.name);
   const phone = cleanText(registration.phone);
   const company = cleanText(registration.company);
+  const website = cleanText(registration.website);
   const shippingAddress = cleanText(registration.shippingAddress || registration.deliveryAddress);
   const displayName = name || company || email;
 
@@ -182,6 +183,7 @@ async function approveRegistrationRequestCore(requestId: string, admin: { uid: s
     {
       name,
       company,
+      website,
       email,
       phone,
       shippingAddress,
