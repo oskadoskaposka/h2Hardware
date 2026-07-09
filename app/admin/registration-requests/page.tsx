@@ -21,6 +21,7 @@ type RegistrationRequestDoc = {
   email: string;
   phone?: string;
   company: string;
+  website?: string;
   shippingAddress?: string;
   status?: string;
   authUid?: string;
@@ -44,6 +45,7 @@ function toSearchText(item: RegistrationRequestDoc) {
     item.email,
     item.phone || "",
     item.company,
+    item.website || "",
     item.shippingAddress || "",
     item.status || "",
     item.archived ? "archived" : "active",
@@ -174,6 +176,7 @@ export default function AdminRegistrationRequestsPage() {
           email: String(data.email ?? "").trim(),
           phone: String(data.phone ?? "").trim(),
           company: String(data.company ?? "").trim(),
+          website: String(data.website ?? "").trim(),
           shippingAddress: String(data.shippingAddress ?? data.deliveryAddress ?? "").trim(),
           status: String(data.status ?? "new").trim(),
           authUid: String(data.authUid ?? "").trim(),
@@ -383,7 +386,7 @@ export default function AdminRegistrationRequestsPage() {
           <input
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search: name, email, phone, company, address, status..."
+            placeholder="Search: name, email, phone, company, website, address, status..."
             style={{ flex: "1 1 360px", minHeight: 42, padding: "0 12px", borderRadius: 10, border: "1px solid #e2e8f0", background: "#fff", outline: "none" }}
           />
           <label style={{ display: "inline-flex", alignItems: "center", gap: 8, minHeight: 42, padding: "0 12px", borderRadius: 10, border: "1px solid #cbd5e1", background: "#fff", color: "#0f172a", fontSize: 13, fontWeight: 900, whiteSpace: "nowrap" }}>
@@ -436,6 +439,7 @@ export default function AdminRegistrationRequestsPage() {
                     <InfoRow label="Email" value={item.email ? <a href={`mailto:${item.email}`} style={linkStyle}>{item.email}</a> : "—"} />
                     <InfoRow label="Phone" value={item.phone ? <a href={`tel:${item.phone.replace(/[^+\d]/g, "")}`} style={linkStyle}>{item.phone}</a> : "—"} />
                     <InfoRow label="Company" value={item.company || "—"} />
+                    <InfoRow label="Website" value={item.website || "—"} />
                     <InfoRow label="Delivery address" value={item.shippingAddress || "—"} />
                     <InfoRow label="Admin access" value={item.admin ? "Yes" : "No"} />
                     {item.authUid ? <InfoRow label="Firebase UID" value={item.authUid} /> : null}
