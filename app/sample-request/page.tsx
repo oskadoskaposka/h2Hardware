@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import { onAuthStateChanged } from "firebase/auth";
 import {
   addDoc,
@@ -55,10 +54,9 @@ function isValidEmail(value: string) {
 }
 
 export default function SampleRequestPage() {
-  const router = useRouter();
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
-
   const [authReady, setAuthReady] = useState(false);
+  const [isLogged, setIsLogged] = useState(false);
   const [loadingProfile, setLoadingProfile] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string>("");
@@ -70,12 +68,14 @@ export default function SampleRequestPage() {
       setErrorMsg("");
 
       if (!user) {
+        setIsLogged(false);
         setAuthReady(true);
+        setLoadingProfile(false);
         setForm(EMPTY_FORM);
-        router.replace("/registration-request");
         return;
       }
 
+      setIsLogged(true);
       setAuthReady(true);
       setLoadingProfile(true);
 
@@ -103,7 +103,7 @@ export default function SampleRequestPage() {
     });
 
     return () => unsub();
-  }, [router]);
+  }, []);
 
   function update<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -116,29 +116,12 @@ export default function SampleRequestPage() {
     const email = form.email.trim();
     const deliveryAddress = form.deliveryAddress.trim();
 
-    if (!companyName) {
-      return "Company name is required.";
-    }
-
-    if (!contactName) {
-      return "Contact name is required.";
-    }
-
-    if (!phone) {
-      return "Phone number is required.";
-    }
-
-    if (!email) {
-      return "Email address is required.";
-    }
-
-    if (!isValidEmail(email)) {
-      return "Please enter a valid email address.";
-    }
-
-    if (!deliveryAddress) {
-      return "Sample delivery address is required.";
-    }
+    if (!companyName) return "Company name is required.";
+    if (!contactName) return "Contact name is required.";
+    if (!phone) return "Phone number is required.";
+    if (!email) return "Email address is required.";
+    if (!isValidEmail(email)) return "Please enter a valid email address.";
+    if (!deliveryAddress) return "Sample delivery address is required.";
 
     return "";
   }
@@ -150,7 +133,7 @@ export default function SampleRequestPage() {
 
     const user = auth.currentUser;
     if (!user) {
-      router.replace("/registration-request");
+      setErrorMsg("Please request account access and login before requesting a free sample.");
       return;
     }
 
@@ -195,14 +178,69 @@ export default function SampleRequestPage() {
             <p className="muted">We are loading your account details.</p>
           </section>
         </div>
-        <style jsx>{`
-          .page { min-height: 100vh; background: #f4f6f8; padding: 24px 0 60px; }
-          .wrap { max-width: 1180px; margin: 0 auto; padding: 0 18px; }
-          .card { background: #fff; border: 1px solid #e2e8f0; border-radius: 16px; padding: 18px; box-shadow: 0 6px 18px rgba(0, 0, 0, 0.05); }
-          .loadingCard { max-width: 640px; margin: 0 auto; }
-          h1 { margin: 0; font-size: 28px; line-height: 1.1; font-weight: 950; color: #0f172a; }
-          .muted { margin: 8px 0 0; color: #64748b; font-size: 13px; line-height: 1.45; }
-        `}</style>
+        <PageStyles />
+      </main>
+    );
+  }
+
+  if (!isLogged) {
+    return (
+      <main className="page">
+        <div className="wrap">
+          <div className="hero">
+            <div>
+              <div className="eyebrow">H2 Hardware</div>
+              <h1>Sample Request</h1>
+              <p>
+                Free sample requests are available only after account registration.
+              </p>
+            </div>
+
+            <div className="heroLinks">
+              <Link href="/catalog" className="ghostBtn">
+                Back to catalog
+              </Link>
+              <Link href="/login" className="ghostBtn">
+                Login
+              </Link>
+            </div>
+          </div>
+
+          <div className="grid lockedGrid">
+            <section className="card lockedCard">
+              <div className="lockedEyebrow">Account required</div>
+              <h2>Register before requesting a free sample</h2>
+              <p className="lockedText">
+                Please request account access first. After H2 Hardware reviews and approves your account, log in to submit the Free Sample Request Form. Your details will be filled in automatically.
+              </p>
+
+              <div className="lockedActions">
+                <Link href="/registration-request" className="primaryLink">
+                  Request account access
+                </Link>
+                <Link href="/login" className="secondaryLink">
+                  I already have an account
+                </Link>
+              </div>
+            </section>
+
+            <aside className="card sideCard">
+              <section className="rulesBox">
+                <div className="sideEyebrow">Free sample</div>
+                <h2>How to Request a Free Sample</h2>
+                <p className="muted">
+                  To qualify for a free sample, please complete the following steps:
+                </p>
+
+                <ol className="rulesList">
+                  <li>Register for an account on the H2 Hardware website.</li>
+                  <li>Log in and submit the Free Sample Request Form.</li>
+                </ol>
+              </section>
+            </aside>
+          </div>
+        </div>
+        <PageStyles />
       </main>
     );
   }
@@ -354,242 +392,284 @@ export default function SampleRequestPage() {
         </div>
       </div>
 
-      <style jsx>{`
-        .page {
-          min-height: 100vh;
-          background: #f4f6f8;
-          padding: 24px 0 60px;
-        }
-        .wrap {
-          max-width: 1180px;
-          margin: 0 auto;
-          padding: 0 18px;
-        }
-        .hero {
-          display: flex;
-          align-items: flex-start;
-          justify-content: space-between;
-          gap: 16px;
-          flex-wrap: wrap;
-          margin-bottom: 18px;
-        }
-        .eyebrow {
-          display: inline-block;
-          font-size: 12px;
-          font-weight: 900;
-          letter-spacing: 0.08em;
-          text-transform: uppercase;
-          color: #b91c1c;
-          margin-bottom: 8px;
-        }
-        h1 {
-          margin: 0;
-          font-size: 34px;
-          line-height: 1.05;
-          font-weight: 950;
-          color: #0f172a;
-        }
-        .hero p {
-          margin: 10px 0 0;
-          color: #64748b;
-          font-size: 14px;
-          max-width: 700px;
-        }
-        .heroLinks {
-          display: flex;
-          gap: 10px;
-          flex-wrap: wrap;
-        }
-        .ghostBtn {
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          height: 42px;
-          padding: 0 14px;
-          border-radius: 10px;
-          background: #fff;
-          border: 1px solid #e2e8f0;
-          color: #0f172a;
-          font-weight: 800;
-          text-decoration: none;
-        }
-        .grid {
-          display: grid;
-          grid-template-columns: 1.3fr 0.9fr;
-          gap: 18px;
-        }
-        @media (max-width: 960px) {
-          .grid {
-            grid-template-columns: 1fr;
-          }
-        }
-        .card {
-          background: #fff;
-          border: 1px solid #e2e8f0;
-          border-radius: 16px;
-          padding: 18px;
-          box-shadow: 0 6px 18px rgba(0, 0, 0, 0.05);
-        }
-        h2 {
-          margin: 0;
-          color: #0f172a;
-          font-size: 22px;
-          font-weight: 900;
-        }
-        h3 {
-          margin: 0;
-          color: #0f172a;
-          font-size: 18px;
-          font-weight: 900;
-        }
-        .muted {
-          margin: 8px 0 0;
-          color: #64748b;
-          font-size: 13px;
-          line-height: 1.45;
-        }
-        .form {
-          margin-top: 16px;
-          display: grid;
-          gap: 14px;
-        }
-        .field {
-          display: grid;
-          gap: 6px;
-        }
-        .field label {
-          color: #0f172a;
-          font-size: 13px;
-          font-weight: 900;
-        }
-        .field input,
-        .field textarea {
-          width: 100%;
-          border: 1px solid #d1d5db;
-          border-radius: 12px;
-          padding: 12px 14px;
-          font-size: 14px;
-          outline: none;
-          background: #fff;
-        }
-        .field textarea {
-          resize: vertical;
-          min-height: 120px;
-          font-family: inherit;
-        }
-        .field input:focus,
-        .field textarea:focus {
-          border-color: #94a3b8;
-        }
-        .fieldRow {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 14px;
-        }
-        @media (max-width: 680px) {
-          .fieldRow {
-            grid-template-columns: 1fr;
-          }
-        }
-        .help {
-          font-size: 12px;
-          color: #64748b;
-          line-height: 1.35;
-        }
-        .error {
-          background: #fff;
-          border: 1px solid rgba(185, 28, 28, 0.24);
-          border-left: 6px solid #b91c1c;
-          border-radius: 12px;
-          padding: 14px;
-          color: #7f1d1d;
-          font-size: 13px;
-          font-weight: 700;
-        }
-        .success {
-          background: rgba(16, 185, 129, 0.07);
-          border: 1px solid rgba(16, 185, 129, 0.22);
-          border-left: 6px solid #10b981;
-          border-radius: 12px;
-          padding: 14px;
-          color: #065f46;
-          font-size: 13px;
-          font-weight: 700;
-        }
-        .submitBtn {
-          height: 46px;
-          border: none;
-          border-radius: 12px;
-          background: #111827;
-          color: #fff;
-          font-weight: 900;
-          font-size: 14px;
-          cursor: pointer;
-        }
-        .submitBtn:disabled {
-          opacity: 0.7;
-          cursor: not-allowed;
-        }
-        .sideCard {
-          display: grid;
-          gap: 18px;
-          align-content: start;
-        }
-        .rulesBox {
-          border: 1px solid rgba(185, 28, 28, 0.18);
-          border-radius: 14px;
-          background: rgba(185, 28, 28, 0.04);
-          padding: 16px;
-        }
-        .sideEyebrow {
-          color: #b91c1c;
-          font-size: 11px;
-          font-weight: 900;
-          letter-spacing: 0.08em;
-          text-transform: uppercase;
-          margin-bottom: 6px;
-        }
-        .rulesList {
-          margin: 14px 0 0;
-          padding-left: 20px;
-          color: #0f172a;
-          display: grid;
-          gap: 10px;
-          font-size: 14px;
-          line-height: 1.45;
-          font-weight: 700;
-        }
-        .contactSection {
-          display: grid;
-          gap: 14px;
-        }
-        .contactBox {
-          display: grid;
-          gap: 12px;
-        }
-        .contactItem {
-          border: 1px solid #eef2f7;
-          border-radius: 12px;
-          padding: 14px;
-          background: #fbfcfd;
-        }
-        .contactLabel {
-          color: #64748b;
-          font-size: 12px;
-          font-weight: 800;
-          text-transform: uppercase;
-          letter-spacing: 0.04em;
-          margin-bottom: 5px;
-        }
-        .contactValue {
-          color: #0f172a;
-          font-size: 16px;
-          font-weight: 900;
-          line-height: 1.45;
-          overflow-wrap: anywhere;
-          text-decoration: none;
-        }
-      `}</style>
+      <PageStyles />
     </main>
+  );
+}
+
+function PageStyles() {
+  return (
+    <style jsx>{`
+      .page {
+        min-height: 100vh;
+        background: #f4f6f8;
+        padding: 24px 0 60px;
+      }
+      .wrap {
+        max-width: 1180px;
+        margin: 0 auto;
+        padding: 0 18px;
+      }
+      .hero {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 16px;
+        flex-wrap: wrap;
+        margin-bottom: 18px;
+      }
+      .eyebrow {
+        display: inline-block;
+        font-size: 12px;
+        font-weight: 900;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: #b91c1c;
+        margin-bottom: 8px;
+      }
+      h1 {
+        margin: 0;
+        font-size: 34px;
+        line-height: 1.05;
+        font-weight: 950;
+        color: #0f172a;
+      }
+      .hero p {
+        margin: 10px 0 0;
+        color: #64748b;
+        font-size: 14px;
+        max-width: 700px;
+      }
+      .heroLinks,
+      .lockedActions {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+      .ghostBtn,
+      .secondaryLink {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        height: 42px;
+        padding: 0 14px;
+        border-radius: 10px;
+        background: #fff;
+        border: 1px solid #e2e8f0;
+        color: #0f172a;
+        font-weight: 800;
+        text-decoration: none;
+      }
+      .primaryLink {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 42px;
+        padding: 0 16px;
+        border-radius: 10px;
+        background: #111827;
+        border: 1px solid #111827;
+        color: #fff;
+        font-weight: 900;
+        text-decoration: none;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: 1.3fr 0.9fr;
+        gap: 18px;
+      }
+      .lockedGrid {
+        align-items: start;
+      }
+      @media (max-width: 960px) {
+        .grid {
+          grid-template-columns: 1fr;
+        }
+      }
+      .card {
+        background: #fff;
+        border: 1px solid #e2e8f0;
+        border-radius: 16px;
+        padding: 18px;
+        box-shadow: 0 6px 18px rgba(0, 0, 0, 0.05);
+      }
+      .loadingCard,
+      .lockedCard {
+        max-width: 720px;
+      }
+      .lockedEyebrow {
+        color: #b91c1c;
+        font-size: 12px;
+        font-weight: 900;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        margin-bottom: 8px;
+      }
+      .lockedText {
+        color: #475569;
+        font-size: 15px;
+        line-height: 1.6;
+        margin: 10px 0 16px;
+      }
+      h2 {
+        margin: 0;
+        color: #0f172a;
+        font-size: 22px;
+        font-weight: 900;
+      }
+      h3 {
+        margin: 0;
+        color: #0f172a;
+        font-size: 18px;
+        font-weight: 900;
+      }
+      .muted {
+        margin: 8px 0 0;
+        color: #64748b;
+        font-size: 13px;
+        line-height: 1.45;
+      }
+      .form {
+        margin-top: 16px;
+        display: grid;
+        gap: 14px;
+      }
+      .field {
+        display: grid;
+        gap: 6px;
+      }
+      .field label {
+        color: #0f172a;
+        font-size: 13px;
+        font-weight: 900;
+      }
+      .field input,
+      .field textarea {
+        width: 100%;
+        border: 1px solid #d1d5db;
+        border-radius: 12px;
+        padding: 12px 14px;
+        font-size: 14px;
+        outline: none;
+        background: #fff;
+      }
+      .field textarea {
+        resize: vertical;
+        min-height: 120px;
+        font-family: inherit;
+      }
+      .field input:focus,
+      .field textarea:focus {
+        border-color: #94a3b8;
+      }
+      .fieldRow {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 14px;
+      }
+      @media (max-width: 680px) {
+        .fieldRow {
+          grid-template-columns: 1fr;
+        }
+      }
+      .help {
+        font-size: 12px;
+        color: #64748b;
+        line-height: 1.35;
+      }
+      .error {
+        background: #fff;
+        border: 1px solid rgba(185, 28, 28, 0.24);
+        border-left: 6px solid #b91c1c;
+        border-radius: 12px;
+        padding: 14px;
+        color: #7f1d1d;
+        font-size: 13px;
+        font-weight: 700;
+      }
+      .success {
+        background: rgba(16, 185, 129, 0.07);
+        border: 1px solid rgba(16, 185, 129, 0.22);
+        border-left: 6px solid #10b981;
+        border-radius: 12px;
+        padding: 14px;
+        color: #065f46;
+        font-size: 13px;
+        font-weight: 700;
+      }
+      .submitBtn {
+        height: 46px;
+        border: none;
+        border-radius: 12px;
+        background: #111827;
+        color: #fff;
+        font-weight: 900;
+        font-size: 14px;
+        cursor: pointer;
+      }
+      .submitBtn:disabled {
+        opacity: 0.7;
+        cursor: not-allowed;
+      }
+      .sideCard {
+        display: grid;
+        gap: 18px;
+        align-content: start;
+      }
+      .rulesBox {
+        border: 1px solid rgba(185, 28, 28, 0.18);
+        border-radius: 14px;
+        background: rgba(185, 28, 28, 0.04);
+        padding: 16px;
+      }
+      .sideEyebrow {
+        color: #b91c1c;
+        font-size: 11px;
+        font-weight: 900;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        margin-bottom: 6px;
+      }
+      .rulesList {
+        margin: 14px 0 0;
+        padding-left: 20px;
+        color: #0f172a;
+        display: grid;
+        gap: 10px;
+        font-size: 14px;
+        line-height: 1.45;
+        font-weight: 700;
+      }
+      .contactSection {
+        display: grid;
+        gap: 14px;
+      }
+      .contactBox {
+        display: grid;
+        gap: 12px;
+      }
+      .contactItem {
+        border: 1px solid #eef2f7;
+        border-radius: 12px;
+        padding: 14px;
+        background: #fbfcfd;
+      }
+      .contactLabel {
+        color: #64748b;
+        font-size: 12px;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        margin-bottom: 5px;
+      }
+      .contactValue {
+        color: #0f172a;
+        font-size: 16px;
+        font-weight: 900;
+        line-height: 1.45;
+        overflow-wrap: anywhere;
+        text-decoration: none;
+      }
+    `}</style>
   );
 }
