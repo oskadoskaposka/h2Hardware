@@ -53,6 +53,81 @@ function isValidEmail(value: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
 }
 
+function PageHero({ locked }: { locked?: boolean }) {
+  return (
+    <div className="hero">
+      <div>
+        <div className="eyebrow">H2 Hardware</div>
+        <h1>Sample Request</h1>
+        <p>
+          {locked
+            ? "Free sample requests are available only after account registration."
+            : "This form is available for logged-in customers only. Your account details are loaded automatically below."}
+        </p>
+      </div>
+
+      <div className="heroLinks">
+        <Link href="/catalog" className="ghostBtn">
+          Back to catalog
+        </Link>
+        <Link href="/login" className="ghostBtn">
+          {locked ? "Login" : "My account"}
+        </Link>
+      </div>
+    </div>
+  );
+}
+
+function RulesCard({ loggedIn }: { loggedIn: boolean }) {
+  return (
+    <section className="rulesBox">
+      <div className="sideEyebrow">Free sample</div>
+      <h2>How to Request a Free Sample</h2>
+      <p className="muted">
+        To qualify for a free sample, please complete the following steps:
+      </p>
+
+      <ol className="rulesList">
+        <li>Register for an account on the H2 Hardware website.</li>
+        <li>{loggedIn ? "Complete and submit the Free Sample Request Form." : "Log in and submit the Free Sample Request Form."}</li>
+      </ol>
+    </section>
+  );
+}
+
+function ContactCard() {
+  return (
+    <section className="contactSection">
+      <h3>Any questions?</h3>
+      <p className="muted">
+        Contact our team if you need help before submitting your sample request.
+        We will be happy to assist you.
+      </p>
+
+      <div className="contactBox">
+        <div className="contactItem">
+          <div className="contactLabel">Phone</div>
+          <a href={CONTACT_PHONE_LINK} className="contactValue">
+            {CONTACT_PHONE}
+          </a>
+        </div>
+
+        <div className="contactItem">
+          <div className="contactLabel">Email</div>
+          <a href={CONTACT_EMAIL_LINK} className="contactValue">
+            {CONTACT_EMAIL}
+          </a>
+        </div>
+
+        <div className="contactItem">
+          <div className="contactLabel">Address</div>
+          <div className="contactValue">{CONTACT_ADDRESS}</div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 export default function SampleRequestPage() {
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [authReady, setAuthReady] = useState(false);
@@ -147,7 +222,6 @@ export default function SampleRequestPage() {
       setSubmitting(true);
 
       const db = getFirestore(app);
-
       await addDoc(collection(db, "sample_requests"), {
         uid: user.uid,
         userEmail: user.email ?? "",
@@ -171,9 +245,9 @@ export default function SampleRequestPage() {
 
   if (!authReady || loadingProfile) {
     return (
-      <main className="page">
-        <div className="wrap">
-          <section className="card loadingCard">
+      <main className="samplePage">
+        <div className="sampleWrap">
+          <section className="sampleCard loadingCard">
             <h1>Loading sample request…</h1>
             <p className="muted">We are loading your account details.</p>
           </section>
@@ -185,29 +259,12 @@ export default function SampleRequestPage() {
 
   if (!isLogged) {
     return (
-      <main className="page">
-        <div className="wrap">
-          <div className="hero">
-            <div>
-              <div className="eyebrow">H2 Hardware</div>
-              <h1>Sample Request</h1>
-              <p>
-                Free sample requests are available only after account registration.
-              </p>
-            </div>
+      <main className="samplePage">
+        <div className="sampleWrap">
+          <PageHero locked />
 
-            <div className="heroLinks">
-              <Link href="/catalog" className="ghostBtn">
-                Back to catalog
-              </Link>
-              <Link href="/login" className="ghostBtn">
-                Login
-              </Link>
-            </div>
-          </div>
-
-          <div className="grid lockedGrid">
-            <section className="card lockedCard">
+          <div className="sampleGrid lockedGrid">
+            <section className="sampleCard lockedCard">
               <div className="lockedEyebrow">Account required</div>
               <h2>Register before requesting a free sample</h2>
               <p className="lockedText">
@@ -224,19 +281,8 @@ export default function SampleRequestPage() {
               </div>
             </section>
 
-            <aside className="card sideCard">
-              <section className="rulesBox">
-                <div className="sideEyebrow">Free sample</div>
-                <h2>How to Request a Free Sample</h2>
-                <p className="muted">
-                  To qualify for a free sample, please complete the following steps:
-                </p>
-
-                <ol className="rulesList">
-                  <li>Register for an account on the H2 Hardware website.</li>
-                  <li>Log in and submit the Free Sample Request Form.</li>
-                </ol>
-              </section>
+            <aside className="sampleCard sideCard">
+              <RulesCard loggedIn={false} />
             </aside>
           </div>
         </div>
@@ -246,34 +292,15 @@ export default function SampleRequestPage() {
   }
 
   return (
-    <main className="page">
-      <div className="wrap">
-        <div className="hero">
-          <div>
-            <div className="eyebrow">H2 Hardware</div>
-            <h1>Sample Request</h1>
-            <p>
-              This form is available for logged-in customers only. Your account
-              details are loaded automatically below.
-            </p>
-          </div>
+    <main className="samplePage">
+      <div className="sampleWrap">
+        <PageHero />
 
-          <div className="heroLinks">
-            <Link href="/catalog" className="ghostBtn">
-              Back to catalog
-            </Link>
-            <Link href="/login" className="ghostBtn">
-              My account
-            </Link>
-          </div>
-        </div>
-
-        <div className="grid">
-          <section className="card">
+        <div className="sampleGrid">
+          <section className="sampleCard">
             <h2>Request form</h2>
             <p className="muted">
-              Please review your account information and confirm the delivery
-              address for the sample.
+              Please review your account information and confirm the delivery address for the sample.
             </p>
 
             <form onSubmit={handleSubmit} className="form">
@@ -346,52 +373,12 @@ export default function SampleRequestPage() {
             </form>
           </section>
 
-          <aside className="card sideCard">
-            <section className="rulesBox">
-              <div className="sideEyebrow">Free sample</div>
-              <h2>How to Request a Free Sample</h2>
-              <p className="muted">
-                To qualify for a free sample, please complete the following steps:
-              </p>
-
-              <ol className="rulesList">
-                <li>Register for an account on the H2 Hardware website.</li>
-                <li>Complete and submit the Free Sample Request Form.</li>
-              </ol>
-            </section>
-
-            <section className="contactSection">
-              <h3>Any questions?</h3>
-              <p className="muted">
-                Contact our team if you need help before submitting your sample
-                request. We will be happy to assist you.
-              </p>
-
-              <div className="contactBox">
-                <div className="contactItem">
-                  <div className="contactLabel">Phone</div>
-                  <a href={CONTACT_PHONE_LINK} className="contactValue">
-                    {CONTACT_PHONE}
-                  </a>
-                </div>
-
-                <div className="contactItem">
-                  <div className="contactLabel">Email</div>
-                  <a href={CONTACT_EMAIL_LINK} className="contactValue">
-                    {CONTACT_EMAIL}
-                  </a>
-                </div>
-
-                <div className="contactItem">
-                  <div className="contactLabel">Address</div>
-                  <div className="contactValue">{CONTACT_ADDRESS}</div>
-                </div>
-              </div>
-            </section>
+          <aside className="sampleCard sideCard">
+            <RulesCard loggedIn />
+            <ContactCard />
           </aside>
         </div>
       </div>
-
       <PageStyles />
     </main>
   );
@@ -399,13 +386,13 @@ export default function SampleRequestPage() {
 
 function PageStyles() {
   return (
-    <style jsx>{`
-      .page {
+    <style jsx global>{`
+      .samplePage {
         min-height: 100vh;
         background: #f4f6f8;
         padding: 24px 0 60px;
       }
-      .wrap {
+      .sampleWrap {
         max-width: 1180px;
         margin: 0 auto;
         padding: 0 18px;
@@ -427,7 +414,7 @@ function PageStyles() {
         color: #b91c1c;
         margin-bottom: 8px;
       }
-      h1 {
+      .samplePage h1 {
         margin: 0;
         font-size: 34px;
         line-height: 1.05;
@@ -451,7 +438,7 @@ function PageStyles() {
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        height: 42px;
+        min-height: 42px;
         padding: 0 14px;
         border-radius: 10px;
         background: #fff;
@@ -473,7 +460,7 @@ function PageStyles() {
         font-weight: 900;
         text-decoration: none;
       }
-      .grid {
+      .sampleGrid {
         display: grid;
         grid-template-columns: 1.3fr 0.9fr;
         gap: 18px;
@@ -482,11 +469,11 @@ function PageStyles() {
         align-items: start;
       }
       @media (max-width: 960px) {
-        .grid {
+        .sampleGrid {
           grid-template-columns: 1fr;
         }
       }
-      .card {
+      .sampleCard {
         background: #fff;
         border: 1px solid #e2e8f0;
         border-radius: 16px;
@@ -511,13 +498,13 @@ function PageStyles() {
         line-height: 1.6;
         margin: 10px 0 16px;
       }
-      h2 {
+      .samplePage h2 {
         margin: 0;
         color: #0f172a;
         font-size: 22px;
         font-weight: 900;
       }
-      h3 {
+      .samplePage h3 {
         margin: 0;
         color: #0f172a;
         font-size: 18px;
