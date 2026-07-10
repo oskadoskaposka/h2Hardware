@@ -318,7 +318,6 @@ export default function SampleRequestPage() {
 
               <ol className="rulesList">
                 <li>Register for an account on the H2 Hardware website.</li>
-                <li>Follow our Facebook page.</li>
                 <li>Complete and submit the Free Sample Request Form.</li>
               </ol>
             </section>
