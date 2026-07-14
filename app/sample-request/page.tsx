@@ -64,15 +64,6 @@ function PageHero({ locked }: { locked?: boolean }) {
             : "Review your details and submit your sample request."}
         </p>
       </div>
-
-      <div className="sampleHeroLinks">
-        <Link href="/catalog" className="sampleButton sampleButtonSecondary">
-          Back to catalog
-        </Link>
-        <Link href="/login" className="sampleButton sampleButtonSecondary">
-          {locked ? "Login" : "My account"}
-        </Link>
-      </div>
     </div>
   );
 }
@@ -203,7 +194,7 @@ export default function SampleRequestPage() {
 
     const user = auth.currentUser;
     if (!user) {
-      setErrorMsg("Please request account access and login before requesting a free sample.");
+      setErrorMsg("Please request account access before submitting this form.");
       return;
     }
 
@@ -265,19 +256,14 @@ export default function SampleRequestPage() {
 
             <section className="sampleCard sampleLockedCard">
               <div className="sampleLockedEyebrow">Account required</div>
-              <h2>Register before requesting a free sample</h2>
+              <h2>Need access?</h2>
               <p className="sampleLockedText">
-                Please request account access or log in before submitting a sample request.
+                Request account access before submitting this form.
               </p>
 
-              <div className="sampleActions">
-                <Link href="/registration-request" className="sampleButton sampleButtonPrimary">
-                  Request account access
-                </Link>
-                <Link href="/login" className="sampleButton sampleButtonSecondary">
-                  Login
-                </Link>
-              </div>
+              <Link href="/registration-request" className="sampleButton sampleButtonPrimary">
+                Request account access
+              </Link>
             </section>
           </div>
         </div>
@@ -294,7 +280,7 @@ export default function SampleRequestPage() {
         <div className="sampleGrid">
           <section className="sampleCard">
             <h2>Request form</h2>
-            <p className="sampleMuted">Review your details before submitting.</p>
+            <p className="sampleMuted">Confirm the information below.</p>
 
             <form onSubmit={handleSubmit} className="sampleForm">
               <div className="sampleFieldRow">
@@ -383,6 +369,9 @@ function PageStyles() {
         background: #f4f6f8;
         padding: 24px 0 60px;
       }
+      .samplePage * {
+        box-sizing: border-box;
+      }
       .sampleWrap {
         max-width: 1180px;
         margin: 0 auto;
@@ -441,12 +430,6 @@ function PageStyles() {
       }
       .sampleHero p {
         max-width: 700px;
-      }
-      .sampleHeroLinks,
-      .sampleActions {
-        display: flex;
-        gap: 10px;
-        flex-wrap: wrap;
       }
       .sampleButton {
         display: inline-flex;
@@ -507,7 +490,7 @@ function PageStyles() {
         margin: 0 auto;
       }
       .sampleLockedCard {
-        max-width: 720px;
+        max-width: 560px;
       }
       .sampleLockedText {
         color: #475569;
