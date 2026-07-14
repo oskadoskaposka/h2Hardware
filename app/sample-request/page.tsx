@@ -52,10 +52,14 @@ function isValidEmail(value: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
 }
 
-function PageHero() {
+function PageHero({ loggedIn }: { loggedIn?: boolean }) {
   return (
     <div className="sampleHero">
-      <h1>Sample Request</h1>
+      <div className="sampleHeroText">
+        <div className="samplePill">Approved customers only</div>
+        <h1>Sample Request</h1>
+        <p>{loggedIn ? "Review your details and submit the form." : "Follow the steps below to request access and continue."}</p>
+      </div>
     </div>
   );
 }
@@ -63,6 +67,7 @@ function PageHero() {
 function RulesCard() {
   return (
     <section className="sampleRulesBox">
+      <div className="sampleCardTopline">Requirements</div>
       <h2>How to Request a Free Sample</h2>
       <p className="sampleMuted">
         To qualify for a free sample, please complete the following steps:
@@ -72,6 +77,19 @@ function RulesCard() {
         <li>Register for an account on the H2 Hardware website.</li>
         <li>Complete and submit the Free Sample Request Form.</li>
       </ol>
+    </section>
+  );
+}
+
+function AccessCard() {
+  return (
+    <section className="sampleCard sampleLockedCard">
+      <div className="sampleCardTopline">Account access</div>
+      <h2>Need access?</h2>
+      <p className="sampleMuted">Request access first. Once approved, you can submit the form.</p>
+      <Link href="/registration-request" className="sampleButton sampleButtonPrimary">
+        Request account access
+      </Link>
     </section>
   );
 }
@@ -244,12 +262,7 @@ export default function SampleRequestPage() {
               <RulesCard />
             </aside>
 
-            <section className="sampleCard sampleLockedCard">
-              <h2>Need access?</h2>
-              <Link href="/registration-request" className="sampleButton sampleButtonPrimary">
-                Request account access
-              </Link>
-            </section>
+            <AccessCard />
           </div>
         </div>
         <PageStyles />
@@ -260,11 +273,12 @@ export default function SampleRequestPage() {
   return (
     <main className="samplePage">
       <div className="sampleWrap">
-        <PageHero />
+        <PageHero loggedIn />
 
         <div className="sampleGrid">
           <section className="sampleCard">
             <h2>Request form</h2>
+            <p className="sampleMuted">Confirm your information below.</p>
 
             <form onSubmit={handleSubmit} className="sampleForm">
               <div className="sampleFieldRow">
@@ -349,7 +363,7 @@ function PageStyles() {
       .samplePage {
         min-height: 100vh;
         background: #f4f6f8;
-        padding: 24px 0 60px;
+        padding: 28px 0 64px;
       }
       .samplePage * {
         box-sizing: border-box;
@@ -360,11 +374,36 @@ function PageStyles() {
         padding: 0 18px;
       }
       .sampleHero {
-        margin-bottom: 18px;
+        margin-bottom: 22px;
+      }
+      .sampleHeroText {
+        max-width: 720px;
+      }
+      .samplePill,
+      .sampleCardTopline {
+        display: inline-flex;
+        align-items: center;
+        width: fit-content;
+        color: #b91c1c;
+        background: rgba(185, 28, 28, 0.06);
+        border: 1px solid rgba(185, 28, 28, 0.12);
+        border-radius: 999px;
+        padding: 5px 10px;
+        font-size: 11px;
+        font-weight: 850;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        margin-bottom: 10px;
+      }
+      .sampleCardTopline {
+        background: transparent;
+        border-color: transparent;
+        padding: 0;
+        margin-bottom: 8px;
       }
       .samplePage h1 {
         margin: 0;
-        font-size: 34px;
+        font-size: 36px;
         line-height: 1.05;
         font-weight: 900;
         color: #0f172a;
@@ -372,8 +411,8 @@ function PageStyles() {
       .samplePage h2 {
         margin: 0;
         color: #0f172a;
-        font-size: 22px;
-        line-height: 1.2;
+        font-size: 23px;
+        line-height: 1.18;
         font-weight: 850;
       }
       .samplePage h3 {
@@ -383,11 +422,15 @@ function PageStyles() {
         line-height: 1.25;
         font-weight: 850;
       }
+      .sampleHero p,
       .sampleMuted {
-        margin: 8px 0 0;
+        margin: 9px 0 0;
         color: #64748b;
         font-size: 14px;
-        line-height: 1.45;
+        line-height: 1.5;
+      }
+      .sampleHero p {
+        max-width: 620px;
       }
       .sampleButton {
         display: inline-flex;
@@ -420,10 +463,8 @@ function PageStyles() {
       }
       .sampleGrid {
         display: grid;
-        grid-template-columns: 1.3fr 0.9fr;
-        gap: 18px;
-      }
-      .sampleLockedGrid {
+        grid-template-columns: 1.25fr 0.75fr;
+        gap: 20px;
         align-items: start;
       }
       @media (max-width: 960px) {
@@ -434,19 +475,19 @@ function PageStyles() {
       .sampleCard {
         background: #fff;
         border: 1px solid #e2e8f0;
-        border-radius: 16px;
-        padding: 18px;
-        box-shadow: 0 6px 18px rgba(0, 0, 0, 0.05);
+        border-radius: 18px;
+        padding: 20px;
+        box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
       }
       .sampleLoadingCard {
         max-width: 640px;
         margin: 0 auto;
       }
       .sampleLockedCard {
-        max-width: 420px;
         display: grid;
-        gap: 14px;
+        gap: 12px;
         align-content: start;
+        border-top: 4px solid #111827;
       }
       .sampleForm {
         margin-top: 16px;
@@ -517,19 +558,19 @@ function PageStyles() {
       }
       .sampleRulesBox {
         border: 1px solid rgba(185, 28, 28, 0.18);
-        border-radius: 14px;
-        background: rgba(185, 28, 28, 0.04);
-        padding: 16px;
+        border-radius: 15px;
+        background: linear-gradient(180deg, rgba(185, 28, 28, 0.045), rgba(255, 255, 255, 0.88));
+        padding: 18px;
       }
       .sampleRulesList {
-        margin: 14px 0 0;
+        margin: 16px 0 0;
         padding-left: 20px;
         color: #0f172a;
         display: grid;
-        gap: 10px;
+        gap: 11px;
         font-size: 14px;
         line-height: 1.45;
-        font-weight: 700;
+        font-weight: 750;
       }
       .sampleContactSection {
         display: grid;
