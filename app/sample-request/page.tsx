@@ -52,18 +52,10 @@ function isValidEmail(value: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
 }
 
-function PageHero({ locked }: { locked?: boolean }) {
+function PageHero() {
   return (
     <div className="sampleHero">
-      <div>
-        <div className="sampleEyebrow">H2 Hardware</div>
-        <h1>Sample Request</h1>
-        <p>
-          {locked
-            ? "Free samples are available for approved H2 Hardware customers."
-            : "Review your details and submit your sample request."}
-        </p>
-      </div>
+      <h1>Sample Request</h1>
     </div>
   );
 }
@@ -71,7 +63,6 @@ function PageHero({ locked }: { locked?: boolean }) {
 function RulesCard() {
   return (
     <section className="sampleRulesBox">
-      <div className="sampleSideEyebrow">Free sample</div>
       <h2>How to Request a Free Sample</h2>
       <p className="sampleMuted">
         To qualify for a free sample, please complete the following steps:
@@ -235,7 +226,6 @@ export default function SampleRequestPage() {
         <div className="sampleWrap">
           <section className="sampleCard sampleLoadingCard">
             <h1>Loading sample request…</h1>
-            <p className="sampleMuted">We are loading your account details.</p>
           </section>
         </div>
         <PageStyles />
@@ -247,7 +237,7 @@ export default function SampleRequestPage() {
     return (
       <main className="samplePage">
         <div className="sampleWrap">
-          <PageHero locked />
+          <PageHero />
 
           <div className="sampleGrid sampleLockedGrid">
             <aside className="sampleCard sampleSideCard">
@@ -255,12 +245,7 @@ export default function SampleRequestPage() {
             </aside>
 
             <section className="sampleCard sampleLockedCard">
-              <div className="sampleLockedEyebrow">Account required</div>
               <h2>Need access?</h2>
-              <p className="sampleLockedText">
-                Request account access before submitting this form.
-              </p>
-
               <Link href="/registration-request" className="sampleButton sampleButtonPrimary">
                 Request account access
               </Link>
@@ -280,7 +265,6 @@ export default function SampleRequestPage() {
         <div className="sampleGrid">
           <section className="sampleCard">
             <h2>Request form</h2>
-            <p className="sampleMuted">Confirm the information below.</p>
 
             <form onSubmit={handleSubmit} className="sampleForm">
               <div className="sampleFieldRow">
@@ -339,8 +323,6 @@ export default function SampleRequestPage() {
                 />
               </div>
 
-              <div className="sampleHelp">Update any missing details before submitting.</div>
-
               {errorMsg ? <div className="sampleError">{errorMsg}</div> : null}
               {successMsg ? <div className="sampleSuccess">{successMsg}</div> : null}
 
@@ -378,27 +360,7 @@ function PageStyles() {
         padding: 0 18px;
       }
       .sampleHero {
-        display: flex;
-        align-items: flex-start;
-        justify-content: space-between;
-        gap: 16px;
-        flex-wrap: wrap;
         margin-bottom: 18px;
-      }
-      .sampleEyebrow,
-      .sampleSideEyebrow,
-      .sampleLockedEyebrow {
-        display: inline-block;
-        color: #b91c1c;
-        font-size: 12px;
-        font-weight: 800;
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
-        margin-bottom: 8px;
-      }
-      .sampleSideEyebrow {
-        font-size: 11px;
-        margin-bottom: 6px;
       }
       .samplePage h1 {
         margin: 0;
@@ -421,15 +383,11 @@ function PageStyles() {
         line-height: 1.25;
         font-weight: 850;
       }
-      .sampleHero p,
       .sampleMuted {
         margin: 8px 0 0;
         color: #64748b;
         font-size: 14px;
         line-height: 1.45;
-      }
-      .sampleHero p {
-        max-width: 700px;
       }
       .sampleButton {
         display: inline-flex;
@@ -451,11 +409,6 @@ function PageStyles() {
         background: #111827;
         border-color: #111827;
         color: #fff;
-      }
-      .sampleButtonSecondary {
-        background: #fff;
-        border-color: #d1d5db;
-        color: #0f172a;
       }
       .sampleButton:disabled {
         opacity: 0.7;
@@ -490,13 +443,10 @@ function PageStyles() {
         margin: 0 auto;
       }
       .sampleLockedCard {
-        max-width: 560px;
-      }
-      .sampleLockedText {
-        color: #475569;
-        font-size: 14px;
-        line-height: 1.5;
-        margin: 10px 0 16px;
+        max-width: 420px;
+        display: grid;
+        gap: 14px;
+        align-content: start;
       }
       .sampleForm {
         margin-top: 16px;
@@ -540,11 +490,6 @@ function PageStyles() {
         .sampleFieldRow {
           grid-template-columns: 1fr;
         }
-      }
-      .sampleHelp {
-        font-size: 12px;
-        color: #64748b;
-        line-height: 1.35;
       }
       .sampleError,
       .sampleSuccess {
