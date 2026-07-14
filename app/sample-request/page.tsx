@@ -32,8 +32,7 @@ type CustomerProfile = {
   deliveryAddress?: string;
 };
 
-const THANK_YOU_TEXT =
-  "Thank you. We received your sample request and will organize everything to send your sample as soon as possible.";
+const THANK_YOU_TEXT = "Sample request received. We will contact you shortly.";
 
 const EMPTY_FORM: FormState = {
   companyName: "",
@@ -55,22 +54,22 @@ function isValidEmail(value: string) {
 
 function PageHero({ locked }: { locked?: boolean }) {
   return (
-    <div className="hero">
+    <div className="sampleHero">
       <div>
-        <div className="eyebrow">H2 Hardware</div>
+        <div className="sampleEyebrow">H2 Hardware</div>
         <h1>Sample Request</h1>
         <p>
           {locked
-            ? "Free sample requests are available only after account registration."
-            : "This form is available for logged-in customers only. Your account details are loaded automatically below."}
+            ? "Free samples are available for approved H2 Hardware customers."
+            : "Review your details and submit your sample request."}
         </p>
       </div>
 
-      <div className="heroLinks">
-        <Link href="/catalog" className="ghostBtn">
+      <div className="sampleHeroLinks">
+        <Link href="/catalog" className="sampleButton sampleButtonSecondary">
           Back to catalog
         </Link>
-        <Link href="/login" className="ghostBtn">
+        <Link href="/login" className="sampleButton sampleButtonSecondary">
           {locked ? "Login" : "My account"}
         </Link>
       </div>
@@ -78,18 +77,18 @@ function PageHero({ locked }: { locked?: boolean }) {
   );
 }
 
-function RulesCard({ loggedIn }: { loggedIn: boolean }) {
+function RulesCard() {
   return (
-    <section className="rulesBox">
-      <div className="sideEyebrow">Free sample</div>
+    <section className="sampleRulesBox">
+      <div className="sampleSideEyebrow">Free sample</div>
       <h2>How to Request a Free Sample</h2>
-      <p className="muted">
+      <p className="sampleMuted">
         To qualify for a free sample, please complete the following steps:
       </p>
 
-      <ol className="rulesList">
+      <ol className="sampleRulesList">
         <li>Register for an account on the H2 Hardware website.</li>
-        <li>{loggedIn ? "Complete and submit the Free Sample Request Form." : "Log in and submit the Free Sample Request Form."}</li>
+        <li>Complete and submit the Free Sample Request Form.</li>
       </ol>
     </section>
   );
@@ -97,31 +96,27 @@ function RulesCard({ loggedIn }: { loggedIn: boolean }) {
 
 function ContactCard() {
   return (
-    <section className="contactSection">
-      <h3>Any questions?</h3>
-      <p className="muted">
-        Contact our team if you need help before submitting your sample request.
-        We will be happy to assist you.
-      </p>
+    <section className="sampleContactSection">
+      <h3>Questions?</h3>
 
-      <div className="contactBox">
-        <div className="contactItem">
-          <div className="contactLabel">Phone</div>
-          <a href={CONTACT_PHONE_LINK} className="contactValue">
+      <div className="sampleContactBox">
+        <div className="sampleContactItem">
+          <div className="sampleContactLabel">Phone</div>
+          <a href={CONTACT_PHONE_LINK} className="sampleContactValue">
             {CONTACT_PHONE}
           </a>
         </div>
 
-        <div className="contactItem">
-          <div className="contactLabel">Email</div>
-          <a href={CONTACT_EMAIL_LINK} className="contactValue">
+        <div className="sampleContactItem">
+          <div className="sampleContactLabel">Email</div>
+          <a href={CONTACT_EMAIL_LINK} className="sampleContactValue">
             {CONTACT_EMAIL}
           </a>
         </div>
 
-        <div className="contactItem">
-          <div className="contactLabel">Address</div>
-          <div className="contactValue">{CONTACT_ADDRESS}</div>
+        <div className="sampleContactItem">
+          <div className="sampleContactLabel">Address</div>
+          <div className="sampleContactValue">{CONTACT_ADDRESS}</div>
         </div>
       </div>
     </section>
@@ -220,8 +215,8 @@ export default function SampleRequestPage() {
 
     try {
       setSubmitting(true);
-
       const db = getFirestore(app);
+
       await addDoc(collection(db, "sample_requests"), {
         uid: user.uid,
         userEmail: user.email ?? "",
@@ -247,9 +242,9 @@ export default function SampleRequestPage() {
     return (
       <main className="samplePage">
         <div className="sampleWrap">
-          <section className="sampleCard loadingCard">
+          <section className="sampleCard sampleLoadingCard">
             <h1>Loading sample request…</h1>
-            <p className="muted">We are loading your account details.</p>
+            <p className="sampleMuted">We are loading your account details.</p>
           </section>
         </div>
         <PageStyles />
@@ -263,27 +258,27 @@ export default function SampleRequestPage() {
         <div className="sampleWrap">
           <PageHero locked />
 
-          <div className="sampleGrid lockedGrid">
-            <section className="sampleCard lockedCard">
-              <div className="lockedEyebrow">Account required</div>
+          <div className="sampleGrid sampleLockedGrid">
+            <aside className="sampleCard sampleSideCard">
+              <RulesCard />
+            </aside>
+
+            <section className="sampleCard sampleLockedCard">
+              <div className="sampleLockedEyebrow">Account required</div>
               <h2>Register before requesting a free sample</h2>
-              <p className="lockedText">
-                Please request account access first. After H2 Hardware reviews and approves your account, log in to submit the Free Sample Request Form. Your details will be filled in automatically.
+              <p className="sampleLockedText">
+                Please request account access or log in before submitting a sample request.
               </p>
 
-              <div className="lockedActions">
-                <Link href="/registration-request" className="primaryLink">
+              <div className="sampleActions">
+                <Link href="/registration-request" className="sampleButton sampleButtonPrimary">
                   Request account access
                 </Link>
-                <Link href="/login" className="secondaryLink">
-                  I already have an account
+                <Link href="/login" className="sampleButton sampleButtonSecondary">
+                  Login
                 </Link>
               </div>
             </section>
-
-            <aside className="sampleCard sideCard">
-              <RulesCard loggedIn={false} />
-            </aside>
           </div>
         </div>
         <PageStyles />
@@ -299,13 +294,11 @@ export default function SampleRequestPage() {
         <div className="sampleGrid">
           <section className="sampleCard">
             <h2>Request form</h2>
-            <p className="muted">
-              Please review your account information and confirm the delivery address for the sample.
-            </p>
+            <p className="sampleMuted">Review your details before submitting.</p>
 
-            <form onSubmit={handleSubmit} className="form">
-              <div className="fieldRow">
-                <div className="field">
+            <form onSubmit={handleSubmit} className="sampleForm">
+              <div className="sampleFieldRow">
+                <div className="sampleField">
                   <label>Company Name *</label>
                   <input
                     value={form.companyName}
@@ -315,7 +308,7 @@ export default function SampleRequestPage() {
                   />
                 </div>
 
-                <div className="field">
+                <div className="sampleField">
                   <label>Contact Name *</label>
                   <input
                     value={form.contactName}
@@ -326,8 +319,8 @@ export default function SampleRequestPage() {
                 </div>
               </div>
 
-              <div className="fieldRow">
-                <div className="field">
+              <div className="sampleFieldRow">
+                <div className="sampleField">
                   <label>Phone Number *</label>
                   <input
                     value={form.phone}
@@ -337,7 +330,7 @@ export default function SampleRequestPage() {
                   />
                 </div>
 
-                <div className="field">
+                <div className="sampleField">
                   <label>Email Address *</label>
                   <input
                     type="email"
@@ -349,7 +342,7 @@ export default function SampleRequestPage() {
                 </div>
               </div>
 
-              <div className="field">
+              <div className="sampleField">
                 <label>Sample Delivery Address *</label>
                 <textarea
                   value={form.deliveryAddress}
@@ -360,21 +353,19 @@ export default function SampleRequestPage() {
                 />
               </div>
 
-              <div className="help">
-                If any information is missing or outdated, adjust it here before submitting.
-              </div>
+              <div className="sampleHelp">Update any missing details before submitting.</div>
 
-              {errorMsg ? <div className="error">{errorMsg}</div> : null}
-              {successMsg ? <div className="success">{successMsg}</div> : null}
+              {errorMsg ? <div className="sampleError">{errorMsg}</div> : null}
+              {successMsg ? <div className="sampleSuccess">{successMsg}</div> : null}
 
-              <button type="submit" className="submitBtn" disabled={submitting}>
+              <button type="submit" className="sampleButton sampleButtonPrimary sampleSubmitButton" disabled={submitting}>
                 {submitting ? "Sending..." : "Submit request"}
               </button>
             </form>
           </section>
 
-          <aside className="sampleCard sideCard">
-            <RulesCard loggedIn />
+          <aside className="sampleCard sampleSideCard">
+            <RulesCard />
             <ContactCard />
           </aside>
         </div>
@@ -397,7 +388,7 @@ function PageStyles() {
         margin: 0 auto;
         padding: 0 18px;
       }
-      .hero {
+      .sampleHero {
         display: flex;
         align-items: flex-start;
         justify-content: space-between;
@@ -405,67 +396,98 @@ function PageStyles() {
         flex-wrap: wrap;
         margin-bottom: 18px;
       }
-      .eyebrow {
+      .sampleEyebrow,
+      .sampleSideEyebrow,
+      .sampleLockedEyebrow {
         display: inline-block;
+        color: #b91c1c;
         font-size: 12px;
-        font-weight: 900;
+        font-weight: 800;
         letter-spacing: 0.08em;
         text-transform: uppercase;
-        color: #b91c1c;
         margin-bottom: 8px;
+      }
+      .sampleSideEyebrow {
+        font-size: 11px;
+        margin-bottom: 6px;
       }
       .samplePage h1 {
         margin: 0;
         font-size: 34px;
         line-height: 1.05;
-        font-weight: 950;
+        font-weight: 900;
         color: #0f172a;
       }
-      .hero p {
-        margin: 10px 0 0;
+      .samplePage h2 {
+        margin: 0;
+        color: #0f172a;
+        font-size: 22px;
+        line-height: 1.2;
+        font-weight: 850;
+      }
+      .samplePage h3 {
+        margin: 0;
+        color: #0f172a;
+        font-size: 18px;
+        line-height: 1.25;
+        font-weight: 850;
+      }
+      .sampleHero p,
+      .sampleMuted {
+        margin: 8px 0 0;
         color: #64748b;
         font-size: 14px;
+        line-height: 1.45;
+      }
+      .sampleHero p {
         max-width: 700px;
       }
-      .heroLinks,
-      .lockedActions {
+      .sampleHeroLinks,
+      .sampleActions {
         display: flex;
         gap: 10px;
         flex-wrap: wrap;
       }
-      .ghostBtn,
-      .secondaryLink {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        min-height: 42px;
-        padding: 0 14px;
-        border-radius: 10px;
-        background: #fff;
-        border: 1px solid #e2e8f0;
-        color: #0f172a;
-        font-weight: 800;
-        text-decoration: none;
-      }
-      .primaryLink {
+      .sampleButton {
         display: inline-flex;
         align-items: center;
         justify-content: center;
         min-height: 42px;
         padding: 0 16px;
         border-radius: 10px;
-        background: #111827;
-        border: 1px solid #111827;
-        color: #fff;
-        font-weight: 900;
+        border: 1px solid transparent;
+        font-family: inherit;
+        font-size: 14px;
+        font-weight: 800;
+        line-height: 1;
         text-decoration: none;
+        white-space: nowrap;
+        cursor: pointer;
+      }
+      .sampleButtonPrimary {
+        background: #111827;
+        border-color: #111827;
+        color: #fff;
+      }
+      .sampleButtonSecondary {
+        background: #fff;
+        border-color: #d1d5db;
+        color: #0f172a;
+      }
+      .sampleButton:disabled {
+        opacity: 0.7;
+        cursor: not-allowed;
+      }
+      .sampleSubmitButton {
+        width: 100%;
+        min-height: 46px;
       }
       .sampleGrid {
         display: grid;
         grid-template-columns: 1.3fr 0.9fr;
         gap: 18px;
       }
-      .lockedGrid {
+      .sampleLockedGrid {
         align-items: start;
       }
       @media (max-width: 960px) {
@@ -480,144 +502,98 @@ function PageStyles() {
         padding: 18px;
         box-shadow: 0 6px 18px rgba(0, 0, 0, 0.05);
       }
-      .loadingCard,
-      .lockedCard {
+      .sampleLoadingCard {
+        max-width: 640px;
+        margin: 0 auto;
+      }
+      .sampleLockedCard {
         max-width: 720px;
       }
-      .lockedEyebrow {
-        color: #b91c1c;
-        font-size: 12px;
-        font-weight: 900;
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
-        margin-bottom: 8px;
-      }
-      .lockedText {
+      .sampleLockedText {
         color: #475569;
-        font-size: 15px;
-        line-height: 1.6;
+        font-size: 14px;
+        line-height: 1.5;
         margin: 10px 0 16px;
       }
-      .samplePage h2 {
-        margin: 0;
-        color: #0f172a;
-        font-size: 22px;
-        font-weight: 900;
-      }
-      .samplePage h3 {
-        margin: 0;
-        color: #0f172a;
-        font-size: 18px;
-        font-weight: 900;
-      }
-      .muted {
-        margin: 8px 0 0;
-        color: #64748b;
-        font-size: 13px;
-        line-height: 1.45;
-      }
-      .form {
+      .sampleForm {
         margin-top: 16px;
         display: grid;
         gap: 14px;
       }
-      .field {
+      .sampleField {
         display: grid;
         gap: 6px;
       }
-      .field label {
+      .sampleField label {
         color: #0f172a;
         font-size: 13px;
-        font-weight: 900;
+        font-weight: 800;
       }
-      .field input,
-      .field textarea {
+      .sampleField input,
+      .sampleField textarea {
         width: 100%;
         border: 1px solid #d1d5db;
         border-radius: 12px;
         padding: 12px 14px;
+        font-family: inherit;
         font-size: 14px;
         outline: none;
         background: #fff;
       }
-      .field textarea {
+      .sampleField textarea {
         resize: vertical;
         min-height: 120px;
-        font-family: inherit;
       }
-      .field input:focus,
-      .field textarea:focus {
+      .sampleField input:focus,
+      .sampleField textarea:focus {
         border-color: #94a3b8;
       }
-      .fieldRow {
+      .sampleFieldRow {
         display: grid;
         grid-template-columns: 1fr 1fr;
         gap: 14px;
       }
       @media (max-width: 680px) {
-        .fieldRow {
+        .sampleFieldRow {
           grid-template-columns: 1fr;
         }
       }
-      .help {
+      .sampleHelp {
         font-size: 12px;
         color: #64748b;
         line-height: 1.35;
       }
-      .error {
+      .sampleError,
+      .sampleSuccess {
+        border-radius: 12px;
+        padding: 14px;
+        font-size: 13px;
+        font-weight: 700;
+      }
+      .sampleError {
         background: #fff;
         border: 1px solid rgba(185, 28, 28, 0.24);
         border-left: 6px solid #b91c1c;
-        border-radius: 12px;
-        padding: 14px;
         color: #7f1d1d;
-        font-size: 13px;
-        font-weight: 700;
       }
-      .success {
+      .sampleSuccess {
         background: rgba(16, 185, 129, 0.07);
         border: 1px solid rgba(16, 185, 129, 0.22);
         border-left: 6px solid #10b981;
-        border-radius: 12px;
-        padding: 14px;
         color: #065f46;
-        font-size: 13px;
-        font-weight: 700;
       }
-      .submitBtn {
-        height: 46px;
-        border: none;
-        border-radius: 12px;
-        background: #111827;
-        color: #fff;
-        font-weight: 900;
-        font-size: 14px;
-        cursor: pointer;
-      }
-      .submitBtn:disabled {
-        opacity: 0.7;
-        cursor: not-allowed;
-      }
-      .sideCard {
+      .sampleSideCard {
         display: grid;
         gap: 18px;
         align-content: start;
       }
-      .rulesBox {
+      .sampleRulesBox {
         border: 1px solid rgba(185, 28, 28, 0.18);
         border-radius: 14px;
         background: rgba(185, 28, 28, 0.04);
         padding: 16px;
       }
-      .sideEyebrow {
-        color: #b91c1c;
-        font-size: 11px;
-        font-weight: 900;
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
-        margin-bottom: 6px;
-      }
-      .rulesList {
+      .sampleRulesList {
         margin: 14px 0 0;
         padding-left: 20px;
         color: #0f172a;
@@ -627,32 +603,32 @@ function PageStyles() {
         line-height: 1.45;
         font-weight: 700;
       }
-      .contactSection {
-        display: grid;
-        gap: 14px;
-      }
-      .contactBox {
+      .sampleContactSection {
         display: grid;
         gap: 12px;
       }
-      .contactItem {
+      .sampleContactBox {
+        display: grid;
+        gap: 10px;
+      }
+      .sampleContactItem {
         border: 1px solid #eef2f7;
         border-radius: 12px;
-        padding: 14px;
+        padding: 12px;
         background: #fbfcfd;
       }
-      .contactLabel {
+      .sampleContactLabel {
         color: #64748b;
         font-size: 12px;
         font-weight: 800;
         text-transform: uppercase;
         letter-spacing: 0.04em;
-        margin-bottom: 5px;
+        margin-bottom: 4px;
       }
-      .contactValue {
+      .sampleContactValue {
         color: #0f172a;
-        font-size: 16px;
-        font-weight: 900;
+        font-size: 14px;
+        font-weight: 800;
         line-height: 1.45;
         overflow-wrap: anywhere;
         text-decoration: none;
