@@ -118,6 +118,20 @@
         }
       },
       {
+        "source": "/api/admin/registration-codes",
+        "function": {
+          "functionId": "registrationCodesAdminHttp",
+          "region": "us-central1"
+        }
+      },
+      {
+        "source": "/api/auth/registration-code",
+        "function": {
+          "functionId": "redeemRegistrationCodeHttp",
+          "region": "us-central1"
+        }
+      },
+      {
         "source": "/api/auth/password-reset",
         "function": {
           "functionId": "sendAccountAccessEmailHttp",
