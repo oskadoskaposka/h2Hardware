@@ -67,6 +67,7 @@ export default function Header() {
                     <Link href="/admin/category-highlights" prefetch={false} className={styles.adminItem} role="menuitem">Category Highlights</Link>
                     <Link href="/admin/sample-requests" prefetch={false} className={styles.adminItem} role="menuitem">Sample Requests</Link>
                     <Link href="/admin/registration-requests" prefetch={false} className={styles.adminItem} role="menuitem">Registration Requests</Link>
+                    <Link href="/admin/registration-codes" prefetch={false} className={styles.adminItem} role="menuitem">Registration Codes</Link>
                   </div>
                 </div>
                 <span className={styles.sep}>|</span>
