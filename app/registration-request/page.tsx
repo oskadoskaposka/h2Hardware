@@ -45,7 +45,7 @@ export default function RegistrationRequestPage() {
   const hasAccessCode = accessCode.trim().length > 0;
 
   function update<K extends keyof FormState>(key: K, value: FormState[K]) {
-    setForm((prev) => ({ ...prev, [key]: value }));
+    setForm((previous) => ({ ...previous, [key]: value }));
   }
 
   function updateAccessCode(value: string) {
@@ -148,18 +148,14 @@ export default function RegistrationRequestPage() {
       const data = await response.json().catch(() => ({}));
 
       if (response.status === 429) {
-        setSuccessMsg(
-          "Your request was received and will be reviewed by H2 Hardware.",
-        );
+        setSuccessMsg("Your request was received and will be reviewed by H2 Hardware.");
         setErrorMsg("Too many code attempts. Please wait 15 minutes before trying again.");
         resetForm();
         return;
       }
 
       if (response.status === 409) {
-        setSuccessMsg(
-          "Your request was received and will be reviewed by H2 Hardware.",
-        );
+        setSuccessMsg("Your request was received and will be reviewed by H2 Hardware.");
         setErrorMsg(
           String(
             data?.error ||
@@ -177,9 +173,7 @@ export default function RegistrationRequestPage() {
       }
 
       if (data?.approved !== true) {
-        setSuccessMsg(
-          "Your request was received and will be reviewed by H2 Hardware.",
-        );
+        setSuccessMsg("Your request was received and will be reviewed by H2 Hardware.");
         setErrorMsg(
           "The access code could not be validated, so immediate access was not activated.",
         );
@@ -211,10 +205,6 @@ export default function RegistrationRequestPage() {
           <div>
             <div className="eyebrow">H2 Hardware</div>
             <h1>Request Account Access</h1>
-            <p>
-              Fill in your information below. H2 Hardware can review your request,
-              or you can activate your account immediately with a valid access code.
-            </p>
           </div>
 
           <div className="heroLinks">
@@ -227,14 +217,6 @@ export default function RegistrationRequestPage() {
           <section className="starCard">
             <div className="starCardHeader">ACCOUNT REQUEST</div>
             <div className="starCardBody">
-              <div className="miniNotice">
-                <div className="miniNoticeTitle">Account access</div>
-                <div className="miniNoticeText">
-                  Complete the form below. A valid H2 Hardware access code can activate
-                  your account immediately.
-                </div>
-              </div>
-
               <form onSubmit={handleSubmit} className="form">
                 <div className="field">
                   <label>Name *</label>
@@ -299,17 +281,8 @@ export default function RegistrationRequestPage() {
                   />
                 </div>
 
-                <section className={`instantAccess ${hasAccessCode ? "active" : ""}`}>
-                  <div className="instantHeader">
-                    <div className="keyBadge" aria-hidden="true">✦</div>
-                    <div>
-                      <div className="instantTitle">Immediate account access</div>
-                      <p>
-                        Enter an H2 Hardware access code to activate your account as soon
-                        as this form is submitted.
-                      </p>
-                    </div>
-                  </div>
+                <section className="accountAccess">
+                  <div className="sectionTitle">Account access</div>
 
                   <div className="field">
                     <label>Access code</label>
@@ -371,19 +344,19 @@ export default function RegistrationRequestPage() {
           <aside className="starCard sideCard">
             <div className="starCardHeader">CONTACT US</div>
             <div className="starCardBody">
-              <p className="muted">
-                Any questions before requesting access? Contact our team and we will be
-                happy to help.
-              </p>
+              <p className="muted">Questions? Contact our team.</p>
+
               <div className="contactBox">
                 <div className="contactItem">
                   <div className="contactLabel">Phone</div>
                   <a href={CONTACT_PHONE_LINK} className="contactValue">{CONTACT_PHONE}</a>
                 </div>
+
                 <div className="contactItem">
                   <div className="contactLabel">Email</div>
                   <a href={CONTACT_EMAIL_LINK} className="contactValue">{CONTACT_EMAIL}</a>
                 </div>
+
                 <div className="contactItem">
                   <div className="contactLabel">Address</div>
                   <div className="contactValue">{CONTACT_ADDRESS}</div>
@@ -398,49 +371,38 @@ export default function RegistrationRequestPage() {
         .page { min-height: 100vh; background: #f4f6f8; padding: 24px 0 60px; }
         .wrap { max-width: 1180px; margin: 0 auto; padding: 0 18px; }
         .hero { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 18px; }
-        .eyebrow { display: inline-block; font-size: 12px; font-weight: 900; letter-spacing: 0.08em; text-transform: uppercase; color: #b91c1c; margin-bottom: 8px; }
+        .eyebrow { display: inline-block; font-size: 12px; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; color: #b91c1c; margin-bottom: 8px; }
         h1 { margin: 0; font-size: 34px; line-height: 1.05; font-weight: 950; color: #0f172a; }
-        .hero p { margin: 10px 0 0; color: #64748b; font-size: 14px; max-width: 700px; }
         .heroLinks { display: flex; gap: 10px; flex-wrap: wrap; }
         .ghostBtn { display: inline-flex; align-items: center; justify-content: center; height: 42px; padding: 0 14px; border-radius: 10px; background: #fff; border: 1px solid #e2e8f0; color: #0f172a; font-weight: 800; text-decoration: none; }
         .grid { display: grid; grid-template-columns: minmax(320px, 620px) minmax(320px, 420px); gap: 28px; justify-content: center; align-items: start; }
-        .starCard { background: #fff; border: 1px solid #e5e7eb; border-radius: 14px; overflow: hidden; box-shadow: 0 10px 26px rgba(0, 0, 0, 0.07); }
-        .starCardHeader { background: linear-gradient(180deg, #121212, #000); color: #fff; font-weight: 900; font-size: 13px; padding: 12px 14px; letter-spacing: 0.08em; text-transform: uppercase; border-bottom: 3px solid #b91c1c; }
-        .starCardBody { padding: 16px; }
-        .miniNotice { background: rgba(185, 28, 28, 0.06); border: 1px solid rgba(185, 28, 28, 0.22); border-left: 5px solid #b91c1c; border-radius: 12px; padding: 12px; margin-bottom: 14px; }
-        .miniNoticeTitle { font-weight: 900; color: #b91c1c; font-size: 13px; margin-bottom: 6px; }
-        .miniNoticeText, .muted { font-size: 13px; font-weight: 650; color: #111; line-height: 1.45; }
-        .muted { margin: 0 0 14px; color: #555; font-weight: 500; }
+        .starCard { background: #fff; border: 1px solid #e5e7eb; border-radius: 14px; overflow: hidden; box-shadow: 0 10px 26px rgba(0, 0, 0, .07); }
+        .starCardHeader { background: linear-gradient(180deg, #121212, #000); color: #fff; font-weight: 900; font-size: 13px; padding: 12px 14px; letter-spacing: .08em; text-transform: uppercase; border-bottom: 3px solid #b91c1c; }
+        .starCardBody { padding: 18px; }
         .form { display: grid; gap: 14px; }
         .field { display: grid; gap: 6px; }
         .field label { color: #0f172a; font-size: 13px; font-weight: 900; }
-        .field input, .field textarea { width: 100%; box-sizing: border-box; border: 1px solid #d1d5db; border-radius: 12px; padding: 12px 14px; font-size: 14px; outline: none; background: #fff; font-family: inherit; transition: border-color .18s ease, box-shadow .18s ease, background .18s ease, opacity .18s ease; }
+        .field input, .field textarea { width: 100%; box-sizing: border-box; border: 1px solid #d1d5db; border-radius: 10px; padding: 12px 14px; font-size: 14px; outline: none; background: #fff; font-family: inherit; transition: border-color .18s ease, box-shadow .18s ease, background .18s ease, opacity .18s ease; }
         .field textarea { resize: vertical; min-height: 90px; }
-        .field input:focus, .field textarea:focus { border-color: #94a3b8; box-shadow: 0 0 0 3px rgba(148, 163, 184, .16); }
-        .field input:disabled { background: #f1f5f9; color: #94a3b8; cursor: not-allowed; opacity: .72; }
+        .field input:focus, .field textarea:focus { border-color: #94a3b8; box-shadow: 0 0 0 3px rgba(148, 163, 184, .14); }
+        .field input:disabled { background: #f3f4f6; color: #94a3b8; cursor: not-allowed; opacity: .72; }
         .help { font-size: 12px; color: #64748b; line-height: 1.35; }
-        .instantAccess { display: grid; gap: 14px; margin-top: 2px; padding: 16px; border: 1px solid #dbe3ec; border-radius: 16px; background: linear-gradient(145deg, #f8fafc, #f1f5f9); transition: border-color .2s ease, box-shadow .2s ease, background .2s ease; }
-        .instantAccess.active { border-color: rgba(185, 28, 28, .42); background: linear-gradient(145deg, #fff, rgba(185, 28, 28, .045)); box-shadow: 0 10px 24px rgba(15, 23, 42, .07); }
-        .instantHeader { display: flex; align-items: flex-start; gap: 11px; }
-        .keyBadge { flex: 0 0 auto; width: 34px; height: 34px; display: grid; place-items: center; border-radius: 10px; background: #0f172a; color: #fff; font-size: 17px; font-weight: 900; }
-        .instantAccess.active .keyBadge { background: #b91c1c; }
-        .instantTitle { color: #0f172a; font-size: 16px; font-weight: 950; }
-        .instantHeader p { margin: 4px 0 0; color: #64748b; font-size: 12px; line-height: 1.45; }
+        .accountAccess { display: grid; gap: 14px; margin-top: 4px; padding-top: 18px; border-top: 1px solid #e5e7eb; }
+        .sectionTitle { display: flex; align-items: center; gap: 9px; color: #0f172a; font-size: 14px; font-weight: 900; }
+        .sectionTitle::before { content: ""; width: 4px; height: 18px; border-radius: 999px; background: #b91c1c; }
         .passwordGrid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-        .error { background: #fff; border: 1px solid rgba(185, 28, 28, 0.24); border-left: 6px solid #b91c1c; border-radius: 12px; padding: 14px; color: #7f1d1d; font-size: 13px; font-weight: 700; }
-        .success { background: rgba(16, 185, 129, 0.07); border: 1px solid rgba(16, 185, 129, 0.22); border-left: 6px solid #10b981; border-radius: 12px; padding: 14px; color: #065f46; font-size: 13px; font-weight: 700; }
-        .submitBtn { height: 48px; border: none; border-radius: 12px; background: #b91c1c; color: #fff; font-weight: 900; font-size: 14px; cursor: pointer; box-shadow: 0 8px 18px rgba(185, 28, 28, .18); }
-        .submitBtn:disabled { opacity: 0.7; cursor: not-allowed; }
+        .error { background: #fff; border: 1px solid rgba(185, 28, 28, .24); border-left: 5px solid #b91c1c; border-radius: 10px; padding: 13px; color: #7f1d1d; font-size: 13px; font-weight: 700; }
+        .success { background: rgba(16, 185, 129, .07); border: 1px solid rgba(16, 185, 129, .22); border-left: 5px solid #10b981; border-radius: 10px; padding: 13px; color: #065f46; font-size: 13px; font-weight: 700; }
+        .submitBtn { height: 48px; border: none; border-radius: 10px; background: #b91c1c; color: #fff; font-weight: 900; font-size: 14px; cursor: pointer; }
+        .submitBtn:disabled { opacity: .7; cursor: not-allowed; }
         .sideCard { align-content: start; }
+        .muted { margin: 0 0 14px; color: #555; font-size: 13px; line-height: 1.45; }
         .contactBox { display: grid; gap: 10px; }
-        .contactItem { border: 1px solid #eef2f7; border-radius: 12px; padding: 12px; background: #fbfcfd; }
-        .contactLabel { color: #64748b; font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 4px; }
+        .contactItem { border: 1px solid #eef2f7; border-radius: 10px; padding: 12px; background: #fbfcfd; }
+        .contactLabel { color: #64748b; font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .04em; margin-bottom: 4px; }
         .contactValue { color: #0f172a; font-size: 15px; font-weight: 900; line-height: 1.45; overflow-wrap: anywhere; text-decoration: none; }
         @media (max-width: 980px) { .grid { grid-template-columns: 1fr; } }
-        @media (max-width: 620px) {
-          .passwordGrid { grid-template-columns: 1fr; }
-          .instantAccess { padding: 14px; }
-        }
+        @media (max-width: 620px) { .passwordGrid { grid-template-columns: 1fr; } }
       `}</style>
     </main>
   );
