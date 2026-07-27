@@ -121,6 +121,9 @@ export default function RegistrationRequestPage() {
         company: form.company.trim(),
         website: form.website.trim(),
         shippingAddress: form.shippingAddress.trim(),
+        ...(hasAccessCode
+          ? { submittedAccessCode: accessCode.trim().toUpperCase() }
+          : {}),
         status: "new",
         createdAt: serverTimestamp(),
       });
