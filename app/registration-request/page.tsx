@@ -14,14 +14,6 @@ type FormState = {
   shippingAddress: string;
 };
 
-type SubmittedRequest = {
-  id: string;
-  email: string;
-};
-
-const THANK_YOU_TEXT =
-  "Thanks, your request was received. H2 Hardware will review it unless you activate it with an access code below.";
-
 const EMPTY_FORM: FormState = {
   name: "",
   email: "",
@@ -43,17 +35,34 @@ function isValidEmail(value: string) {
 
 export default function RegistrationRequestPage() {
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
-  const [submittedRequest, setSubmittedRequest] = useState<SubmittedRequest | null>(null);
   const [accessCode, setAccessCode] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [checkingCode, setCheckingCode] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
-  const [codeError, setCodeError] = useState("");
-  const [codeSuccess, setCodeSuccess] = useState("");
+
+  const hasAccessCode = accessCode.trim().length > 0;
 
   function update<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
+  }
+
+  function updateAccessCode(value: string) {
+    const normalized = value.toUpperCase();
+    setAccessCode(normalized);
+
+    if (!normalized.trim()) {
+      setPassword("");
+      setConfirmPassword("");
+    }
+  }
+
+  function resetForm() {
+    setForm(EMPTY_FORM);
+    setAccessCode("");
+    setPassword("");
+    setConfirmPassword("");
   }
 
   function validate() {
@@ -70,22 +79,36 @@ export default function RegistrationRequestPage() {
     if (!company) return "Company is required.";
     if (!shippingAddress) return "Delivery address is required.";
 
+    if (hasAccessCode) {
+      if (accessCode.trim().length < 10) {
+        return "Please enter a valid access code.";
+      }
+      if (password.length < 8) {
+        return "Password must contain at least 8 characters.";
+      }
+      if (password.length > 128) {
+        return "Password cannot contain more than 128 characters.";
+      }
+      if (password !== confirmPassword) {
+        return "Password and confirmation do not match.";
+      }
+    }
+
     return "";
   }
 
-  async function handleSubmit(e: FormEvent) {
-    e.preventDefault();
+  async function handleSubmit(event: FormEvent) {
+    event.preventDefault();
     setErrorMsg("");
     setSuccessMsg("");
-    setCodeError("");
-    setCodeSuccess("");
-    setSubmittedRequest(null);
 
     const validation = validate();
     if (validation) {
       setErrorMsg(validation);
       return;
     }
+
+    let requestCreated = false;
 
     try {
       setSubmitting(true);
@@ -102,74 +125,82 @@ export default function RegistrationRequestPage() {
         createdAt: serverTimestamp(),
       });
 
-      setSubmittedRequest({ id: requestRef.id, email });
-      setSuccessMsg(THANK_YOU_TEXT);
-      setForm(EMPTY_FORM);
-    } catch (e: any) {
-      setErrorMsg(e?.message ?? "Failed to submit the request.");
-    } finally {
-      setSubmitting(false);
-    }
-  }
+      requestCreated = true;
 
-  async function handleAccessCode(e: FormEvent) {
-    e.preventDefault();
-    if (!submittedRequest) return;
+      if (!hasAccessCode) {
+        setSuccessMsg(
+          "Thanks, your request was received. H2 Hardware will review it and contact you when your account is approved.",
+        );
+        resetForm();
+        return;
+      }
 
-    setCodeError("");
-    setCodeSuccess("");
-
-    if (!accessCode.trim()) {
-      setCodeError("Enter your access code.");
-      return;
-    }
-
-    try {
-      setCheckingCode(true);
       const response = await fetch("/api/auth/registration-code", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          requestId: submittedRequest.id,
+          requestId: requestRef.id,
           code: accessCode,
+          password,
         }),
       });
 
       const data = await response.json().catch(() => ({}));
 
       if (response.status === 429) {
-        throw new Error("Too many attempts. Please wait 15 minutes and try again.");
-      }
-      if (!response.ok) {
-        throw new Error(String(data?.error || "Could not validate the access code."));
-      }
-      if (data?.approved !== true) {
-        setCodeError(
-          "Invalid or unavailable access code. Your request is still waiting for H2 Hardware review.",
+        setSuccessMsg(
+          "Your request was received and will be reviewed by H2 Hardware.",
         );
+        setErrorMsg("Too many code attempts. Please wait 15 minutes before trying again.");
+        resetForm();
         return;
       }
 
-      const emailResponse = await fetch("/api/auth/password-reset", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: String(data.email || submittedRequest.email),
-          purpose: "approval",
-        }),
-      });
-      const emailData = await emailResponse.json().catch(() => ({}));
+      if (response.status === 409) {
+        setSuccessMsg(
+          "Your request was received and will be reviewed by H2 Hardware.",
+        );
+        setErrorMsg(
+          String(
+            data?.error ||
+              "An account already exists for this email. Please log in or use Forgot password.",
+          ),
+        );
+        resetForm();
+        return;
+      }
 
-      setAccessCode("");
-      setCodeSuccess(
-        emailResponse.ok && emailData?.sent === true
-          ? "Your account was created. Check your email to create your password."
-          : "Your account was created, but the setup email could not be sent. Use Forgot password on the login page to create your password.",
+      if (!response.ok) {
+        throw new Error(
+          String(data?.error || "Could not complete immediate account activation."),
+        );
+      }
+
+      if (data?.approved !== true) {
+        setSuccessMsg(
+          "Your request was received and will be reviewed by H2 Hardware.",
+        );
+        setErrorMsg(
+          "The access code could not be validated, so immediate access was not activated.",
+        );
+        resetForm();
+        return;
+      }
+
+      setSuccessMsg(
+        "Your account is ready. You can now sign in using the email and password you entered.",
       );
-    } catch (e) {
-      setCodeError(e instanceof Error ? e.message : "Could not validate the access code.");
+      resetForm();
+    } catch (error) {
+      setErrorMsg(
+        requestCreated
+          ? "Your request was received, but immediate account activation could not be completed. H2 Hardware will review the request."
+          : error instanceof Error
+            ? error.message
+            : "Failed to submit the request.",
+      );
     } finally {
-      setCheckingCode(false);
+      setSubmitting(false);
     }
   }
 
@@ -182,7 +213,7 @@ export default function RegistrationRequestPage() {
             <h1>Request Account Access</h1>
             <p>
               Fill in your information below. H2 Hardware can review your request,
-              or you can activate it immediately with a valid access code.
+              or you can activate your account immediately with a valid access code.
             </p>
           </div>
 
@@ -199,80 +230,164 @@ export default function RegistrationRequestPage() {
               <div className="miniNotice">
                 <div className="miniNoticeTitle">Account access</div>
                 <div className="miniNoticeText">
-                  Submit your information first. If you have an H2 Hardware access
-                  code, you can use it after the request is received.
+                  Complete the form below. A valid H2 Hardware access code can activate
+                  your account immediately.
                 </div>
               </div>
 
               <form onSubmit={handleSubmit} className="form">
                 <div className="field">
                   <label>Name *</label>
-                  <input value={form.name} onChange={(e) => update("name", e.target.value)} placeholder="Your full name" autoComplete="name" />
+                  <input
+                    value={form.name}
+                    onChange={(event) => update("name", event.target.value)}
+                    placeholder="Your full name"
+                    autoComplete="name"
+                  />
                 </div>
+
                 <div className="field">
                   <label>Email *</label>
-                  <input type="email" value={form.email} onChange={(e) => update("email", e.target.value)} placeholder="email@company.com" autoComplete="email" />
+                  <input
+                    type="email"
+                    value={form.email}
+                    onChange={(event) => update("email", event.target.value)}
+                    placeholder="email@company.com"
+                    autoComplete="email"
+                  />
                 </div>
+
                 <div className="field">
                   <label>Phone number *</label>
-                  <input value={form.phone} onChange={(e) => update("phone", e.target.value)} placeholder="+1 403 000 0000" autoComplete="tel" />
+                  <input
+                    value={form.phone}
+                    onChange={(event) => update("phone", event.target.value)}
+                    placeholder="+1 403 000 0000"
+                    autoComplete="tel"
+                  />
                 </div>
+
                 <div className="field">
                   <label>Company *</label>
-                  <input value={form.company} onChange={(e) => update("company", e.target.value)} placeholder="Company name" autoComplete="organization" />
+                  <input
+                    value={form.company}
+                    onChange={(event) => update("company", event.target.value)}
+                    placeholder="Company name"
+                    autoComplete="organization"
+                  />
                 </div>
+
                 <div className="field">
                   <label>Website</label>
-                  <input value={form.website} onChange={(e) => update("website", e.target.value)} placeholder="Company website" autoComplete="url" />
+                  <input
+                    value={form.website}
+                    onChange={(event) => update("website", event.target.value)}
+                    placeholder="Company website"
+                    autoComplete="url"
+                  />
                   <div className="help">Optional.</div>
                 </div>
+
                 <div className="field">
                   <label>Delivery address *</label>
-                  <textarea value={form.shippingAddress} onChange={(e) => update("shippingAddress", e.target.value)} placeholder="Street, city, province, postal code" autoComplete="street-address" rows={4} />
+                  <textarea
+                    value={form.shippingAddress}
+                    onChange={(event) => update("shippingAddress", event.target.value)}
+                    placeholder="Street, city, province, postal code"
+                    autoComplete="street-address"
+                    rows={4}
+                  />
                 </div>
+
+                <section className={`instantAccess ${hasAccessCode ? "active" : ""}`}>
+                  <div className="instantHeader">
+                    <div className="keyBadge" aria-hidden="true">✦</div>
+                    <div>
+                      <div className="instantTitle">Immediate account access</div>
+                      <p>
+                        Enter an H2 Hardware access code to activate your account as soon
+                        as this form is submitted.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="field">
+                    <label>Access code</label>
+                    <input
+                      value={accessCode}
+                      onChange={(event) => updateAccessCode(event.target.value)}
+                      placeholder="H2-ACCESS-2026"
+                      maxLength={64}
+                      autoComplete="off"
+                      spellCheck={false}
+                    />
+                  </div>
+
+                  <div className="passwordGrid">
+                    <div className="field">
+                      <label>Password</label>
+                      <input
+                        type="password"
+                        value={password}
+                        onChange={(event) => setPassword(event.target.value)}
+                        placeholder="Create your password"
+                        minLength={8}
+                        maxLength={128}
+                        autoComplete="new-password"
+                        disabled={!hasAccessCode}
+                      />
+                    </div>
+
+                    <div className="field">
+                      <label>Confirm password</label>
+                      <input
+                        type="password"
+                        value={confirmPassword}
+                        onChange={(event) => setConfirmPassword(event.target.value)}
+                        placeholder="Confirm your password"
+                        minLength={8}
+                        maxLength={128}
+                        autoComplete="new-password"
+                        disabled={!hasAccessCode}
+                      />
+                    </div>
+                  </div>
+                </section>
 
                 {errorMsg ? <div className="error">{errorMsg}</div> : null}
                 {successMsg ? <div className="success">{successMsg}</div> : null}
 
                 <button type="submit" className="submitBtn" disabled={submitting}>
-                  {submitting ? "Sending..." : "Submit access request"}
+                  {submitting
+                    ? "Sending..."
+                    : hasAccessCode
+                      ? "Create account"
+                      : "Submit access request"}
                 </button>
               </form>
-
-              {submittedRequest ? (
-                <section className="codeSection">
-                  <div className="codeTitle">Do you have an access code?</div>
-                  <p>Enter it below to create your account without waiting for manual approval.</p>
-                  <form onSubmit={handleAccessCode} className="codeForm">
-                    <input
-                      value={accessCode}
-                      onChange={(e) => setAccessCode(e.target.value.toUpperCase())}
-                      placeholder="H2-WEI-8K4P-X2LM"
-                      maxLength={64}
-                      autoComplete="off"
-                      spellCheck={false}
-                      disabled={!!codeSuccess}
-                    />
-                    <button type="submit" disabled={checkingCode || !!codeSuccess}>
-                      {checkingCode ? "Checking..." : "Use access code"}
-                    </button>
-                  </form>
-                  <div className="help">No code? Nothing else is required. H2 Hardware will review your request.</div>
-                  {codeError ? <div className="error codeMessage">{codeError}</div> : null}
-                  {codeSuccess ? <div className="success codeMessage">{codeSuccess}</div> : null}
-                </section>
-              ) : null}
             </div>
           </section>
 
           <aside className="starCard sideCard">
             <div className="starCardHeader">CONTACT US</div>
             <div className="starCardBody">
-              <p className="muted">Any questions before requesting access? Contact our team and we will be happy to help.</p>
+              <p className="muted">
+                Any questions before requesting access? Contact our team and we will be
+                happy to help.
+              </p>
               <div className="contactBox">
-                <div className="contactItem"><div className="contactLabel">Phone</div><a href={CONTACT_PHONE_LINK} className="contactValue">{CONTACT_PHONE}</a></div>
-                <div className="contactItem"><div className="contactLabel">Email</div><a href={CONTACT_EMAIL_LINK} className="contactValue">{CONTACT_EMAIL}</a></div>
-                <div className="contactItem"><div className="contactLabel">Address</div><div className="contactValue">{CONTACT_ADDRESS}</div></div>
+                <div className="contactItem">
+                  <div className="contactLabel">Phone</div>
+                  <a href={CONTACT_PHONE_LINK} className="contactValue">{CONTACT_PHONE}</a>
+                </div>
+                <div className="contactItem">
+                  <div className="contactLabel">Email</div>
+                  <a href={CONTACT_EMAIL_LINK} className="contactValue">{CONTACT_EMAIL}</a>
+                </div>
+                <div className="contactItem">
+                  <div className="contactLabel">Address</div>
+                  <div className="contactValue">{CONTACT_ADDRESS}</div>
+                </div>
               </div>
             </div>
           </aside>
@@ -288,8 +403,7 @@ export default function RegistrationRequestPage() {
         .hero p { margin: 10px 0 0; color: #64748b; font-size: 14px; max-width: 700px; }
         .heroLinks { display: flex; gap: 10px; flex-wrap: wrap; }
         .ghostBtn { display: inline-flex; align-items: center; justify-content: center; height: 42px; padding: 0 14px; border-radius: 10px; background: #fff; border: 1px solid #e2e8f0; color: #0f172a; font-weight: 800; text-decoration: none; }
-        .grid { display: grid; grid-template-columns: minmax(320px, 560px) minmax(320px, 420px); gap: 28px; justify-content: center; align-items: start; }
-        @media (max-width: 980px) { .grid { grid-template-columns: 1fr; } }
+        .grid { display: grid; grid-template-columns: minmax(320px, 620px) minmax(320px, 420px); gap: 28px; justify-content: center; align-items: start; }
         .starCard { background: #fff; border: 1px solid #e5e7eb; border-radius: 14px; overflow: hidden; box-shadow: 0 10px 26px rgba(0, 0, 0, 0.07); }
         .starCardHeader { background: linear-gradient(180deg, #121212, #000); color: #fff; font-weight: 900; font-size: 13px; padding: 12px 14px; letter-spacing: 0.08em; text-transform: uppercase; border-bottom: 3px solid #b91c1c; }
         .starCardBody { padding: 16px; }
@@ -300,26 +414,33 @@ export default function RegistrationRequestPage() {
         .form { display: grid; gap: 14px; }
         .field { display: grid; gap: 6px; }
         .field label { color: #0f172a; font-size: 13px; font-weight: 900; }
-        .field input, .field textarea, .codeForm input { width: 100%; box-sizing: border-box; border: 1px solid #d1d5db; border-radius: 12px; padding: 12px 14px; font-size: 14px; outline: none; background: #fff; font-family: inherit; }
+        .field input, .field textarea { width: 100%; box-sizing: border-box; border: 1px solid #d1d5db; border-radius: 12px; padding: 12px 14px; font-size: 14px; outline: none; background: #fff; font-family: inherit; transition: border-color .18s ease, box-shadow .18s ease, background .18s ease, opacity .18s ease; }
         .field textarea { resize: vertical; min-height: 90px; }
-        .field input:focus, .field textarea:focus, .codeForm input:focus { border-color: #94a3b8; }
+        .field input:focus, .field textarea:focus { border-color: #94a3b8; box-shadow: 0 0 0 3px rgba(148, 163, 184, .16); }
+        .field input:disabled { background: #f1f5f9; color: #94a3b8; cursor: not-allowed; opacity: .72; }
         .help { font-size: 12px; color: #64748b; line-height: 1.35; }
+        .instantAccess { display: grid; gap: 14px; margin-top: 2px; padding: 16px; border: 1px solid #dbe3ec; border-radius: 16px; background: linear-gradient(145deg, #f8fafc, #f1f5f9); transition: border-color .2s ease, box-shadow .2s ease, background .2s ease; }
+        .instantAccess.active { border-color: rgba(185, 28, 28, .42); background: linear-gradient(145deg, #fff, rgba(185, 28, 28, .045)); box-shadow: 0 10px 24px rgba(15, 23, 42, .07); }
+        .instantHeader { display: flex; align-items: flex-start; gap: 11px; }
+        .keyBadge { flex: 0 0 auto; width: 34px; height: 34px; display: grid; place-items: center; border-radius: 10px; background: #0f172a; color: #fff; font-size: 17px; font-weight: 900; }
+        .instantAccess.active .keyBadge { background: #b91c1c; }
+        .instantTitle { color: #0f172a; font-size: 16px; font-weight: 950; }
+        .instantHeader p { margin: 4px 0 0; color: #64748b; font-size: 12px; line-height: 1.45; }
+        .passwordGrid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
         .error { background: #fff; border: 1px solid rgba(185, 28, 28, 0.24); border-left: 6px solid #b91c1c; border-radius: 12px; padding: 14px; color: #7f1d1d; font-size: 13px; font-weight: 700; }
         .success { background: rgba(16, 185, 129, 0.07); border: 1px solid rgba(16, 185, 129, 0.22); border-left: 6px solid #10b981; border-radius: 12px; padding: 14px; color: #065f46; font-size: 13px; font-weight: 700; }
-        .submitBtn { height: 46px; border: none; border-radius: 12px; background: #b91c1c; color: #fff; font-weight: 900; font-size: 14px; cursor: pointer; }
-        .submitBtn:disabled, .codeForm button:disabled { opacity: 0.7; cursor: not-allowed; }
-        .codeSection { margin-top: 18px; padding-top: 18px; border-top: 1px solid #e2e8f0; }
-        .codeTitle { color: #0f172a; font-size: 17px; font-weight: 950; }
-        .codeSection p { margin: 6px 0 12px; color: #475569; font-size: 13px; line-height: 1.45; }
-        .codeForm { display: grid; grid-template-columns: 1fr auto; gap: 9px; margin-bottom: 8px; }
-        .codeForm button { border: 0; border-radius: 12px; background: #0f172a; color: #fff; padding: 0 16px; font-weight: 900; cursor: pointer; }
-        .codeMessage { margin-top: 12px; }
-        @media (max-width: 620px) { .codeForm { grid-template-columns: 1fr; } .codeForm button { min-height: 44px; } }
+        .submitBtn { height: 48px; border: none; border-radius: 12px; background: #b91c1c; color: #fff; font-weight: 900; font-size: 14px; cursor: pointer; box-shadow: 0 8px 18px rgba(185, 28, 28, .18); }
+        .submitBtn:disabled { opacity: 0.7; cursor: not-allowed; }
         .sideCard { align-content: start; }
         .contactBox { display: grid; gap: 10px; }
         .contactItem { border: 1px solid #eef2f7; border-radius: 12px; padding: 12px; background: #fbfcfd; }
         .contactLabel { color: #64748b; font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 4px; }
         .contactValue { color: #0f172a; font-size: 15px; font-weight: 900; line-height: 1.45; overflow-wrap: anywhere; text-decoration: none; }
+        @media (max-width: 980px) { .grid { grid-template-columns: 1fr; } }
+        @media (max-width: 620px) {
+          .passwordGrid { grid-template-columns: 1fr; }
+          .instantAccess { padding: 14px; }
+        }
       `}</style>
     </main>
   );
