@@ -38,11 +38,13 @@ export default function RegistrationRequestPage() {
   const [accessCode, setAccessCode] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [pendingRequestId, setPendingRequestId] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
 
   const hasAccessCode = accessCode.trim().length > 0;
+  const requestSaved = pendingRequestId.length > 0;
 
   function update<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((previous) => ({ ...previous, [key]: value }));
@@ -52,7 +54,7 @@ export default function RegistrationRequestPage() {
     const normalized = value.toUpperCase();
     setAccessCode(normalized);
 
-    if (!normalized.trim()) {
+    if (!normalized.trim() && !requestSaved) {
       setPassword("");
       setConfirmPassword("");
     }
@@ -63,6 +65,7 @@ export default function RegistrationRequestPage() {
     setAccessCode("");
     setPassword("");
     setConfirmPassword("");
+    setPendingRequestId("");
   }
 
   function validate() {
@@ -108,27 +111,31 @@ export default function RegistrationRequestPage() {
       return;
     }
 
-    let requestCreated = false;
+    let requestId = pendingRequestId;
 
     try {
       setSubmitting(true);
-      const email = form.email.trim().toLowerCase();
-      const db = getFirestore(app);
-      const requestRef = await addDoc(collection(db, "registration_requests"), {
-        name: form.name.trim(),
-        email,
-        phone: form.phone.trim(),
-        company: form.company.trim(),
-        website: form.website.trim(),
-        shippingAddress: form.shippingAddress.trim(),
-        ...(hasAccessCode
-          ? { submittedAccessCode: accessCode.trim().toUpperCase() }
-          : {}),
-        status: "new",
-        createdAt: serverTimestamp(),
-      });
 
-      requestCreated = true;
+      if (!requestId) {
+        const email = form.email.trim().toLowerCase();
+        const db = getFirestore(app);
+        const requestRef = await addDoc(collection(db, "registration_requests"), {
+          name: form.name.trim(),
+          email,
+          phone: form.phone.trim(),
+          company: form.company.trim(),
+          website: form.website.trim(),
+          shippingAddress: form.shippingAddress.trim(),
+          ...(hasAccessCode
+            ? { submittedAccessCode: accessCode.trim().toUpperCase() }
+            : {}),
+          status: "new",
+          createdAt: serverTimestamp(),
+        });
+
+        requestId = requestRef.id;
+        setPendingRequestId(requestId);
+      }
 
       if (!hasAccessCode) {
         setSuccessMsg(
@@ -142,7 +149,7 @@ export default function RegistrationRequestPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          requestId: requestRef.id,
+          requestId,
           code: accessCode,
           password,
         }),
@@ -151,21 +158,19 @@ export default function RegistrationRequestPage() {
       const data = await response.json().catch(() => ({}));
 
       if (response.status === 429) {
-        setSuccessMsg("Your request was received and will be reviewed by H2 Hardware.");
+        setSuccessMsg("Your request is saved for review.");
         setErrorMsg("Too many code attempts. Please wait 15 minutes before trying again.");
-        resetForm();
         return;
       }
 
       if (response.status === 409) {
-        setSuccessMsg("Your request was received and will be reviewed by H2 Hardware.");
+        setSuccessMsg("Your request is saved for review.");
         setErrorMsg(
           String(
             data?.error ||
               "An account already exists for this email. Please log in or use Forgot password.",
           ),
         );
-        resetForm();
         return;
       }
 
@@ -176,11 +181,10 @@ export default function RegistrationRequestPage() {
       }
 
       if (data?.approved !== true) {
-        setSuccessMsg("Your request was received and will be reviewed by H2 Hardware.");
+        setSuccessMsg("Your request is saved for review.");
         setErrorMsg(
-          "The access code could not be validated, so immediate access was not activated.",
+          "Invalid access code. Correct the code and password, then try again.",
         );
-        resetForm();
         return;
       }
 
@@ -189,13 +193,16 @@ export default function RegistrationRequestPage() {
       );
       resetForm();
     } catch (error) {
-      setErrorMsg(
-        requestCreated
-          ? "Your request was received, but immediate account activation could not be completed. H2 Hardware will review the request."
-          : error instanceof Error
-            ? error.message
-            : "Failed to submit the request.",
-      );
+      if (requestId) {
+        setSuccessMsg("Your request is saved for review.");
+        setErrorMsg(
+          "Immediate account activation could not be completed. Check the code and try again, or wait for H2 Hardware review.",
+        );
+      } else {
+        setErrorMsg(
+          error instanceof Error ? error.message : "Failed to submit the request.",
+        );
+      }
     } finally {
       setSubmitting(false);
     }
@@ -228,6 +235,7 @@ export default function RegistrationRequestPage() {
                     onChange={(event) => update("name", event.target.value)}
                     placeholder="Your full name"
                     autoComplete="name"
+                    disabled={requestSaved}
                   />
                 </div>
 
@@ -239,6 +247,7 @@ export default function RegistrationRequestPage() {
                     onChange={(event) => update("email", event.target.value)}
                     placeholder="email@company.com"
                     autoComplete="email"
+                    disabled={requestSaved}
                   />
                 </div>
 
@@ -249,6 +258,7 @@ export default function RegistrationRequestPage() {
                     onChange={(event) => update("phone", event.target.value)}
                     placeholder="+1 403 000 0000"
                     autoComplete="tel"
+                    disabled={requestSaved}
                   />
                 </div>
 
@@ -259,6 +269,7 @@ export default function RegistrationRequestPage() {
                     onChange={(event) => update("company", event.target.value)}
                     placeholder="Company name"
                     autoComplete="organization"
+                    disabled={requestSaved}
                   />
                 </div>
 
@@ -269,6 +280,7 @@ export default function RegistrationRequestPage() {
                     onChange={(event) => update("website", event.target.value)}
                     placeholder="Company website"
                     autoComplete="url"
+                    disabled={requestSaved}
                   />
                   <div className="help">Optional.</div>
                 </div>
@@ -281,6 +293,7 @@ export default function RegistrationRequestPage() {
                     placeholder="Street, city, province, postal code"
                     autoComplete="street-address"
                     rows={4}
+                    disabled={requestSaved}
                   />
                 </div>
 
@@ -333,12 +346,18 @@ export default function RegistrationRequestPage() {
                 {errorMsg ? <div className="error">{errorMsg}</div> : null}
                 {successMsg ? <div className="success">{successMsg}</div> : null}
 
-                <button type="submit" className="submitBtn" disabled={submitting}>
+                <button
+                  type="submit"
+                  className="submitBtn"
+                  disabled={submitting || (requestSaved && !hasAccessCode)}
+                >
                   {submitting
-                    ? "Sending..."
-                    : hasAccessCode
-                      ? "Create account"
-                      : "Submit access request"}
+                    ? requestSaved ? "Checking..." : "Sending..."
+                    : requestSaved
+                      ? hasAccessCode ? "Try access code again" : "Request submitted"
+                      : hasAccessCode
+                        ? "Create account"
+                        : "Submit access request"}
                 </button>
               </form>
             </div>
@@ -388,7 +407,7 @@ export default function RegistrationRequestPage() {
         .field input, .field textarea { width: 100%; box-sizing: border-box; border: 1px solid #d1d5db; border-radius: 10px; padding: 12px 14px; font-size: 14px; outline: none; background: #fff; font-family: inherit; transition: border-color .18s ease, box-shadow .18s ease, background .18s ease, opacity .18s ease; }
         .field textarea { resize: vertical; min-height: 90px; }
         .field input:focus, .field textarea:focus { border-color: #94a3b8; box-shadow: 0 0 0 3px rgba(148, 163, 184, .14); }
-        .field input:disabled { background: #f3f4f6; color: #94a3b8; cursor: not-allowed; opacity: .72; }
+        .field input:disabled, .field textarea:disabled { background: #f3f4f6; color: #64748b; cursor: not-allowed; opacity: .78; }
         .help { font-size: 12px; color: #64748b; line-height: 1.35; }
         .accountAccess { display: grid; gap: 14px; margin-top: 4px; padding-top: 18px; border-top: 1px solid #e5e7eb; }
         .sectionTitle { display: flex; align-items: center; gap: 9px; color: #0f172a; font-size: 14px; font-weight: 900; }
