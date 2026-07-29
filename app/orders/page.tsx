@@ -13,6 +13,7 @@ import {
 } from "firebase/firestore";
 
 import { auth, app } from "../../lib/firebaseClient";
+import { formatWeight } from "../../lib/weight";
 
 type OrderItem = {
   slug: string;
@@ -34,6 +35,8 @@ type OrderDoc = {
   createdAt?: any; // Timestamp
   total: number;
   currency: string;
+  totalWeightLb?: number;
+  totalWeightKg?: number;
   items: OrderItem[];
 };
 
@@ -51,6 +54,13 @@ function formatMoney(currency: string, value: number) {
   } catch {
     return `${currency} ${v.toFixed(2)}`;
   }
+}
+
+function formatTotalWeight(lb: unknown, kg: unknown) {
+  const weightLb = safeNumber(lb);
+  const weightKg = safeNumber(kg);
+  if (weightLb <= 0 && weightKg <= 0) return "";
+  return `${formatWeight(weightLb, "lb")} / ${formatWeight(weightKg, "kg")}`;
 }
 
 function orderLabel(id: string) {
@@ -116,6 +126,8 @@ export default function OrdersPage() {
             createdAt: data.createdAt,
             total: safeNumber(data.total ?? 0),
             currency: data.currency ?? "CAD",
+            totalWeightLb: safeNumber(data.totalWeightLb),
+            totalWeightKg: safeNumber(data.totalWeightKg),
             items: Array.isArray(data.items) ? data.items : [],
           };
         });
@@ -275,6 +287,7 @@ export default function OrdersPage() {
           <div style={{ marginTop: 14, display: "grid", gap: 10 }}>
             {pagedOrders.map((o) => {
               const dt = o.createdAt?.toDate?.() instanceof Date ? o.createdAt.toDate() : null;
+              const totalWeight = formatTotalWeight(o.totalWeightLb, o.totalWeightKg);
 
               const rows = (o.items || []).map((it) => {
                 const qty = Math.max(1, Math.floor(safeNumber(it.qty) || 1));
@@ -331,6 +344,11 @@ export default function OrdersPage() {
                       <div style={{ marginTop: 2, color: "#64748b", fontSize: 12 }}>
                         {rows.length} item(s)
                       </div>
+                      {totalWeight ? (
+                        <div style={{ marginTop: 5, color: "#475569", fontSize: 12, fontWeight: 800 }}>
+                          Total weight: {totalWeight}
+                        </div>
+                      ) : null}
                     </div>
                   </div>
 

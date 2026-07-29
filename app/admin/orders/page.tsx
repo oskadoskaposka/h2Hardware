@@ -13,6 +13,7 @@ import {
   query,
 } from "firebase/firestore";
 import { auth, app } from "../../../lib/firebaseClient";
+import { formatWeight } from "../../../lib/weight";
 import GenerateQuotePdfButton from "../../../components/GenerateQuotePdfButton";
 
 type OrderItem = {
@@ -25,6 +26,10 @@ type OrderItem = {
   tierApplied?: string | null;
 
   unitPrice?: number; // legacy fallback
+  unitWeightLb?: number;
+  unitWeightKg?: number;
+  totalWeightLb?: number;
+  totalWeightKg?: number;
 };
 
 type OrderDoc = {
@@ -34,6 +39,8 @@ type OrderDoc = {
   createdAt?: any;
   total: number;
   currency: string;
+  totalWeightLb?: number;
+  totalWeightKg?: number;
   customer?: { name?: string; phone?: string; email?: string };
   items: OrderItem[];
 };
@@ -63,6 +70,13 @@ function formatMoney(currency: string, v: number) {
   } catch {
     return `${currency} ${n.toFixed(2)}`;
   }
+}
+
+function formatTotalWeight(lb: unknown, kg: unknown) {
+  const weightLb = safeNumber(lb);
+  const weightKg = safeNumber(kg);
+  if (weightLb <= 0 && weightKg <= 0) return "";
+  return `${formatWeight(weightLb, "lb")} / ${formatWeight(weightKg, "kg")}`;
 }
 
 function toSearchText(o: OrderDoc) {
@@ -129,6 +143,8 @@ export default function AdminOrdersPage() {
             createdAt: data.createdAt,
             total: safeNumber(data.total),
             currency: data.currency ?? "CAD",
+            totalWeightLb: safeNumber(data.totalWeightLb),
+            totalWeightKg: safeNumber(data.totalWeightKg),
             customer: data.customer ?? undefined,
             items: Array.isArray(data.items) ? data.items : [],
           };
@@ -194,6 +210,10 @@ export default function AdminOrdersPage() {
         name: it.name ?? it.slug,
         model: `${it.model ?? ""}${tierTxt}`.trim(),
         price: unit,
+        unitWeightLb: safeNumber(it.unitWeightLb),
+        unitWeightKg: safeNumber(it.unitWeightKg),
+        totalWeightLb: safeNumber(it.totalWeightLb),
+        totalWeightKg: safeNumber(it.totalWeightKg),
       };
     });
 
@@ -392,6 +412,7 @@ export default function AdminOrdersPage() {
                   ? o.createdAt.toDate()
                   : null;
               const pdf = buildPdfProps(o);
+              const totalWeight = formatTotalWeight(o.totalWeightLb, o.totalWeightKg);
 
               const rows = (o.items || []).map((it) => {
                 const qty = Math.max(1, Math.floor(safeNumber(it.qty) || 1));
@@ -505,6 +526,11 @@ export default function AdminOrdersPage() {
                       >
                         {rows.length} item(s)
                       </div>
+                      {totalWeight ? (
+                        <div style={{ marginTop: 5, color: "#475569", fontSize: 12, fontWeight: 800 }}>
+                          Total weight: {totalWeight}
+                        </div>
+                      ) : null}
 
                       <div
                         style={{
