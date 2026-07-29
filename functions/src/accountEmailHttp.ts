@@ -13,7 +13,7 @@ const REGION = "us-central1";
 const SITE_LOGIN_URL = "https://h2hardwareltd.com/login";
 const MAIL_REPLY_TO = "info@h2hardwareltd.com";
 const CONTACT_EMAIL = "info@h2hardwareltd.com";
-const CONTACT_PHONE = "(266) 788-1924";
+const CONTACT_PHONE = "(226) 788-1924";
 const SMTP_USER = defineSecret("SMTP_USER");
 const SMTP_PASSWORD = defineSecret("SMTP_PASSWORD");
 
@@ -79,7 +79,9 @@ function buildApprovalEmail(params: { actionLink: string; customerName: string }
     `Hello ${params.customerName},`,
     "",
     "Great news! Your H2 Hardware account has been verified and approved.",
-    "To get started, click the secure button in this email to create your password.",
+    "",
+    "To get started, simply click the link below to create your password:",
+    params.actionLink,
     "",
     "Once your password has been created, you'll get access to exclusive pricing and our full product catalog.",
     "",
@@ -98,7 +100,7 @@ function buildApprovalEmail(params: { actionLink: string; customerName: string }
         <div style="padding:22px 20px;background:#fff;">
           <p style="margin:0 0 12px;">Hello ${escapeHtml(params.customerName)},</p>
           <p style="margin:0 0 12px;">Great news! Your H2 Hardware account has been verified and approved.</p>
-          <p style="margin:0 0 18px;">To get started, simply click the button below to create your password:</p>
+          <p style="margin:0 0 18px;">To get started, simply click the link below to create your password:</p>
           <p style="margin:22px 0;">
             <a href="${escapeHtml(params.actionLink)}" style="display:inline-block;background:#b91c1c;color:#fff;text-decoration:none;font-weight:900;padding:12px 18px;border-radius:10px;">
               Create Your Password
