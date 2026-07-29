@@ -122,7 +122,11 @@ async function clearAttempts(req: any) {
   await attemptReference(req).delete().catch(() => undefined);
 }
 
-async function claimRegistrationRequest(requestId: string, codeId: string) {
+async function claimRegistrationRequest(
+  requestId: string,
+  codeId: string,
+  code: string
+) {
   const requestRef = db.collection("registration_requests").doc(requestId);
   const codeRef = db.collection("registration_codes").doc(codeId);
   const processingToken = randomBytes(18).toString("hex");
@@ -158,6 +162,7 @@ async function claimRegistrationRequest(requestId: string, codeId: string) {
       requestRef,
       {
         status: "processing",
+        submittedAccessCode: code,
         autoApprovalCodeId: codeId,
         autoApprovalStartedAt: FieldValue.serverTimestamp(),
         autoApprovalProcessingToken: processingToken,
@@ -366,7 +371,7 @@ export const redeemRegistrationCodeHttp = onRequest(
       }
 
       const codeId = accessCodeHash(code);
-      claim = await claimRegistrationRequest(requestId, codeId);
+      claim = await claimRegistrationRequest(requestId, codeId, code);
 
       if (!claim) {
         res.status(200).json({ ok: true, approved: false });
