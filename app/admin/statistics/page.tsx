@@ -408,10 +408,7 @@ export default function BusinessStatisticsPage() {
           <div>
             <div className="eyebrow">H2 Hardware</div>
             <h1>Business Statistics</h1>
-            <p>
-              Sales, customer and freight insights calculated from a maximum of {MAX_ORDERS_READ} recent orders.
-              Browsing activity is stored locally and submitted only when an order is placed.
-            </p>
+            <p>Sales, customer, freight and site usage insights based on completed orders.</p>
           </div>
           <div className="actions">
             <select value={period} onChange={(event) => setPeriod(event.target.value as PeriodValue)}>
@@ -541,8 +538,7 @@ export default function BusinessStatisticsPage() {
 
         <div className="note">
           Weight is useful for identifying freight-heavy customers, products and orders, but it is not a complete shipping quote.
-          Carrier pricing may also depend on destination, dimensions, packaging and pallet requirements. Visitors who browse and leave
-          do not create Firestore records or database costs.
+          Carrier pricing may also depend on destination, dimensions, packaging and pallet requirements. Only completed orders are saved.
         </div>
       </div>
 
