@@ -1,4 +1,5 @@
 import { resolveUnitPrice } from "./pricing";
+import { trackCartAddition, trackCartRemoval } from "./orderActivity";
 
 const KEY = "starpro_cart_v1";
 const CART_CHANGED_EVENT = "starpro_cart_changed_v1";
@@ -83,6 +84,7 @@ function writeCart(items: CartItem[]) {
 export function addToCart(slug: string, qty: number = 1) {
   const s = String(slug || "").trim();
   const q = Math.max(1, Math.floor(Number(qty || 1)));
+  if (!s) return;
 
   const items = readCart();
   const idx = items.findIndex((x) => x.slug === s);
@@ -91,6 +93,7 @@ export function addToCart(slug: string, qty: number = 1) {
   else items.push({ slug: s, qty: q });
 
   writeCart(items);
+  trackCartAddition(q);
 }
 
 export function updateQty(slug: string, qty: number) {
@@ -101,19 +104,40 @@ export function updateQty(slug: string, qty: number) {
   const idx = items.findIndex((x) => x.slug === s);
   if (idx < 0) return;
 
-  if (q <= 0) items.splice(idx, 1);
-  else items[idx].qty = q;
+  const previousQty = items[idx].qty;
+
+  if (q <= 0) {
+    items.splice(idx, 1);
+    trackCartRemoval(previousQty);
+  } else {
+    items[idx].qty = q;
+    if (q > previousQty) trackCartAddition(q - previousQty);
+    if (q < previousQty) trackCartRemoval(previousQty - q);
+  }
 
   writeCart(items);
 }
 
 export function removeFromCart(slug: string) {
   const s = String(slug || "").trim();
-  const items = readCart().filter((x) => x.slug !== s);
-  writeCart(items);
+  const items = readCart();
+  const existing = items.find((x) => x.slug === s);
+
+  writeCart(items.filter((x) => x.slug !== s));
+  if (existing) trackCartRemoval(existing.qty);
 }
 
-export function clearCart() {
+export function clearCart(trackActivity = true) {
+  const items = readCart();
+
+  if (trackActivity) {
+    const removedQty = items.reduce(
+      (sum, item) => sum + Math.max(0, Math.floor(Number(item.qty || 0))),
+      0,
+    );
+    if (removedQty > 0) trackCartRemoval(removedQty);
+  }
+
   writeCart([]);
 }
 

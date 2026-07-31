@@ -8,6 +8,7 @@ import { usePathname } from "next/navigation";
 import { auth } from "../lib/firebaseClient";
 import { isAdminUser } from "../lib/admin";
 import { clearCart, getCartItemCount, onCartChanged } from "../lib/cart";
+import { clearOrderActivitySummary } from "../lib/orderActivity";
 import styles from "../styles/header.module.css";
 
 export default function Header() {
@@ -39,7 +40,8 @@ export default function Header() {
   async function handleLogout() {
     try {
       await signOut(auth);
-      clearCart();
+      clearCart(false);
+      clearOrderActivitySummary();
     } catch {
       // keep simple
     }
@@ -61,6 +63,8 @@ export default function Header() {
                 <div className={styles.adminMenu}>
                   <Link href="/admin/orders" prefetch={false} className={styles.link}>Admin</Link>
                   <div className={styles.adminDropdown} role="menu" aria-label="Admin menu">
+                    <Link href="/admin/statistics" prefetch={false} className={styles.adminItem} role="menuitem">Business Statistics</Link>
+                    <Link href="/admin/statistics/usage" prefetch={false} className={styles.adminItem} role="menuitem">Site Usage</Link>
                     <Link href="/admin/orders" prefetch={false} className={styles.adminItem} role="menuitem">All Orders</Link>
                     <Link href="/admin/products" prefetch={false} className={styles.adminItem} role="menuitem">Manage Products</Link>
                     <Link href="/admin/carousel-builder" prefetch={false} className={styles.adminItem} role="menuitem">Carousel Builder</Link>
