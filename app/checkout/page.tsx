@@ -33,6 +33,10 @@ import {
   getWeightPair,
   type WeightUnit,
 } from "../../lib/weight";
+import {
+  clearOrderActivitySummary,
+  getOrderActivitySummary,
+} from "../../lib/orderActivity";
 
 type OrderItem = {
   slug: string;
@@ -311,6 +315,8 @@ export default function CheckoutPage() {
         };
       });
 
+      const activitySummary = getOrderActivitySummary();
+
       await addDoc(collection(db, "orders"), {
         uid: user.uid,
         userEmail: user.email ?? "",
@@ -326,11 +332,13 @@ export default function CheckoutPage() {
         },
         shippingAddress: shippingAddress.trim(),
         items: orderItems,
+        ...(activitySummary ? { analyticsSummary: activitySummary } : {}),
       });
 
       await decrementStockForOrder(orderItems.map((x) => ({ slug: x.slug, qty: x.qty })));
 
-      clearCart();
+      clearCart(false);
+      clearOrderActivitySummary();
       setCartLines([]);
       setOrderComplete(true);
     } catch (e: any) {
