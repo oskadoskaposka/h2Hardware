@@ -124,10 +124,7 @@ export default function SiteUsageStatisticsPage() {
           <div>
             <div className="eyebrow">H2 Hardware</div>
             <h1>Site Usage</h1>
-            <p>
-              Shows how customers browse before submitting an order. No activity is written to
-              Firestore while the customer is browsing.
-            </p>
+            <p>Shows how customers browse before submitting an order.</p>
           </div>
 
           <div className="actions">
@@ -144,11 +141,6 @@ export default function SiteUsageStatisticsPage() {
         {error ? <div className="error">{error}</div> : null}
 
         <UsageInsights orders={periodOrders} />
-
-        <div className="note">
-          This page reads a maximum of {MAX_ORDERS_READ} recent orders when opened. Visitors who
-          browse and leave without ordering do not create Firestore records.
-        </div>
       </div>
 
       <style jsx>{`
@@ -162,7 +154,6 @@ export default function SiteUsageStatisticsPage() {
         .actions select, .actions a { height: 42px; box-sizing: border-box; border-radius: 10px; border: 1px solid #dbe1e8; background: #fff; padding: 0 13px; color: #0f172a; font: inherit; font-weight: 800; }
         .actions a { display: inline-flex; align-items: center; text-decoration: none; color: #b91c1c; }
         .error { margin-top: 18px; padding: 13px; border: 1px solid rgba(185,28,28,.25); border-left: 5px solid #b91c1c; border-radius: 10px; background: #fff; color: #7f1d1d; font-weight: 800; }
-        .note { margin-top: 18px; border: 1px solid #e2e8f0; border-radius: 12px; padding: 13px 14px; background: #fff; color: #64748b; font-size: 13px; line-height: 1.5; }
         @media (max-width: 620px) { h1 { font-size: 27px; } }
       `}</style>
     </main>
