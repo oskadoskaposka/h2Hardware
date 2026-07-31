@@ -64,6 +64,7 @@ export default function Header() {
                   <Link href="/admin/orders" prefetch={false} className={styles.link}>Admin</Link>
                   <div className={styles.adminDropdown} role="menu" aria-label="Admin menu">
                     <Link href="/admin/statistics" prefetch={false} className={styles.adminItem} role="menuitem">Business Statistics</Link>
+                    <Link href="/admin/statistics/usage" prefetch={false} className={styles.adminItem} role="menuitem">Site Usage</Link>
                     <Link href="/admin/orders" prefetch={false} className={styles.adminItem} role="menuitem">All Orders</Link>
                     <Link href="/admin/products" prefetch={false} className={styles.adminItem} role="menuitem">Manage Products</Link>
                     <Link href="/admin/carousel-builder" prefetch={false} className={styles.adminItem} role="menuitem">Carousel Builder</Link>
