@@ -1,11 +1,13 @@
 import "./globals.css";
 import "./catalog-size.css";
+import { Suspense } from "react";
 import styles from "../styles/layout.module.css";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
 import AuthSync from "../components/AuthSync";
 import CatalogNavigationState from "../components/CatalogNavigationState";
 import PhoneNumberPatch from "../components/PhoneNumberPatch";
+import ActivityTracker from "../components/ActivityTracker";
 
 export const metadata = {
   title: {
@@ -28,6 +30,9 @@ export default function RootLayout({
         <AuthSync />
         <CatalogNavigationState />
         <PhoneNumberPatch />
+        <Suspense fallback={null}>
+          <ActivityTracker />
+        </Suspense>
         <main className={styles.main}>{children}</main>
         <Footer />
       </body>
