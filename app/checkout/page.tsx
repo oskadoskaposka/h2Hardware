@@ -16,15 +16,13 @@ import GenerateQuotePdfButton from "../../components/GenerateQuotePdfButton";
 import { auth, app } from "../../lib/firebaseClient";
 import { onAuthStateChanged } from "firebase/auth";
 import {
-  addDoc,
   collection,
   doc,
   getDoc,
   getDocs,
   getFirestore,
-  runTransaction,
-  serverTimestamp,
 } from "firebase/firestore";
+import { orderAction } from "../../lib/orderActions";
 
 import { resolveUnitPrice } from "../../lib/pricing";
 import {
@@ -248,29 +246,6 @@ export default function CheckoutPage() {
     });
   }, [cartLinesSafe]);
 
-  async function decrementStockForOrder(orderItems: { slug: string; qty: number }[]) {
-    const db = getFirestore(app);
-
-    for (const it of orderItems) {
-      const qty = Math.max(0, Math.floor(safeNumber(it.qty)));
-      if (!qty) continue;
-
-      const ref = doc(db, "products", it.slug);
-
-      await runTransaction(db, async (tx) => {
-        const snap = await tx.get(ref);
-        if (!snap.exists()) return;
-
-        const data: any = snap.data() || {};
-        const current = Number(data.stock ?? 0);
-        if (!Number.isFinite(current)) return;
-
-        const next = Math.max(0, Math.floor(current) - qty);
-        tx.update(ref, { stock: next });
-      });
-    }
-  }
-
   async function handleFinalizeOrder() {
     setUiError(null);
 
@@ -291,8 +266,6 @@ export default function CheckoutPage() {
 
     setFinalizing(true);
     try {
-      const db = getFirestore(app);
-
       const orderItems: OrderItem[] = cartLinesSafe.map((l) => {
         const p: any = l.product || {};
         const pricing = getCheckoutPricing(p, l.qty);
@@ -317,25 +290,17 @@ export default function CheckoutPage() {
 
       const activitySummary = getOrderActivitySummary();
 
-      await addDoc(collection(db, "orders"), {
-        uid: user.uid,
-        userEmail: user.email ?? "",
-        createdAt: serverTimestamp(),
-        currency: "CAD",
-        total: safeNumber(total),
-        totalWeightLb: totalWeight.lb,
-        totalWeightKg: totalWeight.kg,
+      await orderAction(user, {
+        action: "save",
         customer: {
           name: customerName.trim(),
           phone: customerPhone.trim(),
           email: (customerEmail || user.email || "").trim(),
         },
         shippingAddress: shippingAddress.trim(),
-        items: orderItems,
+        items: orderItems.map(({ slug, qty }) => ({ slug, qty })),
         ...(activitySummary ? { analyticsSummary: activitySummary } : {}),
       });
-
-      await decrementStockForOrder(orderItems.map((x) => ({ slug: x.slug, qty: x.qty })));
 
       clearCart(false);
       clearOrderActivitySummary();

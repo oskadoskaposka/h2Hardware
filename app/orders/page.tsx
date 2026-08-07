@@ -37,6 +37,7 @@ type OrderDoc = {
   currency: string;
   totalWeightLb?: number;
   totalWeightKg?: number;
+  canCustomerEdit?: boolean;
   items: OrderItem[];
 };
 
@@ -128,6 +129,7 @@ export default function OrdersPage() {
             currency: data.currency ?? "CAD",
             totalWeightLb: safeNumber(data.totalWeightLb),
             totalWeightKg: safeNumber(data.totalWeightKg),
+            canCustomerEdit: data.canCustomerEdit === true,
             items: Array.isArray(data.items) ? data.items : [],
           };
         });
@@ -348,6 +350,11 @@ export default function OrdersPage() {
                         <div style={{ marginTop: 5, color: "#475569", fontSize: 12, fontWeight: 800 }}>
                           Total weight: {totalWeight}
                         </div>
+                      ) : null}
+                      {o.canCustomerEdit ? (
+                        <Link href={`/orders/edit?id=${encodeURIComponent(o.id)}`} style={{ display: "inline-flex", marginTop: 10, padding: "9px 12px", borderRadius: 9, background: "#b91c1c", color: "#fff", fontWeight: 900, textDecoration: "none" }}>
+                          Edit order
+                        </Link>
                       ) : null}
                     </div>
                   </div>
