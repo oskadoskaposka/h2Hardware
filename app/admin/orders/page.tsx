@@ -15,6 +15,7 @@ import {
 import { auth, app } from "../../../lib/firebaseClient";
 import { formatWeight } from "../../../lib/weight";
 import GenerateQuotePdfButton from "../../../components/GenerateQuotePdfButton";
+import { orderAction } from "../../../lib/orderActions";
 
 type OrderItem = {
   slug: string;
@@ -43,6 +44,7 @@ type OrderDoc = {
   totalWeightKg?: number;
   customer?: { name?: string; phone?: string; email?: string };
   items: OrderItem[];
+  canCustomerEdit?: boolean;
 };
 
 const adminEmails =
@@ -104,6 +106,7 @@ export default function AdminOrdersPage() {
   const [loading, setLoading] = useState(true);
   const [orders, setOrders] = useState<OrderDoc[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [editingAccessId, setEditingAccessId] = useState<string | null>(null);
 
   // search + pagination
   const [search, setSearch] = useState("");
@@ -147,6 +150,7 @@ export default function AdminOrdersPage() {
             totalWeightKg: safeNumber(data.totalWeightKg),
             customer: data.customer ?? undefined,
             items: Array.isArray(data.items) ? data.items : [],
+            canCustomerEdit: data.canCustomerEdit === true,
           };
         });
 
@@ -224,6 +228,18 @@ export default function AdminOrdersPage() {
   }
 
   const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  async function handleEditingAccess(order: OrderDoc) {
+    const user = auth.currentUser;
+    if (!user) return;
+    setEditingAccessId(order.id); setError(null);
+    try {
+      const next = !order.canCustomerEdit;
+      await orderAction(user, { action: "set-editing", orderId: order.id, canCustomerEdit: next });
+      setOrders((all) => all.map((item) => item.id === order.id ? { ...item, canCustomerEdit: next } : item));
+    } catch (e: any) { setError(e?.message ?? "Failed to change editing access."); }
+    finally { setEditingAccessId(null); }
+  }
 
   async function handleDeleteOrder(orderId: string) {
     const ok = window.confirm(
@@ -549,6 +565,10 @@ export default function AdminOrdersPage() {
                           filename={pdf.filename}
                           subtitle={`Order / Copy — ${orderLabel(o)}`}
                         />
+
+                        <button type="button" onClick={() => handleEditingAccess(o)} disabled={editingAccessId === o.id} style={{ height: 40, padding: "0 12px", borderRadius: 10, border: "1px solid #cbd5e1", background: o.canCustomerEdit ? "#fff" : "#0f172a", color: o.canCustomerEdit ? "#0f172a" : "#fff", cursor: editingAccessId === o.id ? "not-allowed" : "pointer", fontWeight: 900 }}>
+                          {editingAccessId === o.id ? "Saving…" : o.canCustomerEdit ? "Lock editing" : "Unlock editing"}
+                        </button>
 
                         <button
                           type="button"

@@ -97,6 +97,13 @@
     ],
     "rewrites": [
       {
+        "source": "/api/orders/action",
+        "function": {
+          "functionId": "orderActionsHttp",
+          "region": "us-central1"
+        }
+      },
+      {
         "source": "/api/admin/registration-requests/approve",
         "function": {
           "functionId": "approveRegistrationRequestHttp",
