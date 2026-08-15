@@ -7,6 +7,7 @@ import { defineSecret } from "firebase-functions/params";
 import * as logger from "firebase-functions/logger";
 import nodemailer from "nodemailer";
 import { randomBytes } from "crypto";
+import { createOrderPdfBuffer } from "./orderPdf";
 
 export {
   approveRegistrationRequestHttp,
@@ -110,9 +111,25 @@ async function sendNotification(subject: string, text: string, html: string) {
   await sendMail(MAIL_TO, subject, text, html);
 }
 
-async function sendCustomerNotification(to: string, subject: string, text: string, html: string) {
+async function sendCustomerNotification(
+  to: string,
+  subject: string,
+  text: string,
+  html: string,
+  attachments: Array<{ filename: string; content: Buffer; contentType: string }> = []
+) {
   if (!isLikelyEmail(to)) return;
-  await sendMail(to, subject, text, html);
+  const user = SMTP_USER.value();
+  const transporter = createTransporter();
+  await transporter.sendMail({
+    from: `H2 Hardware Notifications <${user}>`,
+    to,
+    replyTo: MAIL_REPLY_TO,
+    subject,
+    text,
+    html,
+    attachments,
+  });
 }
 
 function configuredAdminEmails() {
@@ -448,7 +465,18 @@ export const notifyNewOrder = onDocumentCreated(
       ].join("\n");
 
       try {
-        await sendCustomerNotification(customerEmail, "[H2 Hardware] Order received", customerText, customerHtml);
+        const pdf = createOrderPdfBuffer(orderId, data);
+        await sendCustomerNotification(
+          customerEmail,
+          "[H2 Hardware] Order received",
+          customerText,
+          customerHtml,
+          [{
+            filename: `h2-hardware-order-${orderId.slice(0, 8).toLowerCase()}.pdf`,
+            content: pdf,
+            contentType: "application/pdf",
+          }]
+        );
         logger.info("Order customer notification sent", { orderId, customerEmail });
       } catch (error) {
         logger.warn("Order customer notification failed", { orderId, customerEmail, error });
