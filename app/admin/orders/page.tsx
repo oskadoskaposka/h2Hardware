@@ -42,6 +42,7 @@ type OrderDoc = {
   currency: string;
   totalWeightLb?: number;
   totalWeightKg?: number;
+  shippingAddress?: string;
   customer?: { name?: string; phone?: string; email?: string };
   items: OrderItem[];
   canCustomerEdit?: boolean;
@@ -148,6 +149,7 @@ export default function AdminOrdersPage() {
             currency: data.currency ?? "CAD",
             totalWeightLb: safeNumber(data.totalWeightLb),
             totalWeightKg: safeNumber(data.totalWeightKg),
+            shippingAddress: String(data.shippingAddress ?? "").trim(),
             customer: data.customer ?? undefined,
             items: Array.isArray(data.items) ? data.items : [],
             canCustomerEdit: data.canCustomerEdit === true,
@@ -224,7 +226,7 @@ export default function AdminOrdersPage() {
     const fileId = o.id.slice(0, 8).toLowerCase();
     const filename = `starpro-order-${fileId}.pdf`;
 
-    return { customer, items, filename };
+    return { customer, items, filename, shippingAddress: o.shippingAddress || "" };
   }
 
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -563,6 +565,7 @@ export default function AdminOrdersPage() {
                           customerType={"tiered" as any}
                           currency={o.currency || "CAD"}
                           filename={pdf.filename}
+                          shippingAddress={pdf.shippingAddress}
                           subtitle={`Order / Copy — ${orderLabel(o)}`}
                         />
 

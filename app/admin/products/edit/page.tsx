@@ -17,6 +17,7 @@ import {
   getFirestore,
 } from "firebase/firestore";
 import { auth, app } from "../../../../lib/firebaseClient";
+import styles from "../admin-products.module.css";
 
 type TierRow = {
   id?: string;
@@ -549,30 +550,27 @@ function AdminProductEditInner() {
   if (loadingData) return <p style={{ padding: 24 }}>Loading product…</p>;
 
   return (
-    <main style={{ padding: 24, maxWidth: 980, margin: "0 auto" }}>
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          gap: 16,
-          alignItems: "center",
-        }}
-      >
-        <h1 style={{ margin: 0 }}>{title}</h1>
-        <button onClick={() => router.push("/admin/products")} type="button">
+    <main className={styles.page} style={{ maxWidth: 1080 }}>
+      <div className={styles.pageHeader}>
+        <div>
+          <p className={styles.eyebrow}>Catalog management</p>
+          <h1 className={styles.title}>{title}</h1>
+          <p className={styles.subtitle}>Keep the product information customers see clear and accurate.</p>
+        </div>
+        <button className={styles.secondaryButton} onClick={() => router.push("/admin/products")} type="button">
           Back to list
         </button>
       </div>
 
-      <form onSubmit={handleSubmit} style={{ marginTop: 16 }}>
+      <form className={styles.form} onSubmit={handleSubmit}>
         {/* Basics */}
         <section
-          style={{ border: "1px solid #e5e5e5", borderRadius: 10, padding: 16 }}
+          className={`${styles.card} ${styles.formCard}`}
         >
-          <h2 style={{ marginTop: 0 }}>Basics</h2>
+          <div className={styles.sectionHeader}><h2 className={styles.sectionTitle}>Basics</h2><p className={styles.sectionDescription}>Core information used across the catalog.</p></div>
 
           <div
-            style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}
+            className={styles.formGrid}
           >
             <label>
               Slug (Document ID)
@@ -662,14 +660,7 @@ function AdminProductEditInner() {
               />
             </label>
 
-            <label
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-                marginTop: 22,
-              }}
-            >
+            <label className={styles.checkField}>
               <input
                 name="active"
                 type="checkbox"
@@ -696,14 +687,9 @@ function AdminProductEditInner() {
         {/* Change slug */}
         {slugParam !== "new" ? (
           <section
-            style={{
-              border: "1px solid #e5e5e5",
-              borderRadius: 10,
-              padding: 16,
-              marginTop: 16,
-            }}
+            className={`${styles.card} ${styles.formCard}`}
           >
-            <h2 style={{ marginTop: 0 }}>Change slug</h2>
+            <div className={styles.sectionHeader}><h2 className={styles.sectionTitle}>Change slug</h2><p className={styles.sectionDescription}>Use this only when the product identifier must change.</p></div>
 
             <div style={{ color: "#666", fontSize: 13, marginBottom: 12 }}>
               This will create a new product record with the new slug and delete
@@ -712,12 +698,7 @@ function AdminProductEditInner() {
             </div>
 
             <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "1fr auto",
-                gap: 12,
-                alignItems: "end",
-              }}
+              className={styles.renameGrid}
             >
               <label>
                 New slug
@@ -733,7 +714,7 @@ function AdminProductEditInner() {
                 type="button"
                 onClick={handleChangeSlug}
                 disabled={renaming || saving}
-                style={{ height: 38 }}
+                className={styles.secondaryButton}
               >
                 {renaming ? "Changing…" : "Change slug"}
               </button>
@@ -743,23 +724,13 @@ function AdminProductEditInner() {
 
         {/* Pricing */}
         <section
-          style={{
-            border: "1px solid #e5e5e5",
-            borderRadius: 10,
-            padding: 16,
-            marginTop: 16,
-          }}
+          className={`${styles.card} ${styles.formCard}`}
         >
-          <h2 style={{ marginTop: 0 }}>Pricing</h2>
+          <div className={styles.sectionHeader}><h2 className={styles.sectionTitle}>Pricing</h2><p className={styles.sectionDescription}>Set the standard price and optional volume discounts.</p></div>
 
           {/* ✅ Mantém grid, mas remove Currency */}
           <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "1fr 1fr 1fr",
-              gap: 12,
-              alignItems: "end",
-            }}
+            className={styles.formGridThree}
           >
             <label>
               Public price (unit) — $ <span style={{ color: "#b00" }}>*</span>
@@ -778,14 +749,14 @@ function AdminProductEditInner() {
             <div />
 
             <div style={{ display: "flex", gap: 10 }}>
-              <button type="button" onClick={addTier}>
+              <button className={styles.secondaryButton} type="button" onClick={addTier}>
                 + Add tier
               </button>
             </div>
           </div>
 
           <div style={{ marginTop: 12, overflowX: "auto" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <table className={styles.tierTable}>
               <thead>
                 <tr>
                   <th
@@ -928,7 +899,7 @@ function AdminProductEditInner() {
           </div>
 
           <div style={{ marginTop: 14 }}>
-            <details>
+            <details className={styles.details}>
               <summary style={{ cursor: "pointer" }}>Bulk paste tiers</summary>
               <div style={{ marginTop: 10 }}>
                 <div style={{ color: "#666", marginBottom: 8 }}>
@@ -958,14 +929,9 @@ function AdminProductEditInner() {
 
         {/* Content */}
         <section
-          style={{
-            border: "1px solid #e5e5e5",
-            borderRadius: 10,
-            padding: 16,
-            marginTop: 16,
-          }}
+          className={`${styles.card} ${styles.formCard}`}
         >
-          <h2 style={{ marginTop: 0 }}>Content</h2>
+          <div className={styles.sectionHeader}><h2 className={styles.sectionTitle}>Content</h2><p className={styles.sectionDescription}>Customer-facing description, images, and product highlights.</p></div>
 
           <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 12 }}>
             <label>
@@ -1004,11 +970,11 @@ function AdminProductEditInner() {
           </div>
         </section>
 
-        <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
-          <button type="submit" disabled={saving || renaming}>
+        <div className={styles.actionBar}>
+          <button className={styles.primaryButton} type="submit" disabled={saving || renaming}>
             {saving ? "Saving…" : "Save"}
           </button>
-          <button type="button" onClick={() => router.push("/admin/products")}>
+          <button className={styles.secondaryButton} type="button" onClick={() => router.push("/admin/products")}>
             Cancel
           </button>
         </div>

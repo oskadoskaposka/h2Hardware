@@ -14,6 +14,7 @@ import {
 
 import { auth, app } from "../../lib/firebaseClient";
 import { formatWeight } from "../../lib/weight";
+import GenerateQuotePdfButton from "../../components/GenerateQuotePdfButton";
 
 type OrderItem = {
   slug: string;
@@ -26,6 +27,11 @@ type OrderItem = {
   // preferred snapshot (newer)
   unitPriceApplied?: number;
   tierApplied?: string | null;
+  model?: string;
+  unitWeightLb?: number;
+  unitWeightKg?: number;
+  totalWeightLb?: number;
+  totalWeightKg?: number;
 };
 
 type OrderDoc = {
@@ -38,6 +44,8 @@ type OrderDoc = {
   totalWeightLb?: number;
   totalWeightKg?: number;
   canCustomerEdit?: boolean;
+  shippingAddress?: string;
+  customer?: { name?: string; phone?: string; email?: string };
   items: OrderItem[];
 };
 
@@ -130,6 +138,8 @@ export default function OrdersPage() {
             totalWeightLb: safeNumber(data.totalWeightLb),
             totalWeightKg: safeNumber(data.totalWeightKg),
             canCustomerEdit: data.canCustomerEdit === true,
+            shippingAddress: String(data.shippingAddress ?? "").trim(),
+            customer: data.customer ?? undefined,
             items: Array.isArray(data.items) ? data.items : [],
           };
         });
@@ -351,11 +361,30 @@ export default function OrdersPage() {
                           Total weight: {totalWeight}
                         </div>
                       ) : null}
-                      {o.canCustomerEdit ? (
-                        <Link href={`/orders/edit?id=${encodeURIComponent(o.id)}`} style={{ display: "inline-flex", marginTop: 10, padding: "9px 12px", borderRadius: 9, background: "#b91c1c", color: "#fff", fontWeight: 900, textDecoration: "none" }}>
-                          Edit order
-                        </Link>
-                      ) : null}
+                      <div style={{ marginTop: 10, display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 8 }}>
+                        {o.canCustomerEdit ? (
+                          <Link href={`/orders/edit?id=${encodeURIComponent(o.id)}`} style={{ display: "inline-flex", alignItems: "center", minHeight: 36, padding: "0 12px", borderRadius: 9, background: "#b91c1c", color: "#fff", fontWeight: 900, textDecoration: "none", fontSize: 13 }}>
+                            Edit order
+                          </Link>
+                        ) : null}
+                        <GenerateQuotePdfButton
+                          items={(o.items || []).map((item) => ({
+                            ...item,
+                            price: typeof item.unitPriceApplied === "number" ? item.unitPriceApplied : item.unitPrice,
+                          }))}
+                          customer={{
+                            name: String(o.customer?.name || ""),
+                            email: String(o.customer?.email || o.userEmail || email || ""),
+                            phone: String(o.customer?.phone || ""),
+                          }}
+                          customerType={"tiered"}
+                          currency={o.currency || "CAD"}
+                          filename={`h2-hardware-order-${o.id.slice(0, 8).toLowerCase()}.pdf`}
+                          subtitle={`Order / Copy - ${orderLabel(o.id)}`}
+                          shippingAddress={o.shippingAddress || ""}
+                          variant="icon"
+                        />
+                      </div>
                     </div>
                   </div>
 

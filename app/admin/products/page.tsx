@@ -14,6 +14,7 @@ import {
 import { auth, app } from "../../../lib/firebaseClient";
 import { isAdminUser } from "../../../lib/admin";
 import { formatUnitWeightPair, normalizeWeightUnit, type WeightUnit } from "../../../lib/weight";
+import styles from "./admin-products.module.css";
 
 function toNumberOr(value: any, fallback: number) {
   const n = Number(value);
@@ -210,25 +211,29 @@ export default function AdminProductsPage() {
   if (!isAdmin) return <p style={{ padding: 24 }}>Access denied. Admins only.</p>;
 
   return (
-    <main style={{ padding: 24, maxWidth: 1300, margin: "0 auto" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center" }}>
-        <h1 style={{ margin: 0 }}>Manage Products</h1>
-        <Link href="/admin/products/edit?slug=new">+ New product</Link>
+    <main className={styles.page}>
+      <div className={styles.pageHeader}>
+        <div>
+          <p className={styles.eyebrow}>Catalog management</p>
+          <h1 className={styles.title}>Products</h1>
+          <p className={styles.subtitle}>Manage product details, pricing, inventory, and visibility.</p>
+        </div>
+        <Link className={styles.primaryButton} href="/admin/products/edit?slug=new">+ New product</Link>
       </div>
 
-      <div style={{ display: "flex", gap: 12, marginTop: 12, alignItems: "center" }}>
-        <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search by slug or name…" style={{ flex: 1, padding: 8 }} />
-        <div style={{ color: "#666", fontSize: 14, whiteSpace: "nowrap" }}>
+      <div className={styles.toolbar}>
+        <input className={styles.search} value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search by slug or name…" />
+        <div className={styles.meta}>
           Showing <strong>{pagedProducts.length}</strong> on page <strong>{pageSafe}</strong> / {totalPages}
           <span style={{ marginLeft: 8 }}>({filteredProducts.length} filtered / {products.length} total)</span>
         </div>
       </div>
 
-      <div style={{ display: "flex", gap: 10, alignItems: "center", marginTop: 10, flexWrap: "wrap" }}>
-        <button type="button" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={pageSafe <= 1}>Prev</button>
-        <span style={{ color: "#444", fontSize: 14 }}>Page <strong>{pageSafe}</strong> of <strong>{totalPages}</strong></span>
-        <button type="button" onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={pageSafe >= totalPages}>Next</button>
-        <span style={{ marginLeft: 6, color: "#888", fontSize: 13 }}>{PAGE_SIZE} per page</span>
+      <div className={styles.pager}>
+        <button className={styles.secondaryButton} type="button" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={pageSafe <= 1}>Prev</button>
+        <span className={styles.pagerText}>Page <strong>{pageSafe}</strong> of <strong>{totalPages}</strong></span>
+        <button className={styles.secondaryButton} type="button" onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={pageSafe >= totalPages}>Next</button>
+        <span className={styles.pagerText}>{PAGE_SIZE} per page</span>
       </div>
 
       {loadingProducts ? (
@@ -236,8 +241,9 @@ export default function AdminProductsPage() {
       ) : error ? (
         <p style={{ marginTop: 16, color: "red" }}>{error}</p>
       ) : (
-        <div style={{ marginTop: 16, overflowX: "auto" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 1120 }}>
+        <div className={`${styles.card} ${styles.tableCard}`}>
+          <div className={styles.tableScroller}>
+          <table className={styles.productTable}>
             <thead>
               <tr>
                 <th style={th}>Slug</th>
@@ -267,8 +273,8 @@ export default function AdminProductsPage() {
 
                 return (
                   <tr key={p.id}>
-                    <td style={td}>{p.slug || p.id}</td>
-                    <td style={td}>{p.name || ""}</td>
+                    <td style={td} className={styles.slug}>{p.slug || p.id}</td>
+                    <td style={td} className={styles.productName}>{p.name || ""}</td>
                     <td style={td}>{p.currency || "CAD"}</td>
                     <td style={td}><input type="number" step="0.01" value={d.publicPrice} onChange={(e) => setRowDraft(p.id, { publicPrice: e.target.value })} style={{ width: 120, padding: 6 }} /></td>
                     <td style={td}><input type="number" value={d.stock} onChange={(e) => setRowDraft(p.id, { stock: e.target.value })} style={{ width: 95, padding: 6 }} /></td>
@@ -282,12 +288,12 @@ export default function AdminProductsPage() {
                     <td style={{ ...td, color: "#64748b", fontSize: 12, whiteSpace: "nowrap" }}>{weightPreview || "—"}</td>
                     <td style={td}><input type="checkbox" checked={!!d.active} onChange={(e) => setRowDraft(p.id, { active: e.target.checked })} /></td>
                     <td style={td}>
-                      <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
-                        <Link href={`/admin/products/edit?slug=${encodeURIComponent(p.id)}`}>Edit</Link>
-                        <button type="button" onClick={() => saveRow(p)} disabled={rowState.saving || !dirty} style={{ padding: "6px 10px" }}>{rowState.saving ? "Saving…" : "Save"}</button>
-                        {rowState.saved ? <span style={{ color: "green", fontSize: 13 }}>Saved</span> : null}
-                        {rowState.error ? <span style={{ color: "red", fontSize: 13 }}>{rowState.error}</span> : null}
-                        <button type="button" onClick={() => handleDelete(p.id)}>Delete</button>
+                      <div className={styles.rowActions}>
+                        <Link className={styles.textLink} href={`/admin/products/edit?slug=${encodeURIComponent(p.id)}`}>Edit</Link>
+                        <button className={styles.secondaryButton} type="button" onClick={() => saveRow(p)} disabled={rowState.saving || !dirty}>{rowState.saving ? "Saving…" : "Save"}</button>
+                        {rowState.saved ? <span className={styles.saved}>Saved</span> : null}
+                        {rowState.error ? <span className={styles.error}>{rowState.error}</span> : null}
+                        <button className={styles.dangerButton} type="button" onClick={() => handleDelete(p.id)}>Delete</button>
                       </div>
                     </td>
                   </tr>
@@ -295,8 +301,9 @@ export default function AdminProductsPage() {
               })}
             </tbody>
           </table>
+          </div>
 
-          <p style={{ color: "#666", marginTop: 10, fontSize: 13 }}>
+          <p className={styles.tip}>
             Tip: use <strong>Save</strong> to quickly update Public price, Stock, Unit weight, Weight unit, and Active without opening the product. Use <strong>Edit</strong> for tiers, images, and details. Weight preview always shows both lb and kg.
           </p>
         </div>
