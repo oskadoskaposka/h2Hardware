@@ -122,6 +122,17 @@ async function clearAttempts(req: any) {
   await attemptReference(req).delete().catch(() => undefined);
 }
 
+async function registrationCodeIsActive(code: string) {
+  if (!isValidAccessCode(code)) return false;
+
+  const codeSnap = await db
+    .collection("registration_codes")
+    .doc(accessCodeHash(code))
+    .get();
+
+  return codeSnap.exists && codeSnap.data()?.active === true;
+}
+
 async function claimRegistrationRequest(
   requestId: string,
   codeId: string,
@@ -361,8 +372,20 @@ export const redeemRegistrationCodeHttp = onRequest(
       assertPost(req);
       await registerAttempt(req);
 
-      const requestId = cleanText(req.body?.requestId);
       const code = normalizeAccessCode(req.body?.code);
+
+      if (cleanText(req.body?.mode) === "verify") {
+        const valid = await registrationCodeIsActive(code);
+
+        if (valid) {
+          await clearAttempts(req);
+        }
+
+        res.status(200).json({ ok: true, valid });
+        return;
+      }
+
+      const requestId = cleanText(req.body?.requestId);
       const password = validatePassword(req.body?.password);
 
       if (!requestId || requestId.length > 160 || !isValidAccessCode(code)) {
