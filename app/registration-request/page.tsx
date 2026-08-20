@@ -14,6 +14,8 @@ type FormState = {
   shippingAddress: string;
 };
 
+type AccessChoice = "code" | "request" | null;
+
 const EMPTY_FORM: FormState = {
   name: "",
   email: "",
@@ -35,7 +37,10 @@ function isValidEmail(value: string) {
 
 export default function RegistrationRequestPage() {
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
+  const [accessChoice, setAccessChoice] = useState<AccessChoice>(null);
   const [accessCode, setAccessCode] = useState("");
+  const [codeVerified, setCodeVerified] = useState(false);
+  const [verifyingCode, setVerifyingCode] = useState(false);
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [pendingRequestId, setPendingRequestId] = useState("");
@@ -43,7 +48,7 @@ export default function RegistrationRequestPage() {
   const [errorMsg, setErrorMsg] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
 
-  const hasAccessCode = accessCode.trim().length > 0;
+  const hasAccessCode = accessChoice === "code";
   const requestSaved = pendingRequestId.length > 0;
 
   function update<K extends keyof FormState>(key: K, value: FormState[K]) {
@@ -53,16 +58,29 @@ export default function RegistrationRequestPage() {
   function updateAccessCode(value: string) {
     const normalized = value.toUpperCase();
     setAccessCode(normalized);
+    setCodeVerified(false);
+    setPassword("");
+    setConfirmPassword("");
+    setErrorMsg("");
+    setSuccessMsg("");
+  }
 
-    if (!normalized.trim() && !requestSaved) {
-      setPassword("");
-      setConfirmPassword("");
-    }
+  function chooseAccess(nextChoice: Exclude<AccessChoice, null>) {
+    if (requestSaved) return;
+    setAccessChoice(nextChoice);
+    setAccessCode("");
+    setCodeVerified(false);
+    setPassword("");
+    setConfirmPassword("");
+    setErrorMsg("");
+    setSuccessMsg("");
   }
 
   function resetForm() {
     setForm(EMPTY_FORM);
+    setAccessChoice(null);
     setAccessCode("");
+    setCodeVerified(false);
     setPassword("");
     setConfirmPassword("");
     setPendingRequestId("");
@@ -82,9 +100,16 @@ export default function RegistrationRequestPage() {
     if (!company) return "Company is required.";
     if (!shippingAddress) return "Delivery address is required.";
 
+    if (!accessChoice) {
+      return "Please tell us whether H2 Hardware provided you with a registration code.";
+    }
+
     if (hasAccessCode) {
       if (accessCode.trim().length < 10) {
         return "Please enter a valid access code.";
+      }
+      if (!codeVerified) {
+        return "Verify your registration code before creating your password.";
       }
       if (password.length < 8) {
         return "Password must contain at least 8 characters.";
@@ -98,6 +123,45 @@ export default function RegistrationRequestPage() {
     }
 
     return "";
+  }
+
+  async function verifyAccessCode() {
+    setErrorMsg("");
+    setSuccessMsg("");
+
+    if (accessCode.trim().length < 10) {
+      setErrorMsg("Enter the registration code provided by H2 Hardware.");
+      return;
+    }
+
+    try {
+      setVerifyingCode(true);
+      const response = await fetch("/api/auth/registration-code", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mode: "verify", code: accessCode }),
+      });
+      const data = await response.json().catch(() => ({}));
+
+      if (response.status === 429) {
+        setErrorMsg("Too many code attempts. Please wait 15 minutes before trying again.");
+        return;
+      }
+
+      if (!response.ok || data?.valid !== true) {
+        setCodeVerified(false);
+        setErrorMsg("That registration code is not valid. Check the code provided by H2 Hardware and try again.");
+        return;
+      }
+
+      setCodeVerified(true);
+      setSuccessMsg("Code verified. Create your password below.");
+    } catch {
+      setCodeVerified(false);
+      setErrorMsg("We could not verify the code right now. Please try again.");
+    } finally {
+      setVerifyingCode(false);
+    }
   }
 
   async function handleSubmit(event: FormEvent) {
@@ -299,48 +363,93 @@ export default function RegistrationRequestPage() {
 
                 <section className="accountAccess">
                   <div className="sectionTitle">Account access</div>
-
-                  <div className="field">
-                    <label>Access code</label>
-                    <input
-                      value={accessCode}
-                      onChange={(event) => updateAccessCode(event.target.value)}
-                      placeholder="H2-ACCESS-2026"
-                      maxLength={64}
-                      autoComplete="off"
-                      spellCheck={false}
-                    />
-                  </div>
-
-                  <div className="passwordGrid">
-                    <div className="field">
-                      <label>Password</label>
-                      <input
-                        type="password"
-                        value={password}
-                        onChange={(event) => setPassword(event.target.value)}
-                        placeholder="Create your password"
-                        minLength={8}
-                        maxLength={128}
-                        autoComplete="new-password"
-                        disabled={!hasAccessCode}
-                      />
+                  <fieldset className="accessQuestion">
+                    <legend>Did H2 Hardware provide you with a registration code?</legend>
+                    <div className="accessChoices">
+                      <button
+                        type="button"
+                        className={`accessChoice ${accessChoice === "code" ? "selected" : ""}`}
+                        aria-pressed={accessChoice === "code"}
+                        onClick={() => chooseAccess("code")}
+                        disabled={requestSaved}
+                      >
+                        <span className="choiceTitle">Yes, I have a code</span>
+                        <span className="choiceHelp">Use the code sent to you by H2 Hardware.</span>
+                      </button>
+                      <button
+                        type="button"
+                        className={`accessChoice ${accessChoice === "request" ? "selected" : ""}`}
+                        aria-pressed={accessChoice === "request"}
+                        onClick={() => chooseAccess("request")}
+                        disabled={requestSaved}
+                      >
+                        <span className="choiceTitle">No, request access</span>
+                        <span className="choiceHelp">Our team will review your information.</span>
+                      </button>
                     </div>
+                  </fieldset>
 
-                    <div className="field">
-                      <label>Confirm password</label>
-                      <input
-                        type="password"
-                        value={confirmPassword}
-                        onChange={(event) => setConfirmPassword(event.target.value)}
-                        placeholder="Confirm your password"
-                        minLength={8}
-                        maxLength={128}
-                        autoComplete="new-password"
-                        disabled={!hasAccessCode}
-                      />
+                  {accessChoice === "code" ? (
+                    <div className="codeFlow">
+                      <div className="field">
+                        <label>Registration code</label>
+                        <div className="codeRow">
+                          <input
+                            value={accessCode}
+                            onChange={(event) => updateAccessCode(event.target.value)}
+                            placeholder="Enter your registration code"
+                            maxLength={64}
+                            autoComplete="off"
+                            spellCheck={false}
+                            disabled={codeVerified || requestSaved}
+                          />
+                          <button
+                            type="button"
+                            className="verifyBtn"
+                            onClick={verifyAccessCode}
+                            disabled={verifyingCode || codeVerified || requestSaved}
+                          >
+                            {verifyingCode ? "Checking..." : codeVerified ? "Verified" : "Verify code"}
+                          </button>
+                        </div>
+                        <div className="help">Enter only the code provided directly by H2 Hardware.</div>
+                      </div>
+
+                      {codeVerified ? (
+                        <div className="passwordGrid">
+                          <div className="field">
+                            <label>Password</label>
+                            <input
+                              type="password"
+                              value={password}
+                              onChange={(event) => setPassword(event.target.value)}
+                              placeholder="Create your password"
+                              minLength={8}
+                              maxLength={128}
+                              autoComplete="new-password"
+                            />
+                          </div>
+
+                          <div className="field">
+                            <label>Confirm password</label>
+                            <input
+                              type="password"
+                              value={confirmPassword}
+                              onChange={(event) => setConfirmPassword(event.target.value)}
+                              placeholder="Confirm your password"
+                              minLength={8}
+                              maxLength={128}
+                              autoComplete="new-password"
+                            />
+                          </div>
+                        </div>
+                      ) : null}
                     </div>
-                  </div>
+                  ) : accessChoice === "request" ? (
+                    <div className="requestExplanation">
+                      No problem. Submit your information and the H2 Hardware team will review your access request.
+                    </div>
+                  ) : null}
                 </section>
 
                 {errorMsg ? <div className="error">{errorMsg}</div> : null}
@@ -349,7 +458,7 @@ export default function RegistrationRequestPage() {
                 <button
                   type="submit"
                   className="submitBtn"
-                  disabled={submitting || (requestSaved && !hasAccessCode)}
+                  disabled={submitting || !accessChoice || (hasAccessCode && !codeVerified) || (requestSaved && !hasAccessCode)}
                 >
                   {submitting
                     ? requestSaved ? "Checking..." : "Sending..."
@@ -357,7 +466,7 @@ export default function RegistrationRequestPage() {
                       ? hasAccessCode ? "Try access code again" : "Request submitted"
                       : hasAccessCode
                         ? "Create account"
-                        : "Submit access request"}
+                        : accessChoice === "request" ? "Submit access request" : "Choose an option to continue"}
                 </button>
               </form>
             </div>
@@ -412,6 +521,20 @@ export default function RegistrationRequestPage() {
         .accountAccess { display: grid; gap: 14px; margin-top: 4px; padding-top: 18px; border-top: 1px solid #e5e7eb; }
         .sectionTitle { display: flex; align-items: center; gap: 9px; color: #0f172a; font-size: 14px; font-weight: 900; }
         .sectionTitle::before { content: ""; width: 4px; height: 18px; border-radius: 999px; background: #b91c1c; }
+        .accessQuestion { min-width: 0; margin: 0; padding: 0; border: 0; }
+        .accessQuestion legend { margin-bottom: 10px; padding: 0; color: #0f172a; font-size: 14px; font-weight: 800; line-height: 1.4; }
+        .accessChoices { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .accessChoice { display: grid; gap: 4px; min-height: 84px; border: 1px solid #d1d5db; border-radius: 11px; background: #fff; padding: 13px 14px; color: #0f172a; text-align: left; cursor: pointer; transition: border-color .18s ease, box-shadow .18s ease, background .18s ease; }
+        .accessChoice:hover { border-color: #94a3b8; background: #fafafa; }
+        .accessChoice.selected { border-color: #b91c1c; background: #fff8f8; box-shadow: 0 0 0 2px rgba(185, 28, 28, .1); }
+        .accessChoice:disabled { cursor: not-allowed; opacity: .7; }
+        .choiceTitle { font-size: 13px; font-weight: 900; }
+        .choiceHelp { color: #64748b; font-size: 12px; font-weight: 500; line-height: 1.35; }
+        .codeFlow { display: grid; gap: 14px; padding: 14px; border-radius: 11px; background: #f8fafc; border: 1px solid #e2e8f0; }
+        .codeRow { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 9px; }
+        .verifyBtn { min-width: 110px; border: 1px solid #0f172a; border-radius: 10px; background: #0f172a; padding: 0 14px; color: #fff; font-size: 13px; font-weight: 900; cursor: pointer; }
+        .verifyBtn:disabled { cursor: not-allowed; opacity: .65; }
+        .requestExplanation { border: 1px solid #dbe4ee; border-radius: 11px; background: #f8fafc; padding: 14px; color: #475569; font-size: 13px; line-height: 1.55; }
         .passwordGrid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
         .error { background: #fff; border: 1px solid rgba(185, 28, 28, .24); border-left: 5px solid #b91c1c; border-radius: 10px; padding: 13px; color: #7f1d1d; font-size: 13px; font-weight: 700; }
         .success { background: rgba(16, 185, 129, .07); border: 1px solid rgba(16, 185, 129, .22); border-left: 5px solid #10b981; border-radius: 10px; padding: 13px; color: #065f46; font-size: 13px; font-weight: 700; }
@@ -424,7 +547,7 @@ export default function RegistrationRequestPage() {
         .contactLabel { color: #64748b; font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .04em; margin-bottom: 4px; }
         .contactValue { color: #0f172a; font-size: 15px; font-weight: 900; line-height: 1.45; overflow-wrap: anywhere; text-decoration: none; }
         @media (max-width: 980px) { .grid { grid-template-columns: 1fr; } }
-        @media (max-width: 620px) { .passwordGrid { grid-template-columns: 1fr; } }
+        @media (max-width: 620px) { .passwordGrid, .accessChoices, .codeRow { grid-template-columns: 1fr; } .verifyBtn { min-height: 44px; } }
       `}</style>
     </main>
   );
