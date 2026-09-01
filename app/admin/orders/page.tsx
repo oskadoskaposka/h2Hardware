@@ -224,7 +224,7 @@ export default function AdminOrdersPage() {
     });
 
     const fileId = o.id.slice(0, 8).toLowerCase();
-    const filename = `starpro-order-${fileId}.pdf`;
+    const filename = `h2-hardware-order-${fileId}.pdf`;
 
     return { customer, items, filename, shippingAddress: o.shippingAddress || "" };
   }
