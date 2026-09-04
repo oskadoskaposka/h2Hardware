@@ -67,6 +67,7 @@ export default function Header() {
                     <Link href="/admin/statistics/usage" prefetch={false} className={styles.adminItem} role="menuitem">Site Usage</Link>
                     <Link href="/admin/orders" prefetch={false} className={styles.adminItem} role="menuitem">All Orders</Link>
                     <Link href="/admin/products" prefetch={false} className={styles.adminItem} role="menuitem">Manage Products</Link>
+                    <Link href="/admin/data-import" prefetch={false} className={styles.adminItem} role="menuitem">Data Import</Link>
                     <Link href="/admin/carousel-builder" prefetch={false} className={styles.adminItem} role="menuitem">Carousel Builder</Link>
                     <Link href="/admin/category-highlights" prefetch={false} className={styles.adminItem} role="menuitem">Category Highlights</Link>
                     <Link href="/admin/sample-requests" prefetch={false} className={styles.adminItem} role="menuitem">Sample Requests</Link>
