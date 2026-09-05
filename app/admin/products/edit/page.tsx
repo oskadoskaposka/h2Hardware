@@ -17,6 +17,7 @@ import {
   getFirestore,
 } from "firebase/firestore";
 import { auth, app } from "../../../../lib/firebaseClient";
+import { isAdminUser } from "../../../../lib/admin";
 import styles from "../admin-products.module.css";
 
 type TierRow = {
@@ -25,11 +26,6 @@ type TierRow = {
   maxQty: number | null; // null = no limit
   price: number;
 };
-
-const adminEmails =
-  process.env.NEXT_PUBLIC_ADMIN_EMAILS?.split(",")
-    .map((s) => s.trim().toLowerCase())
-    .filter(Boolean) || [];
 
 function toNumberOr(value: any, fallback: number) {
   const n = Number(value);
@@ -126,9 +122,8 @@ function AdminProductEditInner() {
 
   // Auth / admin gate
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      const email = user?.email?.toLowerCase() || "";
-      setIsAdmin(!!email && adminEmails.includes(email));
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      setIsAdmin(await isAdminUser(user));
       setLoadingUser(false);
     });
     return () => unsubscribe();

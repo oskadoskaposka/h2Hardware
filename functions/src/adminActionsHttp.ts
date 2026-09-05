@@ -11,29 +11,12 @@ if (!getApps().length) {
 
 const db = getFirestore();
 const REGION = "us-central1";
-const DEFAULT_ADMIN_EMAILS = [
+const SUPER_ADMIN_EMAILS = new Set([
   "maia@h2hardwareltd.com",
   "admin@starpro.com",
   "admin@h2hardware.com",
   "admin@h2hardwareltd.com",
-];
-
-function configuredAdminEmails() {
-  const envEmails = [
-    process.env.ADMIN_EMAILS || "",
-    process.env.NEXT_PUBLIC_ADMIN_EMAILS || "",
-  ]
-    .join(",")
-    .split(",")
-    .map((email) => email.trim().toLowerCase())
-    .filter(Boolean);
-
-  return new Set(
-    [...DEFAULT_ADMIN_EMAILS, ...envEmails].map((email) =>
-      email.trim().toLowerCase()
-    )
-  );
-}
+]);
 
 function cleanText(value: unknown) {
   return String(value ?? "").trim();
@@ -41,6 +24,10 @@ function cleanText(value: unknown) {
 
 function normalizeEmail(value: unknown) {
   return String(value ?? "").trim().toLowerCase();
+}
+
+function isSuperAdminEmail(value: unknown) {
+  return SUPER_ADMIN_EMAILS.has(normalizeEmail(value));
 }
 
 function temporaryPassword() {
@@ -63,6 +50,7 @@ function getStatus(error: unknown) {
   if (code === "functions/not-found" || code === "not-found") return 404;
   if (code === "functions/invalid-argument" || code === "invalid-argument") return 400;
   if (code === "functions/failed-precondition" || code === "failed-precondition") return 412;
+  if (code === "functions/unavailable" || code === "unavailable") return 503;
 
   return 500;
 }
@@ -85,23 +73,23 @@ async function assertAdminFromRequest(req: any) {
   }
 
   const decoded = await getAuth().verifyIdToken(match[1]);
-  const adminEmail = String(decoded.email || "").trim().toLowerCase();
+  const adminEmail = normalizeEmail(decoded.email);
 
   if (!decoded.uid || !adminEmail) {
     throw new HttpsError("unauthenticated", "Admin login is required.");
   }
 
-  const isDefaultAdmin = configuredAdminEmails().has(adminEmail);
+  const isSuperAdmin = isSuperAdminEmail(adminEmail);
   const isClaimAdmin = decoded.admin === true;
 
-  if (!isDefaultAdmin && !isClaimAdmin) {
+  if (!isSuperAdmin && !isClaimAdmin) {
     throw new HttpsError("permission-denied", "Only admins can perform this action.");
   }
 
   return {
     uid: decoded.uid,
     email: adminEmail,
-    isDefaultAdmin,
+    isSuperAdmin,
   };
 }
 
@@ -123,7 +111,10 @@ function assertPost(req: any) {
   }
 }
 
-async function approveRegistrationRequestCore(requestId: string, admin: { uid: string; email: string }) {
+async function approveRegistrationRequestCore(
+  requestId: string,
+  admin: { uid: string; email: string }
+) {
   if (!requestId) {
     throw new HttpsError("invalid-argument", "requestId is required.");
   }
@@ -141,8 +132,11 @@ async function approveRegistrationRequestCore(requestId: string, admin: { uid: s
   const phone = cleanText(registration.phone);
   const company = cleanText(registration.company);
   const website = cleanText(registration.website);
-  const shippingAddress = cleanText(registration.shippingAddress || registration.deliveryAddress);
+  const shippingAddress = cleanText(
+    registration.shippingAddress || registration.deliveryAddress
+  );
   const displayName = name || company || email;
+  const isSuperAdmin = isSuperAdminEmail(email);
 
   if (!email || !email.includes("@")) {
     throw new HttpsError(
@@ -162,7 +156,11 @@ async function approveRegistrationRequestCore(requestId: string, admin: { uid: s
     });
   } catch (error) {
     if (errorCode(error) !== "auth/user-not-found") {
-      logger.error("Failed to check registration user", { requestId, email, error });
+      logger.error("Failed to check registration user", {
+        requestId,
+        email,
+        error,
+      });
       throw new HttpsError("internal", "Failed to check Firebase user.");
     }
 
@@ -188,6 +186,7 @@ async function approveRegistrationRequestCore(requestId: string, admin: { uid: s
       phone,
       shippingAddress,
       disabled: false,
+      ...(isSuperAdmin ? { admin: true, superAdmin: true } : {}),
       updatedAt: FieldValue.serverTimestamp(),
       ...(customerSnap.exists ? {} : { createdAt: FieldValue.serverTimestamp() }),
     },
@@ -199,6 +198,7 @@ async function approveRegistrationRequestCore(requestId: string, admin: { uid: s
       status: "approved",
       archived: false,
       authUid: userRecord.uid,
+      ...(isSuperAdmin ? { admin: true, superAdmin: true } : {}),
       approvedAt: FieldValue.serverTimestamp(),
       approvedByUid: admin.uid,
       approvedByEmail: admin.email,
@@ -212,6 +212,7 @@ async function approveRegistrationRequestCore(requestId: string, admin: { uid: s
     email,
     uid: userRecord.uid,
     created,
+    isSuperAdmin,
     approvedBy: admin.email,
   });
 
@@ -223,7 +224,10 @@ async function approveRegistrationRequestCore(requestId: string, admin: { uid: s
   };
 }
 
-async function disableRegistrationUserCore(requestId: string, admin: { uid: string; email: string }) {
+async function disableRegistrationUserCore(
+  requestId: string,
+  admin: { uid: string; email: string }
+) {
   if (!requestId) {
     throw new HttpsError("invalid-argument", "requestId is required.");
   }
@@ -239,13 +243,23 @@ async function disableRegistrationUserCore(requestId: string, admin: { uid: stri
   const email = normalizeEmail(registration.email);
   let uid = cleanText(registration.authUid);
 
+  if (isSuperAdminEmail(email)) {
+    throw new HttpsError(
+      "permission-denied",
+      "Super admin accounts cannot be disabled."
+    );
+  }
+
   if (!uid && email) {
     try {
       const userByEmail = await getAuth().getUserByEmail(email);
       uid = userByEmail.uid;
     } catch (error) {
       if (errorCode(error) === "auth/user-not-found") {
-        throw new HttpsError("not-found", "Firebase user not found for this request.");
+        throw new HttpsError(
+          "not-found",
+          "Firebase user not found for this request."
+        );
       }
 
       logger.error("Failed to find user by email", { requestId, email, error });
@@ -254,7 +268,10 @@ async function disableRegistrationUserCore(requestId: string, admin: { uid: stri
   }
 
   if (!uid) {
-    throw new HttpsError("failed-precondition", "Request has no Firebase user UID.");
+    throw new HttpsError(
+      "failed-precondition",
+      "Request has no Firebase user UID."
+    );
   }
 
   await getAuth().updateUser(uid, {
@@ -299,10 +316,13 @@ async function disableRegistrationUserCore(requestId: string, admin: { uid: stri
 async function setRegistrationUserAdminCore(
   requestId: string,
   makeAdmin: boolean,
-  admin: { uid: string; email: string; isDefaultAdmin?: boolean }
+  admin: { uid: string; email: string; isSuperAdmin?: boolean }
 ) {
-  if (!admin.isDefaultAdmin) {
-    throw new HttpsError("permission-denied", "Only super admins can change admin access.");
+  if (!admin.isSuperAdmin) {
+    throw new HttpsError(
+      "permission-denied",
+      "Only super admins can change admin access."
+    );
   }
 
   if (!requestId) {
@@ -326,7 +346,10 @@ async function setRegistrationUserAdminCore(
       uid = userByEmail.uid;
     } catch (error) {
       if (errorCode(error) === "auth/user-not-found") {
-        throw new HttpsError("failed-precondition", "Approve or create this user before changing admin access.");
+        throw new HttpsError(
+          "failed-precondition",
+          "Approve or create this user before changing admin access."
+        );
       }
 
       logger.error("Failed to find user by email", { requestId, email, error });
@@ -335,15 +358,30 @@ async function setRegistrationUserAdminCore(
   }
 
   if (!uid || !email) {
-    throw new HttpsError("failed-precondition", "Request has no Firebase user to update.");
+    throw new HttpsError(
+      "failed-precondition",
+      "Request has no Firebase user to update."
+    );
+  }
+
+  if (!makeAdmin && isSuperAdminEmail(email)) {
+    throw new HttpsError(
+      "permission-denied",
+      "Super admin access cannot be removed."
+    );
   }
 
   if (!makeAdmin && email === admin.email) {
-    throw new HttpsError("permission-denied", "You cannot remove your own admin access.");
+    throw new HttpsError(
+      "permission-denied",
+      "You cannot remove your own admin access."
+    );
   }
 
   const userRecord = await getAuth().getUser(uid);
-  const customClaims = { ...(userRecord.customClaims || {}) } as Record<string, unknown>;
+  const customClaims = {
+    ...(userRecord.customClaims || {}),
+  } as Record<string, unknown>;
 
   if (makeAdmin) {
     customClaims.admin = true;
@@ -356,6 +394,7 @@ async function setRegistrationUserAdminCore(
   await db.collection("customers").doc(uid).set(
     {
       admin: makeAdmin,
+      superAdmin: false,
       updatedAt: FieldValue.serverTimestamp(),
     },
     { merge: true }
@@ -364,6 +403,7 @@ async function setRegistrationUserAdminCore(
   await requestRef.set(
     {
       admin: makeAdmin,
+      superAdmin: false,
       authUid: uid,
       adminUpdatedAt: FieldValue.serverTimestamp(),
       adminUpdatedByUid: admin.uid,
@@ -445,7 +485,10 @@ export const approveRegistrationRequestHttp = onRequest(
     try {
       assertPost(req);
       const admin = await assertAdminFromRequest(req);
-      const result = await approveRegistrationRequestCore(getRequestId(req), admin);
+      const result = await approveRegistrationRequestCore(
+        getRequestId(req),
+        admin
+      );
       res.status(200).json(result);
     } catch (error) {
       logger.error("approveRegistrationRequestHttp failed", { error });
@@ -463,7 +506,10 @@ export const disableRegistrationUserHttp = onRequest(
     try {
       assertPost(req);
       const admin = await assertAdminFromRequest(req);
-      const result = await disableRegistrationUserCore(getRequestId(req), admin);
+      const result = await disableRegistrationUserCore(
+        getRequestId(req),
+        admin
+      );
       res.status(200).json(result);
     } catch (error) {
       logger.error("disableRegistrationUserHttp failed", { error });
@@ -481,7 +527,11 @@ export const setRegistrationUserAdminHttp = onRequest(
     try {
       assertPost(req);
       const admin = await assertAdminFromRequest(req);
-      const result = await setRegistrationUserAdminCore(getRequestId(req), getAdminValue(req), admin);
+      const result = await setRegistrationUserAdminCore(
+        getRequestId(req),
+        getAdminValue(req),
+        admin
+      );
       res.status(200).json(result);
     } catch (error) {
       logger.error("setRegistrationUserAdminHttp failed", { error });
