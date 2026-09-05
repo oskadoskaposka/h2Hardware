@@ -1,29 +1,31 @@
-const DEFAULT_ADMIN_EMAILS = [
+export const SUPER_ADMIN_EMAILS = [
   "maia@h2hardwareltd.com",
   "admin@starpro.com",
   "admin@h2hardware.com",
   "admin@h2hardwareltd.com",
-];
+] as const;
 
-export const ADMIN_EMAILS = Array.from(
-  new Set(
-    [
-      ...DEFAULT_ADMIN_EMAILS,
-      ...(process.env.NEXT_PUBLIC_ADMIN_EMAILS || "")
-        .split(",")
-        .map((email) => email.trim().toLowerCase())
-        .filter(Boolean),
-    ].map((email) => email.trim().toLowerCase()),
-  ),
-);
+function normalizeEmail(email: string | null | undefined) {
+  return String(email || "").trim().toLowerCase();
+}
 
+export function isSuperAdminEmail(email: string | null | undefined) {
+  const normalized = normalizeEmail(email);
+  return !!normalized && SUPER_ADMIN_EMAILS.includes(normalized as (typeof SUPER_ADMIN_EMAILS)[number]);
+}
+
+/**
+ * Kept for backwards compatibility with older imports.
+ * Fixed email based access is now reserved for the four protected super admins.
+ * Every other admin must be granted the Firebase custom claim `admin: true`.
+ */
 export function isAdminEmail(email: string | null | undefined) {
-  return !!email && ADMIN_EMAILS.includes(email.trim().toLowerCase());
+  return isSuperAdminEmail(email);
 }
 
 export async function isAdminUser(user: any) {
   if (!user) return false;
-  if (isAdminEmail(user.email)) return true;
+  if (isSuperAdminEmail(user.email)) return true;
 
   try {
     const token = await user.getIdTokenResult();
