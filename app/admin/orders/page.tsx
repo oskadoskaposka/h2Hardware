@@ -13,6 +13,7 @@ import {
   query,
 } from "firebase/firestore";
 import { auth, app } from "../../../lib/firebaseClient";
+import { isAdminUser } from "../../../lib/admin";
 import { formatWeight } from "../../../lib/weight";
 import GenerateQuotePdfButton from "../../../components/GenerateQuotePdfButton";
 import { orderAction } from "../../../lib/orderActions";
@@ -48,11 +49,6 @@ type OrderDoc = {
   canCustomerEdit?: boolean;
 };
 
-const adminEmails =
-  process.env.NEXT_PUBLIC_ADMIN_EMAILS?.split(",")
-    .map((s) => s.trim().toLowerCase())
-    .filter(Boolean) || [];
-
 function safeNumber(v: any) {
   const n = Number(v);
   return Number.isFinite(n) ? n : 0;
@@ -60,10 +56,6 @@ function safeNumber(v: any) {
 
 function approxEqual(a: number, b: number, tolerance = 0.02) {
   return Math.abs(a - b) <= tolerance;
-}
-
-function isAdminEmail(email: string | null | undefined) {
-  return !!email && adminEmails.includes((email || "").toLowerCase());
 }
 
 function formatMoney(currency: string, v: number) {
@@ -115,9 +107,9 @@ export default function AdminOrdersPage() {
   const [page, setPage] = useState(1);
 
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (u) =>
-      setIsAdmin(isAdminEmail(u?.email)),
-    );
+    const unsub = onAuthStateChanged(auth, async (u) => {
+      setIsAdmin(await isAdminUser(u));
+    });
     return () => unsub();
   }, []);
 
