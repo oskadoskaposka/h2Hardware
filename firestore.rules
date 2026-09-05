@@ -1,0 +1,322 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isSuperAdmin() {
+      return isSignedIn() && request.auth.token.email in [
+        "admin@starpro.com",
+        "admin@h2hardware.com",
+        "admin@h2hardwareltd.com",
+        "maia@h2hardwareltd.com"
+      ];
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        isSuperAdmin()
+        || request.auth.token.admin == true
+      );
+    }
+
+    function isOwner(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    function isValidCustomerProfileCreate() {
+      return request.resource.data.keys().hasOnly([
+          "name",
+          "phone",
+          "email",
+          "updatedAt",
+          "createdAt"
+        ])
+
+        && (!("name" in request.resource.data)
+            || (request.resource.data.name is string
+                && request.resource.data.name.size() <= 80))
+
+        && (!("phone" in request.resource.data)
+            || (request.resource.data.phone is string
+                && request.resource.data.phone.size() <= 30))
+
+        && (!("email" in request.resource.data)
+            || (request.resource.data.email is string
+                && request.resource.data.email.size() <= 120))
+
+        && (!("updatedAt" in request.resource.data)
+            || request.resource.data.updatedAt is timestamp)
+
+        && (!("createdAt" in request.resource.data)
+            || request.resource.data.createdAt is timestamp);
+    }
+
+    function isValidCustomerProfileUpdate() {
+      return request.resource.data.diff(resource.data).changedKeys().hasOnly([
+          "name",
+          "phone",
+          "email",
+          "updatedAt"
+        ])
+
+        && (!("name" in request.resource.data)
+            || (request.resource.data.name is string
+                && request.resource.data.name.size() <= 80))
+
+        && (!("phone" in request.resource.data)
+            || (request.resource.data.phone is string
+                && request.resource.data.phone.size() <= 30))
+
+        && (!("email" in request.resource.data)
+            || (request.resource.data.email is string
+                && request.resource.data.email.size() <= 120))
+
+        && (!("updatedAt" in request.resource.data)
+            || request.resource.data.updatedAt is timestamp);
+    }
+
+    function isValidSampleRequest() {
+      return isSignedIn()
+
+        && request.resource.data.keys().hasOnly([
+          "uid",
+          "userEmail",
+          "companyName",
+          "contactName",
+          "website",
+          "nameCardImageUrl",
+          "phone",
+          "email",
+          "deliveryAddress",
+          "thankYouText",
+          "status",
+          "createdAt",
+          "requestType",
+          "source",
+          "name",
+          "company"
+        ])
+
+        && ("uid" in request.resource.data)
+        && request.resource.data.uid is string
+        && request.resource.data.uid == request.auth.uid
+
+        && ("userEmail" in request.resource.data)
+        && request.resource.data.userEmail is string
+        && request.resource.data.userEmail.size() > 0
+        && request.resource.data.userEmail.size() <= 120
+        && request.resource.data.userEmail == request.auth.token.email
+
+        && ("companyName" in request.resource.data)
+        && request.resource.data.companyName is string
+        && request.resource.data.companyName.size() > 0
+        && request.resource.data.companyName.size() <= 120
+
+        && ("contactName" in request.resource.data)
+        && request.resource.data.contactName is string
+        && request.resource.data.contactName.size() > 0
+        && request.resource.data.contactName.size() <= 120
+
+        && (!("website" in request.resource.data)
+            || (request.resource.data.website is string
+                && request.resource.data.website.size() <= 300))
+
+        && (!("nameCardImageUrl" in request.resource.data)
+            || (request.resource.data.nameCardImageUrl is string
+                && request.resource.data.nameCardImageUrl.size() <= 500))
+
+        && ("phone" in request.resource.data)
+        && request.resource.data.phone is string
+        && request.resource.data.phone.size() > 0
+        && request.resource.data.phone.size() <= 40
+
+        && ("email" in request.resource.data)
+        && request.resource.data.email is string
+        && request.resource.data.email.size() > 0
+        && request.resource.data.email.size() <= 120
+
+        && ("deliveryAddress" in request.resource.data)
+        && request.resource.data.deliveryAddress is string
+        && request.resource.data.deliveryAddress.size() > 0
+        && request.resource.data.deliveryAddress.size() <= 500
+
+        && (!("thankYouText" in request.resource.data)
+            || (request.resource.data.thankYouText is string
+                && request.resource.data.thankYouText.size() <= 300))
+
+        && ("status" in request.resource.data)
+        && request.resource.data.status == "new"
+
+        && ("createdAt" in request.resource.data)
+        && request.resource.data.createdAt == request.time
+
+        && (!("requestType" in request.resource.data)
+            || request.resource.data.requestType == "registration_request")
+
+        && (!("source" in request.resource.data)
+            || request.resource.data.source == "registration_request")
+
+        && (!("name" in request.resource.data)
+            || (request.resource.data.name is string
+                && request.resource.data.name.size() > 0
+                && request.resource.data.name.size() <= 120))
+
+        && (!("company" in request.resource.data)
+            || (request.resource.data.company is string
+                && request.resource.data.company.size() > 0
+                && request.resource.data.company.size() <= 120));
+    }
+
+    function isValidRegistrationRequest() {
+      return request.resource.data.keys().hasOnly([
+          "name",
+          "email",
+          "phone",
+          "company",
+          "website",
+          "shippingAddress",
+          "deliveryAddress",
+          "submittedAccessCode",
+          "status",
+          "createdAt"
+        ])
+
+        && ("name" in request.resource.data)
+        && request.resource.data.name is string
+        && request.resource.data.name.size() > 0
+        && request.resource.data.name.size() <= 120
+
+        && ("email" in request.resource.data)
+        && request.resource.data.email is string
+        && request.resource.data.email.size() > 0
+        && request.resource.data.email.size() <= 120
+
+        && ("phone" in request.resource.data)
+        && request.resource.data.phone is string
+        && request.resource.data.phone.size() > 0
+        && request.resource.data.phone.size() <= 40
+
+        && ("company" in request.resource.data)
+        && request.resource.data.company is string
+        && request.resource.data.company.size() > 0
+        && request.resource.data.company.size() <= 120
+
+        && (!("website" in request.resource.data)
+            || (request.resource.data.website is string
+                && request.resource.data.website.size() <= 300))
+
+        && (
+          (
+            ("shippingAddress" in request.resource.data)
+            && request.resource.data.shippingAddress is string
+            && request.resource.data.shippingAddress.size() > 0
+            && request.resource.data.shippingAddress.size() <= 500
+          )
+          ||
+          (
+            ("deliveryAddress" in request.resource.data)
+            && request.resource.data.deliveryAddress is string
+            && request.resource.data.deliveryAddress.size() > 0
+            && request.resource.data.deliveryAddress.size() <= 500
+          )
+        )
+
+        && (!("submittedAccessCode" in request.resource.data)
+            || (
+              request.resource.data.submittedAccessCode is string
+              && request.resource.data.submittedAccessCode.size() > 0
+              && request.resource.data.submittedAccessCode.size() <= 64
+            ))
+
+        && ("status" in request.resource.data)
+        && request.resource.data.status == "new"
+
+        && ("createdAt" in request.resource.data)
+        && request.resource.data.createdAt == request.time;
+    }
+
+    match /products/{docId} {
+      allow read: if true;
+
+      allow create, update, delete: if isAdmin();
+
+      allow update: if isSignedIn()
+        && request.resource.data.diff(resource.data).changedKeys().hasOnly([
+          "stock"
+        ])
+        && request.resource.data.stock is int
+        && request.resource.data.stock >= 0
+        && request.resource.data.stock <= resource.data.stock;
+    }
+
+    match /customers/{uid} {
+      allow read: if isAdmin() || isOwner(uid);
+
+      allow create: if isAdmin()
+        || (isOwner(uid) && isValidCustomerProfileCreate());
+
+      allow update: if isAdmin()
+        || (isOwner(uid) && isValidCustomerProfileUpdate());
+
+      allow delete: if false;
+    }
+
+    match /orders/{orderId} {
+      allow create: if isSignedIn()
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.createdAt == request.time;
+
+      allow read: if isAdmin()
+        || (isSignedIn() && resource.data.uid == request.auth.uid);
+
+      allow delete: if isAdmin();
+
+      allow update: if false;
+    }
+
+    match /site_config/{docId} {
+      allow read: if true;
+
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /sample_requests/{requestId} {
+      allow create: if isValidSampleRequest();
+
+      allow read, update, delete: if isAdmin();
+    }
+
+    match /registration_requests/{requestId} {
+      allow create: if isValidRegistrationRequest();
+
+      allow read, update, delete: if isAdmin();
+    }
+
+    match /registration_codes/{codeId} {
+      allow read, write: if false;
+    }
+
+    match /registration_code_attempts/{attemptId} {
+      allow read, write: if false;
+    }
+
+    match /externalInventoryItems/{itemId} {
+      allow read, write: if isAdmin();
+    }
+
+    match /inventoryMappings/{mappingId} {
+      allow read, write: if isAdmin();
+    }
+
+    match /inventoryImports/{importId} {
+      allow read, write: if isAdmin();
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
